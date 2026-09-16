@@ -252,7 +252,7 @@ export default function CreatorDashboardPage() {
   ];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-16 font-sans">
+    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pt-4 sm:pt-6 pb-16 font-sans">
       <AdminPageHeader
         icon={FiVideo}
         title={bi('Creator Studio & Collaborations Hub', 'क्रिएटर स्टूडियो और सहयोग केंद्र (Collaborations Hub)')}

@@ -480,10 +480,11 @@ export default function CreatorDashboardScreen({ embedded }: { embedded?: boolea
   );
 
   if (embedded) {
+    const topInset = Math.max(insets.top, 20) + 12;
     return (
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: topInset, paddingBottom: 110 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GOLD} colors={[GOLD]} />}>
         {content}
       </ScrollView>
