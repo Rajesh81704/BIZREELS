@@ -34,10 +34,11 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GRID_COL_WIDTH = (SCREEN_WIDTH - Spacing.four * 3) / 2;
 const REEL_GRID_WIDTH = (SCREEN_WIDTH - Spacing.four * 4) / 3;
 
-const YELLOW = '#F59E0B';
-const BLACK = '#0F0F12';
-const DARK_CARD = '#18181C';
-const BORDER = '#2D2D36';
+const YELLOW = '#D99A3D';
+const AMBER_GOLD = '#D99A3D';
+const BLACK = '#241B15';
+const DARK_CARD = '#1A1410';
+const BORDER = '#3A2C22';
 
 interface CreatorProfileData {
   _id: string;

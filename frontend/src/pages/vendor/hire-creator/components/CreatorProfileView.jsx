@@ -59,7 +59,7 @@ export default function CreatorProfileView({ profile, onBack, onSelectHire }) {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-brand-purple font-semibold mt-0.5">@{profile.username} • {profile.category}</p>
+                <p className="text-xs text-[#d99a3d] font-bold mt-0.5">@{profile.username} • {profile.category}</p>
                 <p className="text-xs text-text-tertiary flex items-center justify-center sm:justify-start gap-1 mt-1">
                   <FiMapPin size={13} /> {profile.city}, {profile.state}, {profile.country}
                 </p>
@@ -68,7 +68,7 @@ export default function CreatorProfileView({ profile, onBack, onSelectHire }) {
               <div className="flex items-center gap-2 justify-center shrink-0">
                 <button
                   onClick={onSelectHire}
-                  className="px-6 py-2.5 gradient-brand text-white font-bold text-xs rounded-xl shadow-premium hover:opacity-90 transition flex items-center gap-1.5"
+                  className="px-6 py-2.5 bg-[#241b15] text-[#d99a3d] border border-[#d99a3d] font-black uppercase tracking-wider text-xs rounded-xl shadow-md hover:bg-[#342820] transition flex items-center gap-1.5 cursor-pointer"
                 >
                   <FiSend size={14} /> Hire Creator
                 </button>
@@ -78,7 +78,7 @@ export default function CreatorProfileView({ profile, onBack, onSelectHire }) {
         </div>
 
         {/* Social Metrics Section */}
-        <div className="grid grid-cols-4 divide-x divide-border/30 py-4 text-center bg-surface-secondary/20">
+        <div className="grid grid-cols-4 divide-x divide-border/30 py-4 text-center bg-[#241b15]/5">
           <div>
             <span className="text-sm sm:text-base font-black text-text-primary block">{formatCount(profile.followersCount)}</span>
             <span className="text-[10px] text-text-tertiary font-bold uppercase tracking-wider">Followers</span>
@@ -99,30 +99,30 @@ export default function CreatorProfileView({ profile, onBack, onSelectHire }) {
       </div>
 
       {/* Tabs Menu Navigation */}
-      <div className="flex border-b border-border overflow-x-auto scrollbar-hide gap-6 text-xs font-bold text-text-tertiary">
+      <div className="flex border-b border-[#e3dccb] overflow-x-auto scrollbar-hide gap-6 text-xs font-bold text-text-tertiary">
         <button
           onClick={() => setActiveTab('reels')}
-          className={`pb-3 flex items-center gap-1.5 shrink-0 border-b-2 transition-all ${activeTab === 'reels' ? 'border-brand-purple text-brand-purple' : 'border-transparent hover:text-text-primary'}`}
+          className={`pb-3 flex items-center gap-1.5 shrink-0 border-b-2 transition-all cursor-pointer ${activeTab === 'reels' ? 'border-[#d99a3d] text-[#d99a3d] font-black' : 'border-transparent hover:text-text-primary'}`}
         >
           <FiVideo size={15} /> Reels ({reels.length})
         </button>
         <button
           onClick={() => setActiveTab('portfolio')}
-          className={`pb-3 flex items-center gap-1.5 shrink-0 border-b-2 transition-all ${activeTab === 'portfolio' ? 'border-brand-purple text-brand-purple' : 'border-transparent hover:text-text-primary'}`}
+          className={`pb-3 flex items-center gap-1.5 shrink-0 border-b-2 transition-all cursor-pointer ${activeTab === 'portfolio' ? 'border-[#d99a3d] text-[#d99a3d] font-black' : 'border-transparent hover:text-text-primary'}`}
         >
           <FiGrid size={15} /> Photos ({portfolioImages.length})
         </button>
         <button
           onClick={() => setActiveTab('reviews')}
-          className={`pb-3 flex items-center gap-1.5 shrink-0 border-b-2 transition-all ${activeTab === 'reviews' ? 'border-brand-purple text-brand-purple' : 'border-transparent hover:text-text-primary'}`}
+          className={`pb-3 flex items-center gap-1.5 shrink-0 border-b-2 transition-all cursor-pointer ${activeTab === 'reviews' ? 'border-[#d99a3d] text-[#d99a3d] font-black' : 'border-transparent hover:text-text-primary'}`}
         >
           <FiStar size={15} /> Client Reviews ({reviews.length})
         </button>
         <button
           onClick={() => setActiveTab('about')}
-          className={`pb-3 flex items-center gap-1.5 shrink-0 border-b-2 transition-all ${activeTab === 'about' ? 'border-brand-purple text-brand-purple' : 'border-transparent hover:text-text-primary'}`}
+          className={`pb-3 flex items-center gap-1.5 shrink-0 border-b-2 transition-all cursor-pointer ${activeTab === 'about' ? 'border-[#d99a3d] text-[#d99a3d] font-black' : 'border-transparent hover:text-text-primary'}`}
         >
-          <FiUser size={15} /> Pricing & About
+          <FiUser size={15} /> Pricing &amp; About
         </button>
       </div>
 

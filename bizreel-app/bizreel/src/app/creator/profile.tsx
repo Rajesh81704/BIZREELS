@@ -23,10 +23,13 @@ import { FontSize, Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/context';
 import { api } from '@/lib/api';
 
-const YELLOW = '#F59E0B';
-const BLACK = '#0F0F12';
-const DARK_CARD = '#18181C';
-const BORDER = '#2D2D36';
+const AMBER_GOLD = '#D99A3D';
+const DARK_ESPRESSO = '#241B15';
+const WARM_CREAM = '#F8F4EC';
+const WHITE_CARD = '#FFFFFF';
+const BORDER_COLOR = '#E3DCCB';
+const TEXT_DARK = '#0F172A';
+const TEXT_MUTED = '#64748B';
 
 export default function CreatorProfileScreen() {
   const router = useRouter();
@@ -36,16 +39,16 @@ export default function CreatorProfileScreen() {
   const u = (user as any) || {};
   const cp = u.creatorProfile || {};
 
-  const [displayName, setDisplayName] = useState(cp.displayName || u.name || '');
+  const [displayName, setDisplayName] = useState(cp.displayName || cp.name || u.name || '');
   const [category, setCategory] = useState(cp.category || cp.creatorCategories?.[0] || 'Product Reel Creator');
   const [bio, setBio] = useState(cp.bio || '');
   const [mobileNumber, setMobileNumber] = useState(cp.mobileNumber || u.phone || '');
   const [email, setEmail] = useState(cp.email || u.email || '');
 
   // Address
-  const [city, setCity] = useState(cp.address?.city || u.city || '');
-  const [stateName, setStateName] = useState(cp.address?.state || '');
-  const [pincode, setPincode] = useState(cp.address?.pincode || '');
+  const [city, setCity] = useState(cp.address?.city || cp.city || u.city || '');
+  const [stateName, setStateName] = useState(cp.address?.state || cp.state || '');
+  const [pincode, setPincode] = useState(cp.address?.pincode || cp.pincode || '');
 
   // Social Links
   const [instagram, setInstagram] = useState(cp.portfolio?.instagramLink || cp.socialMedia?.instagram?.handleOrUrl || '');
@@ -65,6 +68,7 @@ export default function CreatorProfileScreen() {
       const updatedCreatorProfile = {
         ...cp,
         displayName: displayName.trim(),
+        name: displayName.trim(),
         category: category.trim(),
         bio: bio.trim(),
         mobileNumber: mobileNumber.trim(),
@@ -110,75 +114,170 @@ export default function CreatorProfileScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Top Header Bar */}
       <View style={styles.headerBar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.replace('/(tabs)/home')}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
+          <Ionicons name="arrow-back" size={20} color={AMBER_GOLD} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>CREATOR PROFILE</Text>
-          <Text style={styles.headerSub}>Manage Profile & Bio Details</Text>
+          <Text style={styles.headerBadge}>CREATOR HUB</Text>
+          <Text style={styles.headerTitle}>CREATOR PROFILE &amp; BIO</Text>
         </View>
         <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/creator/onboarding')}>
-          <Ionicons name="create-outline" size={18} color={YELLOW} />
+          <Ionicons name="create-outline" size={18} color={AMBER_GOLD} />
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        {/* Basic Identity Card */}
+        {/* Banner Intro */}
+        <View style={styles.bannerCard}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.bannerSubtitle}>PORTFOLIO &amp; STAGE PROFILE</Text>
+            <Text style={styles.bannerTitle}>SHOWCASE YOUR CREATIVE BRAND</Text>
+            <Text style={styles.bannerDesc}>Update your stage name, bio pitch, contact info, and portfolio links for local business clients.</Text>
+          </View>
+          <View style={styles.bannerIconBox}>
+            <Ionicons name="person" size={22} color={DARK_ESPRESSO} />
+          </View>
+        </View>
+
+        {/* Identity & Category Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Identity & Category</Text>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.numBadge}>
+              <Text style={styles.numBadgeText}>1</Text>
+            </View>
+            <Text style={styles.cardTitle}>Identity &amp; Category Specialty</Text>
+          </View>
 
           <Text style={styles.label}>Creator Display Name *</Text>
-          <TextInput style={styles.input} value={displayName} onChangeText={setDisplayName} placeholder="Rahul Content Studio" placeholderTextColor="rgba(255,255,255,0.4)" />
+          <TextInput
+            style={styles.input}
+            value={displayName}
+            onChangeText={setDisplayName}
+            placeholder="e.g. Rahul Content Studio"
+            placeholderTextColor="#94A3B8"
+          />
 
-          <Text style={styles.label}>Primary Category Specialty</Text>
-          <TextInput style={styles.input} value={category} onChangeText={setCategory} placeholder="Product Reel Creator" placeholderTextColor="rgba(255,255,255,0.4)" />
+          <Text style={styles.label}>Primary Specialty / Category</Text>
+          <TextInput
+            style={styles.input}
+            value={category}
+            onChangeText={setCategory}
+            placeholder="e.g. Product Reel Creator"
+            placeholderTextColor="#94A3B8"
+          />
 
           <Text style={styles.label}>Creator Bio / Pitch</Text>
           <TextInput
-            style={[styles.input, { height: 80 }]}
+            style={[styles.input, { height: 90, textAlignVertical: 'top', paddingTop: 10 }]}
             value={bio}
             onChangeText={setBio}
-            placeholder="Tell local brands why they should collaborate with you..."
-            placeholderTextColor="rgba(255,255,255,0.4)"
+            placeholder="Tell local vendors and brands why they should collaborate with you..."
+            placeholderTextColor="#94A3B8"
             multiline
           />
         </View>
 
         {/* Contact & Location Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Contact & Location</Text>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.numBadge}>
+              <Text style={styles.numBadgeText}>2</Text>
+            </View>
+            <Text style={styles.cardTitle}>Contact &amp; Physical Location</Text>
+          </View>
 
           <Text style={styles.label}>Mobile Phone Number</Text>
-          <TextInput style={styles.input} value={mobileNumber} onChangeText={setMobileNumber} keyboardType="phone-pad" placeholder="+91 98765 43210" placeholderTextColor="rgba(255,255,255,0.4)" />
+          <TextInput
+            style={styles.input}
+            value={mobileNumber}
+            onChangeText={setMobileNumber}
+            keyboardType="phone-pad"
+            placeholder="+91 98765 43210"
+            placeholderTextColor="#94A3B8"
+          />
 
           <Text style={styles.label}>Email Address</Text>
-          <TextInput style={styles.input} value={email} onChangeText={setEmail} keyboardType="email-address" placeholder="creator@example.com" placeholderTextColor="rgba(255,255,255,0.4)" />
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            placeholder="creator@example.com"
+            placeholderTextColor="#94A3B8"
+            autoCapitalize="none"
+          />
 
-          <Text style={styles.label}>City *</Text>
-          <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="e.g. Raipur, Mumbai, Bengaluru" placeholderTextColor="rgba(255,255,255,0.4)" />
+          <Text style={styles.label}>City Location *</Text>
+          <TextInput
+            style={styles.input}
+            value={city}
+            onChangeText={setCity}
+            placeholder="e.g. Mumbai, Bengaluru, Raipur"
+            placeholderTextColor="#94A3B8"
+          />
 
           <Text style={styles.label}>State</Text>
-          <TextInput style={styles.input} value={stateName} onChangeText={setStateName} placeholder="Chhattisgarh" placeholderTextColor="rgba(255,255,255,0.4)" />
+          <TextInput
+            style={styles.input}
+            value={stateName}
+            onChangeText={setStateName}
+            placeholder="e.g. Maharashtra"
+            placeholderTextColor="#94A3B8"
+          />
         </View>
 
         {/* Social Links Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Social Handles & Links</Text>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.numBadge}>
+              <Text style={styles.numBadgeText}>3</Text>
+            </View>
+            <Text style={styles.cardTitle}>Social Handles &amp; Portfolio Links</Text>
+          </View>
 
-          <Text style={styles.label}>Instagram Link</Text>
-          <TextInput style={styles.input} value={instagram} onChangeText={setInstagram} placeholder="https://instagram.com/handle" placeholderTextColor="rgba(255,255,255,0.4)" autoCapitalize="none" />
+          <Text style={styles.label}>Instagram Handle or Link</Text>
+          <TextInput
+            style={styles.input}
+            value={instagram}
+            onChangeText={setInstagram}
+            placeholder="https://instagram.com/handle"
+            placeholderTextColor="#94A3B8"
+            autoCapitalize="none"
+          />
 
-          <Text style={styles.label}>YouTube Link</Text>
-          <TextInput style={styles.input} value={youtube} onChangeText={setYoutube} placeholder="https://youtube.com/@channel" placeholderTextColor="rgba(255,255,255,0.4)" autoCapitalize="none" />
+          <Text style={styles.label}>YouTube Channel Link</Text>
+          <TextInput
+            style={styles.input}
+            value={youtube}
+            onChangeText={setYoutube}
+            placeholder="https://youtube.com/@channel"
+            placeholderTextColor="#94A3B8"
+            autoCapitalize="none"
+          />
 
-          <Text style={styles.label}>Sample Reel / Portfolio Link</Text>
-          <TextInput style={styles.input} value={portfolioVideo} onChangeText={setPortfolioVideo} placeholder="https://drive.google.com/..." placeholderTextColor="rgba(255,255,255,0.4)" autoCapitalize="none" />
+          <Text style={styles.label}>Sample Reel / Portfolio Video Link</Text>
+          <TextInput
+            style={styles.input}
+            value={portfolioVideo}
+            onChangeText={setPortfolioVideo}
+            placeholder="https://drive.google.com/..."
+            placeholderTextColor="#94A3B8"
+            autoCapitalize="none"
+          />
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity style={styles.submitBtn} onPress={handleSaveProfile} disabled={saving}>
-          {saving ? <ActivityIndicator color={BLACK} /> : <Text style={styles.submitBtnText}>Save Profile Changes ✦</Text>}
+        <TouchableOpacity style={styles.submitBtn} onPress={handleSaveProfile} disabled={saving} activeOpacity={0.85}>
+          {saving ? (
+            <ActivityIndicator color={AMBER_GOLD} />
+          ) : (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="checkmark-circle" size={18} color={AMBER_GOLD} />
+              <Text style={styles.submitBtnText}>SAVE CREATOR PROFILE</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -186,45 +285,125 @@ export default function CreatorProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BLACK },
+  container: { flex: 1, backgroundColor: WARM_CREAM },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
-    backgroundColor: DARK_CARD,
+    backgroundColor: DARK_ESPRESSO,
     borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    borderBottomColor: '#3A2C22',
     gap: Spacing.three,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    backgroundColor: BLACK,
+    width: 38,
+    height: 38,
+    backgroundColor: '#1A1410',
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: '#3A2C22',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
+    borderRadius: 10,
   },
-  headerTitle: { color: YELLOW, fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 1 },
-  headerSub: { color: '#888', fontSize: FontSize.xs, fontWeight: '600' },
-  actionBtn: { width: 36, height: 36, backgroundColor: BLACK, borderWidth: 1, borderColor: BORDER, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
-  scroll: { flex: 1 },
-  scrollContent: { padding: Spacing.four, gap: Spacing.four },
-  card: { backgroundColor: DARK_CARD, borderWidth: 1, borderColor: BORDER, padding: Spacing.four, borderRadius: 12, gap: Spacing.two },
-  cardTitle: { color: YELLOW, fontSize: FontSize.sm, fontWeight: '900', marginBottom: 4 },
-  label: { color: '#ddd', fontSize: FontSize.xs, fontWeight: '700', marginTop: 4 },
-  input: {
-    backgroundColor: BLACK,
+  headerBadge: { color: AMBER_GOLD, fontSize: 10, fontWeight: '900', letterSpacing: 1.5 },
+  headerTitle: { color: '#FFFFFF', fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 0.5 },
+  actionBtn: {
+    width: 38,
+    height: 38,
+    backgroundColor: '#1A1410',
     borderWidth: 1,
-    borderColor: BORDER,
-    color: '#fff',
+    borderColor: '#3A2C22',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+  },
+  scroll: { flex: 1 },
+  scrollContent: { padding: Spacing.four, gap: Spacing.four, paddingBottom: 40 },
+
+  bannerCard: {
+    backgroundColor: DARK_ESPRESSO,
+    padding: Spacing.four,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#3A2C22',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.three,
+  },
+  bannerSubtitle: { color: AMBER_GOLD, fontSize: 9.5, fontWeight: '900', letterSpacing: 1.5, marginBottom: 2 },
+  bannerTitle: { color: '#FFFFFF', fontSize: FontSize.base, fontWeight: '900', letterSpacing: 0.5 },
+  bannerDesc: { color: '#CBD5E1', fontSize: FontSize.xs, marginTop: 4, lineHeight: 16 },
+  bannerIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: AMBER_GOLD,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  card: {
+    backgroundColor: WHITE_CARD,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    padding: Spacing.four,
+    borderRadius: 14,
+    gap: Spacing.two,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER_COLOR,
+    paddingBottom: 10,
+    marginBottom: 4,
+  },
+  numBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    backgroundColor: DARK_ESPRESSO,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  numBadgeText: { color: AMBER_GOLD, fontSize: 11, fontWeight: '900' },
+  cardTitle: { color: DARK_ESPRESSO, fontSize: FontSize.xs, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  label: { color: '#334155', fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 6 },
+  input: {
+    backgroundColor: WARM_CREAM,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    color: TEXT_DARK,
     paddingHorizontal: Spacing.three,
     height: 44,
     fontSize: FontSize.xs,
+    fontWeight: '600',
     borderRadius: 8,
   },
-  submitBtn: { backgroundColor: YELLOW, height: 50, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
-  submitBtnText: { color: BLACK, fontSize: FontSize.base, fontWeight: '900' },
+
+  submitBtn: {
+    backgroundColor: DARK_ESPRESSO,
+    borderWidth: 1,
+    borderColor: DARK_ESPRESSO,
+    height: 50,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  submitBtnText: { color: AMBER_GOLD, fontSize: FontSize.xs, fontWeight: '900', letterSpacing: 1 },
 });
