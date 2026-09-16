@@ -40,7 +40,7 @@ export default function MyOrdersTab({
         const orderId = o._id || o.id;
         const listing = o.listing || {};
         const vendor = o.vendor || listing.vendor || {};
-        const vendorName = vendor.shopName || vendor.name || 'Verified Vendor';
+        const vendorName = vendor.shopName || vendor.name || 'Seller';
         const rawImg = listing.images?.[0] || listing.image || listing.mediaUrl || DEFAULT_ORDER_IMG;
         const imgUrl = resolveMediaUrl(rawImg);
 

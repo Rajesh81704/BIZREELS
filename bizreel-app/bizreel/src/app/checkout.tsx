@@ -77,7 +77,7 @@ export default function CheckoutScreen() {
     ? [
         {
           vendor_id: 'direct_vendor',
-          vendor: { name: params.vendorName || 'Verified Vendor' },
+          vendor: { name: params.vendorName || 'Seller' },
           items: [
             {
               listing_id: params.listingId || 'direct_item',
@@ -113,7 +113,7 @@ export default function CheckoutScreen() {
     ? [
         {
           vendor_id: 'direct_vendor',
-          vendor: { name: params.vendorName || 'Verified Vendor' },
+          vendor: { name: params.vendorName || 'Seller' },
           items: [
             {
               listing_id: params.listingId || 'direct_item',

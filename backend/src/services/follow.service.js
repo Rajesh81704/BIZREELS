@@ -256,7 +256,7 @@ const myFollowing = async (followerId, queryOptions = {}) => {
   const items = users.map(u => ({
     id: u._id.toString(),
     _id: u._id.toString(),
-    name: u.vendorProfile?.shopName || u.vendorProfile?.businessName || u.name || 'Verified Vendor',
+    name: u.vendorProfile?.shopName || u.vendorProfile?.businessName || u.name || 'BizReels Seller',
     profile_pic: u.profile_pic || u.avatarUrl,
     avatarUrl: u.avatarUrl || u.profile_pic,
     roles: u.roles || [],

@@ -398,7 +398,7 @@ export default function ImageFullscreenViewer({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-white text-xs sm:text-sm font-extrabold truncate max-w-[150px] sm:max-w-[220px]">
-                  {vendor.vendorProfile?.shopName || vendor.name || 'Verified Vendor'}
+                  {vendor.vendorProfile?.shopName || vendor.name || 'Seller'}
                 </p>
                 {currentPost.isBoosted && (
                   <span className="bg-[#d99a3d]/20 text-[#d99a3d] text-[8px] font-black px-1.5 py-0.5 rounded-full border border-[#d99a3d]/40 uppercase tracking-wide shrink-0">

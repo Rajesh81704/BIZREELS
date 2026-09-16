@@ -860,7 +860,7 @@ router.get('/me/activities', requireAuth, catchAsync(async (req, res) => {
         vendor: {
           id: vendor._id?.toString(),
           _id: vendor._id?.toString(),
-          name: vendor.name || 'Verified Vendor',
+          name: vendor.name || 'BizReels Seller',
           avatarUrl: vendor.avatarUrl || vendor.profile_pic,
           vendorProfile: vendor.vendorProfile,
           phone: vendor.phone,

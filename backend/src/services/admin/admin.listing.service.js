@@ -293,7 +293,7 @@ const listListingsAdmin = async (...args) => {
       id,
       _id: id,
       vendor_id: vendorObj ? vendorObj._id?.toString() : (item.vendor?.toString() || null),
-      vendor_name: vendorObj?.vendorProfile?.businessName || vendorObj?.name || 'Verified Vendor',
+      vendor_name: vendorObj?.vendorProfile?.businessName || vendorObj?.name || 'Seller',
       vendor_email: vendorObj?.email || null,
       vendor_phone: vendorObj?.phone || null,
       vendor_avatar: vendorObj?.avatar || null,

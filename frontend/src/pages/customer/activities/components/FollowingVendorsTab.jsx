@@ -34,7 +34,7 @@ export default function FollowingVendorsTab({
       {following.map((f) => {
         const vendor = f.vendor || f.user || f;
         const vendorId = vendor._id || vendor.id;
-        const vendorName = vendor.vendorProfile?.shopName || vendor.shopName || vendor.name || 'Verified Vendor';
+        const vendorName = vendor.vendorProfile?.shopName || vendor.shopName || vendor.name || 'Seller';
         const avatar = resolveMediaUrl(vendor.avatarUrl || vendor.profile_pic || vendor.vendorProfile?.logo || DEFAULT_AVATAR);
         const city = vendor.city || vendor.location?.city || 'Local';
 

@@ -48,29 +48,34 @@ function computeVendorVerification(user, counts = {}) {
 
   // Determine standard tier
   let tier = 'unverified';
-  let badgeLabel = 'Unverified';
+  let badgeLabel = 'Unverified Vendor';
   let badgeColor = '⚪';
 
-  if (completionPercentage === 100) {
+  const isKycApproved = user.kyc_status === 'approved' || user.is_verified === true || user.isVerified === true || vp.verificationStatus === 'approved';
+  const hasApprovedDoc = (documents.aadhaar?.status === 'approved' || documents.aadhaar?.verified) || 
+                         (documents.pan?.status === 'approved' || documents.pan?.verified) ||
+                         (documents.gst?.status === 'approved' || documents.gst?.verified);
+
+  if (completionPercentage === 100 && (isKycApproved || hasApprovedDoc)) {
     tier = 'trusted_vendor';
     badgeLabel = 'Trusted Vendor';
     badgeColor = '👑';
-  } else if (completionPercentage >= 85) {
+  } else if (completionPercentage >= 85 && (isKycApproved || hasApprovedDoc)) {
     tier = 'verified_vendor';
     badgeLabel = 'Verified Vendor';
     badgeColor = '🟢';
-  } else if (completionPercentage >= 50) {
+  } else if (completionPercentage >= 30) {
     tier = 'partially_verified';
     badgeLabel = 'Partially Verified';
     badgeColor = '🟡';
   }
 
-  // Premium Vendor criteria override
+  // Premium Vendor criteria override (only if verified)
   const pCount = counts.productsCount || 0;
   const rCount = counts.reelsCount || 0;
   const oCount = counts.ordersCount || 0;
 
-  if (pCount >= 100 && rCount >= 100 && oCount >= 10000) {
+  if (pCount >= 100 && rCount >= 100 && oCount >= 10000 && (isKycApproved || hasApprovedDoc)) {
     tier = 'premium_vendor';
     badgeLabel = 'Premium Vendor';
     badgeColor = '💎';

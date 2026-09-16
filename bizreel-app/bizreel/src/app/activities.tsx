@@ -194,7 +194,7 @@ export default function MyActivitiesScreen() {
 
     if (activeTab === 'chat-inquiries') {
       const vendor = item.vendor || item.target_user || {};
-      const vendorName = vendor.shopName || vendor.businessName || vendor.name || 'Verified Vendor';
+      const vendorName = vendor.shopName || vendor.businessName || vendor.name || 'Seller';
       const avatar = resolveImageUrl(vendor.avatarUrl || vendor.profile_pic);
       const isOpen = item.status !== 'closed' && item.status !== 'resolved';
 

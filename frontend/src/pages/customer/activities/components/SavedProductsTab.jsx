@@ -34,7 +34,7 @@ export default function SavedProductsTab({
       {products.map((p) => {
         const itemId = p._id || p.id;
         const vendorObj = p.vendor || p.vendorId || {};
-        const vendorName = vendorObj.shopName || vendorObj.businessName || vendorObj.name || 'Verified Vendor';
+        const vendorName = vendorObj.shopName || vendorObj.businessName || vendorObj.name || 'Seller';
         const rawImg = p.images?.[0] || p.image || p.mediaUrl || DEFAULT_PRODUCT_IMG;
         const imgUrl = resolveMediaUrl(rawImg);
 

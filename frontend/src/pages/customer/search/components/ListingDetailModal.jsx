@@ -111,7 +111,7 @@ export default function ListingDetailModal({
   const isLiked = !!likedItems[itemId];
 
   const vendorObj = selectedItem.vendor || selectedItem.vendorId || {};
-  const vendorName = vendorObj.shopName || vendorObj.businessName || vendorObj.name || selectedItem.vendorName || 'Verified Vendor';
+  const vendorName = vendorObj.shopName || vendorObj.businessName || vendorObj.name || selectedItem.vendorName || 'Seller';
   const vendorAvatar = vendorObj.avatarUrl || vendorObj.logo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80';
   const city = selectedItem.city || vendorObj.city || selectedItem.location?.city || 'Local Shop';
 

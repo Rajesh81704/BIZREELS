@@ -29,7 +29,7 @@ export default function ListingCard({
   const isVendor = activeRole === 'vendor' || activeRole === 'creator';
   const itemId = item._id || item.id;
   const vendorObj = item.vendor || item.vendorId || {};
-  const vendorName = vendorObj.shopName || vendorObj.businessName || vendorObj.name || item.vendorName || 'Verified Vendor';
+  const vendorName = vendorObj.shopName || vendorObj.businessName || vendorObj.name || item.vendorName || 'Seller';
   const city = item.city || vendorObj.city || item.location?.city || 'Local';
   const vendorAvatar = vendorObj.avatarUrl || vendorObj.logo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80';
   

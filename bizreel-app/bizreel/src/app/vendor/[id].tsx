@@ -260,6 +260,14 @@ export default function PublicVendorProfileScreen() {
 
   const avatarUri = resolveImageUrl(vendor.profile_pic) || 'https://via.placeholder.com/150';
   const bannerUri = resolveImageUrl(vendor.cover_banner) || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800';
+  const isVerified = Boolean(
+    (vendor as any)?.isVerified === true ||
+    (vendor as any)?.is_verified === true ||
+    (vendor as any)?.kyc_status === 'approved' ||
+    (vendor as any)?.kyc_status === 'verified' ||
+    (vendor as any)?.vendorProfile?.verificationStatus === 'verified' ||
+    (vendor as any)?.vendorProfile?.verificationStatus === 'verified_vendor'
+  );
 
   return (
     <View style={styles.container}>
@@ -273,7 +281,7 @@ export default function PublicVendorProfileScreen() {
             {vendor.business_name || vendor.name}
           </Text>
           <Text style={styles.headerSub} numberOfLines={1}>
-            {vendor.category || 'Verified Business Store'}
+            {vendor.category || (isVerified ? 'Verified Business Store' : 'Local Business Store')}
           </Text>
         </View>
         {!hideCustomerActions && (
@@ -335,11 +343,30 @@ export default function PublicVendorProfileScreen() {
               <Text style={styles.businessTitle}>
                 {vendor.business_name || vendor.name}
               </Text>
-              <View style={styles.verifiedBadge}>
-                <Ionicons name="shield-checkmark" size={12} color="#fff" />
-                <Text style={styles.verifiedBadgeText}>VERIFIED STORE</Text>
-              </View>
+              {isVerified ? (
+                <View style={styles.verifiedBadge}>
+                  <Ionicons name="shield-checkmark" size={12} color="#fff" />
+                  <Text style={styles.verifiedBadgeText}>VERIFIED STORE</Text>
+                </View>
+              ) : (
+                <View style={[styles.verifiedBadge, { backgroundColor: '#F59E0B' }]}>
+                  <Ionicons name="shield-outline" size={12} color="#fff" />
+                  <Text style={styles.verifiedBadgeText}>UNVERIFIED</Text>
+                </View>
+              )}
             </View>
+
+            {/* Unverified Owner Alert Prompt */}
+            {isOwner && !isVerified && (
+              <View style={{ backgroundColor: '#241B15', borderWidth: 1, borderColor: '#D99A3D', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700', flex: 1, marginRight: 8 }}>
+                  ⚠️ Business Unverified: Complete KYC verification to earn your official 🟢 Verified Vendor badge.
+                </Text>
+                <TouchableOpacity onPress={() => router.push('/vendor/verification' as any)} style={{ backgroundColor: YELLOW, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}>
+                  <Text style={{ color: BLACK, fontSize: 11, fontWeight: '900' }}>Verify Now</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             <Text style={styles.categorySub}>
               {vendor.category ? `${vendor.category}` : 'General Business'}
@@ -552,8 +579,8 @@ export default function PublicVendorProfileScreen() {
               <View style={styles.aboutRow}>
                 <Ionicons name="shield-checkmark-outline" size={16} color={YELLOW} />
                 <Text style={styles.aboutLabel}>Verification Status:</Text>
-                <Text style={[styles.aboutVal, { color: '#10B981', fontWeight: '900' }]}>
-                  Verified Business
+                <Text style={[styles.aboutVal, { color: isVerified ? '#10B981' : '#F59E0B', fontWeight: '900' }]}>
+                  {isVerified ? 'Verified Business' : 'Unverified Business'}
                 </Text>
               </View>
             </View>

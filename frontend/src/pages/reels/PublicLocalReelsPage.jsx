@@ -871,9 +871,11 @@ const PublicLocalReelsPage = () => {
                     <div className="flex flex-col">
                       <div className="flex items-center gap-1">
                         <span className="font-bold text-sm leading-tight text-white">
-                          {currentReel.creator?.name || currentReel.creator?.business_name || 'Verified Vendor'}
+                          {currentReel.creator?.name || currentReel.creator?.business_name || 'Seller'}
                         </span>
-                        <FiShield className="w-3.5 h-3.5 text-[#d99a3d] fill-current" />
+                        {(currentReel.creator?.kyc_status === 'approved' || currentReel.creator?.is_verified === true || currentReel.creator?.isVerified === true) && (
+                          <FiShield className="w-3.5 h-3.5 text-[#d99a3d] fill-current" title="Verified Creator" />
+                        )}
                       </div>
                       <span className="text-[11px] text-white/70">
                         {currentReel.location?.city || 'Local Store'}

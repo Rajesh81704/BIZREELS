@@ -5,7 +5,7 @@ import CartItemRow from './CartItemRow';
 
 export default function CartVendorGroup({ group, onUpdateQty, onRemove, updatingId }) {
   const vendorId = group.vendor_id || group.vendor?._id || group.vendor?.id;
-  const vendorName = group.vendor?.shopName || group.vendor?.businessName || group.vendor?.name || 'Verified Vendor';
+  const vendorName = group.vendor?.shopName || group.vendor?.businessName || group.vendor?.name || 'Seller';
 
   return (
     <div className="bg-white border border-[#e3dccb] rounded-2xl overflow-hidden shadow-xs">

@@ -152,9 +152,43 @@ export default function VendorDashboardPage() {
     setShowWelcomeModal(false);
   };
 
+  const isVendorKycApproved = currentUser?.kyc_status === 'approved' || currentUser?.kyc_status === 'verified' || currentUser?.is_verified === true || currentUser?.isVerified === true;
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans p-2 sm:p-4 animate-fade-in">
       
+      {/* ── 0. UNVERIFIED VENDOR ALERT PROMPT ── */}
+      {!isVendorKycApproved && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-amber-500/10 border-2 border-[#d99a3d] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs font-sans">
+          <div className="flex items-start gap-3.5 min-w-0">
+            <div className="p-2.5 bg-[#d99a3d] text-[#241b15] rounded-xl font-bold flex-shrink-0 mt-0.5 shadow-xs">
+              <FiShield size={22} />
+            </div>
+            <div>
+              <h4 className="text-sm sm:text-base font-extrabold text-[#241b15] flex items-center gap-2 flex-wrap">
+                <span>{bi('Your Business is Unverified', 'आपका व्यवसाय सत्यापित नहीं है')}</span>
+                <span className="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded-full font-extrabold border border-amber-300 uppercase tracking-wide">
+                  {bi('Unverified Status', 'अपुष्ट स्थिति')}
+                </span>
+              </h4>
+              <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed font-medium">
+                {bi(
+                  'Complete your identity & business document verification (Aadhaar, PAN, GST, Payouts) to earn your official 🟢 Verified Vendor badge, unlock direct WhatsApp buyer leads, and gain maximum customer trust.',
+                  'आधिकारिक 🟢 सत्यापित विक्रेता बैज पाने, सीधे व्हाट्सएप ग्राहक लीड्स अनलॉक करने और अधिकतम ग्राहक विश्वास हासिल करने के लिए अपना दस्तावेज़ सत्यापन पूरा करें।'
+                )}
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/vendor/verification"
+            className="px-5 py-2.5 bg-[#241b15] hover:bg-[#342820] text-[#d99a3d] rounded-xl font-extrabold text-xs transition shadow-md whitespace-nowrap cursor-pointer border border-[#241b15] flex items-center gap-1.5 self-stretch sm:self-auto justify-center flex-shrink-0"
+          >
+            <span>{bi('Verify Business Now', 'अभी व्यवसाय सत्यापित करें')}</span>
+            <FiArrowRight size={14} />
+          </Link>
+        </div>
+      )}
+
       {/* Active Special Offers & Deals */}
       <ActiveOffersPanel role="vendor" />
 

@@ -331,14 +331,16 @@ export default function VendorLayout() {
     },
   ];
 
-  const currentTier = vendorProfile.verificationStatus || 'unverified';
+  const isFullyVerified = profileUser?.kyc_status === 'approved' || profileUser?.kyc_status === 'verified' || profileUser?.is_verified === true || profileUser?.isVerified === true || vendorProfile.verificationStatus === 'verified' || vendorProfile.verificationStatus === 'verified_vendor';
+  const rawTier = vendorProfile.verificationStatus || 'unverified';
+  const currentTier = isFullyVerified ? (rawTier === 'unverified' ? 'verified_vendor' : rawTier) : (rawTier === 'partially_verified' ? 'partially_verified' : 'unverified');
   const isSubscribed = !!profileUser.is_subscribed_verified;
 
   const getTierBadge = () => {
-    if (currentTier === 'premium_verified' || (isSubscribed && currentTier === 'verified_vendor')) {
+    if (isFullyVerified && (currentTier === 'premium_verified' || isSubscribed)) {
       return { icon: '🔵', label: bi('Premium Verified', 'प्रीमियम सत्यापित'), class: 'bg-blue-500/10 text-blue-600 border-blue-500/20' };
     }
-    if (currentTier === 'verified_vendor') {
+    if (isFullyVerified && (currentTier === 'verified_vendor' || currentTier === 'verified')) {
       return { icon: '🟢', label: bi('Verified Vendor', 'सत्यापित विक्रेता'), class: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' };
     }
     if (currentTier === 'partially_verified') {
@@ -519,12 +521,12 @@ export default function VendorLayout() {
         </header>
 
         {/* Verification Dialogue Banner (Show if not fully verified) */}
-        {currentTier !== 'verified_vendor' && currentTier !== 'premium_verified' && (
-          <div className="bg-[#241b15] text-[#f8f4ec] border-b border-[#d99a3d]/40 px-3 sm:px-5 py-2.5 text-[11px] sm:text-xs font-bold flex items-center justify-between gap-2 sm:gap-4 shadow-xs font-sans min-w-0 w-full">
+        {!isFullyVerified && (
+          <div className="bg-[#241b15] text-[#f8f4ec] border-b border-[#d99a3d]/40 px-3 sm:px-5 py-2.5 text-[11px] sm:text-xs font-bold flex items-center justify-between gap-2 sm:gap-4 shadow-xs font-sans min-w-0 w-full animate-fade-in">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] flex-shrink-0 animate-pulse" />
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.8)] flex-shrink-0 animate-pulse" />
               <span className="truncate text-[11px] sm:text-xs tracking-wide text-[#f8f4ec] font-bold">
-                {bi('Verify your business to get 5x more leads & maximum buyer trust!', 'अपने व्यवसाय का सत्यापन करें और 5 गुना अधिक लीड्स और अधिकतम ग्राहक विश्वास पाएं!')}
+                {bi('⚠️ Business Not Verified: Complete your document verification to get your official 🟢 Verified Vendor badge & gain customer trust!', '⚠️ व्यवसाय सत्यापित नहीं है: आधिकारिक 🟢 सत्यापित विक्रेता बैज और ग्राहकों का विश्वास पाने के लिए सत्यापन पूरा करें!')}
               </span>
             </div>
             <Link

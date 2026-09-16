@@ -278,7 +278,7 @@ export default function SavedReelsScreen() {
                     ₹{(item.salePrice || item.price || 0).toLocaleString('en-IN')}
                   </Text>
                   <Text style={styles.cardVendor} numberOfLines={1}>
-                    {item.vendor?.name || item.vendorName || item.city || 'Verified Vendor'}
+                    {item.vendor?.name || item.vendorName || item.city || 'Seller'}
                   </Text>
                 </View>
 

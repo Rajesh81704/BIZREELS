@@ -777,7 +777,7 @@ export default function HomeScreen() {
                         </Text>
 
                         <Text style={styles.vendorName} numberOfLines={1}>
-                          {item.vendor?.businessName || item.vendor?.name || 'Verified Vendor'}
+                          {item.vendor?.businessName || item.vendor?.name || 'Seller'}
                         </Text>
 
                         <View style={styles.priceRow}>

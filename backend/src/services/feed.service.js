@@ -230,7 +230,7 @@ const buildFeed = async ({
         const userObj = {
           id: u._id.toString(),
           _id: u._id.toString(),
-          name: u.shop_name || u.business_name || u.name || 'Verified Vendor',
+          name: u.shop_name || u.business_name || u.name || 'BizReels Seller',
           shop_name: u.shop_name,
           business_name: u.business_name,
           profile_pic: u.profile_pic || u.avatarUrl,
@@ -421,7 +421,7 @@ const getHomeTrendingFeed = async () => {
       num: String(index + 1).padStart(2, '0'),
       img: (l.images && l.images[0]) || (l.serviceDetails && l.serviceDetails.coverImage) || defaultTrending[index % defaultTrending.length]?.img,
       title: l.title,
-      sub: l.shortDescription || l.subcategory || l.category || (l.vendor ? (l.vendor.business_name || l.vendor.name) : 'Verified Vendor'),
+      sub: l.shortDescription || l.subcategory || l.category || (l.vendor ? (l.vendor.business_name || l.vendor.name) : 'BizReels Seller'),
       meta: `${(l.views || 0).toLocaleString()} views · ${(l.orders_count || l.saves_count || 0)} leads`,
       price: l.price || l.salePrice || 0,
       category: l.category

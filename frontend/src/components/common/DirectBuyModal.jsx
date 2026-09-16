@@ -98,7 +98,7 @@ export default function DirectBuyModal({
   const itemId = item?._id || item?.id;
   const vendorObj = vendorFullDetails || item?.vendor || item?.creator || item?.vendorId || {};
   const vendorId = vendorObj?._id || vendorObj?.id || (typeof vendorObj === 'string' ? vendorObj : null);
-  const vendorName = vendorObj?.shopName || vendorObj?.vendorProfile?.shopName || vendorObj?.businessName || vendorObj?.name || 'Verified Vendor';
+  const vendorName = vendorObj?.shopName || vendorObj?.vendorProfile?.shopName || vendorObj?.businessName || vendorObj?.name || 'Seller';
   const vendorAvatar = vendorObj?.avatarUrl || vendorObj?.profile_pic || null;
 
   // Pricing calculations

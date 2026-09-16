@@ -88,7 +88,7 @@ export default function Home() {
         views: item.views ? (typeof item.views === 'number' ? (item.views >= 1000 ? `${(item.views/1000).toFixed(1)}K` : `${item.views}`) : item.views) : '1.5K',
         title,
         category: item.category || item.sub || 'Products',
-        sub: item.sub || item.shortDescription || item.subcategory || item.category || (item.vendor ? (item.vendor.business_name || item.vendor.name) : 'Verified Vendor'),
+        sub: item.sub || item.shortDescription || item.subcategory || item.category || (item.vendor ? (item.vendor.business_name || item.vendor.name) : 'Seller'),
         meta: item.meta || `${(item.views || 1200).toLocaleString()} views`
       });
     };

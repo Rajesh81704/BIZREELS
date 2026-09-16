@@ -1066,7 +1066,7 @@ export default function CustomerHomePage() {
                         </div>
                         <div>
                           <h4 className="text-xs font-extrabold text-[#1a1a1a] flex items-center gap-1.5">
-                            {item.vendor?.name || 'Verified Vendor'}
+                            {item.vendor?.name || item.vendor?.businessName || 'Seller'}
                             <span className="bg-emerald-500/15 text-emerald-700 text-[9px] px-1.5 py-0.2 rounded font-bold uppercase tracking-wider">Product</span>
                           </h4>
                           <p className="text-[10px] text-slate-500 flex items-center gap-1">
@@ -1199,7 +1199,7 @@ export default function CustomerHomePage() {
 
                       {/* Expandable Caption */}
                       <div className="text-xs text-slate-700 leading-relaxed mt-1">
-                        <span className="font-extrabold text-[#1a1a1a] mr-1.5">{item.vendor?.name || 'Verified Vendor'}</span>
+                        <span className="font-extrabold text-[#1a1a1a] mr-1.5">{item.vendor?.name || item.vendor?.businessName || 'Seller'}</span>
                         {isExpanded ? (
                           <span>{item.description}</span>
                         ) : (

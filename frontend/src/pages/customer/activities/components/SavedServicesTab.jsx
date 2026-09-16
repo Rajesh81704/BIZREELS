@@ -34,7 +34,7 @@ export default function SavedServicesTab({
       {services.map((s) => {
         const itemId = s._id || s.id;
         const vendorObj = s.vendor || s.vendorId || {};
-        const vendorName = vendorObj.shopName || vendorObj.businessName || vendorObj.name || 'Verified Vendor';
+        const vendorName = vendorObj.shopName || vendorObj.businessName || vendorObj.name || 'Seller';
         const rawImg = s.images?.[0] || s.image || s.mediaUrl || DEFAULT_SERVICE_IMG;
         const imgUrl = resolveMediaUrl(rawImg);
 

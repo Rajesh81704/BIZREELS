@@ -340,7 +340,7 @@ export default function AdminListingsPage() {
             )}
           </div>
           <div className="truncate text-xs font-semibold text-[#1a1a1a]">
-            {row.vendor_name || 'Verified Vendor'}
+            {row.vendor_name || 'Seller'}
           </div>
         </div>
       )
