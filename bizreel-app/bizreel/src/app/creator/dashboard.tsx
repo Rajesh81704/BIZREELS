@@ -190,10 +190,30 @@ export default function CreatorDashboardScreen({ embedded }: { embedded?: boolea
               <Text style={styles.creatorName}>
                 {(user as any)?.creatorProfile?.displayName || user?.name || 'Content Creator'}
               </Text>
-              <View style={styles.verifiedBadge}>
-                <Ionicons name="checkmark-circle" size={12} color="#0F172A" />
-                <Text style={styles.verifiedBadgeText}>CREATOR</Text>
-              </View>
+              {(() => {
+                const isCreatorVerified = Boolean(
+                  stats?.verificationStatus === 'pro_verified' ||
+                  stats?.verificationStatus === 'verified_creator' ||
+                  (user as any)?.isVerified ||
+                  (user as any)?.is_verified ||
+                  (user as any)?.is_subscribed_verified ||
+                  (user as any)?.kyc_status === 'approved' ||
+                  (user as any)?.creatorProfile?.isVerified
+                );
+                return isCreatorVerified ? (
+                  <View style={styles.verifiedBadge}>
+                    <Ionicons name="checkmark-circle" size={12} color="#0F172A" />
+                    <Text style={styles.verifiedBadgeText}>VERIFIED CREATOR</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.verifiedBadge, { backgroundColor: '#FEF3C7' }]}
+                    onPress={() => router.push('/creator/verification')}>
+                    <Ionicons name="alert-circle-outline" size={12} color="#B45309" />
+                    <Text style={[styles.verifiedBadgeText, { color: '#B45309' }]}>UNVERIFIED</Text>
+                  </TouchableOpacity>
+                );
+              })()}
             </View>
             <Text style={styles.creatorSub} numberOfLines={2}>
               {(user as any)?.creatorProfile?.category || (user as any)?.creatorProfile?.bio || 'Short-Form Video Reel Specialist'} • Tap to edit rates & bio ›
@@ -214,7 +234,7 @@ export default function CreatorDashboardScreen({ embedded }: { embedded?: boolea
           onPress={() => router.push('/creator/verification')}>
           <Ionicons name="shield-checkmark" size={16} color={GOLD} />
           <Text style={styles.kycBannerText} numberOfLines={1}>
-            {stats?.verificationStatus === 'pro_verified' || stats?.verificationStatus === 'verified_creator'
+            {stats?.verificationStatus === 'pro_verified' || stats?.verificationStatus === 'verified_creator' || (user as any)?.isVerified || (user as any)?.kyc_status === 'approved'
               ? '✅ Verified Creator Badge Active'
               : 'Complete KYC verification to unlock brand campaign deals ›'}
           </Text>

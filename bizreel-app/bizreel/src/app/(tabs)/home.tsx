@@ -445,14 +445,33 @@ export default function HomeScreen() {
                 <TouchableOpacity
                   style={{ flex: 1 }}
                   onPress={() => router.push('/vendor/profile' as any)}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     <Text style={styles.vendorStoreName}>
                       {(user as any)?.vendorProfile?.storeName || (user as any)?.vendorProfile?.businessName || user?.name || 'My Store'}
                     </Text>
-                    <View style={styles.verifiedShieldBadge}>
-                      <Ionicons name="shield-checkmark" size={12} color="#fff" />
-                      <Text style={styles.verifiedShieldText}>VERIFIED</Text>
-                    </View>
+                    {(() => {
+                      const isVendorVerified = Boolean(
+                        (user as any)?.isVerified ||
+                        (user as any)?.is_verified ||
+                        (user as any)?.is_subscribed_verified ||
+                        (user as any)?.vendorProfile?.isVerified ||
+                        (user as any)?.kyc_status === 'approved' ||
+                        (user as any)?.vendorProfile?.kyc_status === 'approved'
+                      );
+                      return isVendorVerified ? (
+                        <View style={styles.verifiedShieldBadge}>
+                          <Ionicons name="shield-checkmark" size={12} color="#fff" />
+                          <Text style={styles.verifiedShieldText}>VERIFIED</Text>
+                        </View>
+                      ) : (
+                        <TouchableOpacity
+                          style={[styles.verifiedShieldBadge, { backgroundColor: '#FEF3C7' }]}
+                          onPress={() => router.push('/vendor/verification' as any)}>
+                          <Ionicons name="alert-circle-outline" size={12} color="#B45309" />
+                          <Text style={[styles.verifiedShieldText, { color: '#B45309' }]}>UNVERIFIED</Text>
+                        </TouchableOpacity>
+                      );
+                    })()}
                   </View>
                   <Text style={styles.vendorStoreSub}>
                     {(user as any)?.vendorProfile?.category || 'Vendor Store Catalog & Live Inventory'} • Tap to Edit Business Profile ›

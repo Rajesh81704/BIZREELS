@@ -95,6 +95,16 @@ export function VendorDrawerModal({ isOpen, onClose }: VendorDrawerModalProps) {
     },
   ];
 
+  const isUserVerified = Boolean(
+    (user as any)?.isVerified ||
+    (user as any)?.is_verified ||
+    (user as any)?.is_subscribed_verified ||
+    (user as any)?.vendorProfile?.isVerified ||
+    (user as any)?.creatorProfile?.isVerified ||
+    (user as any)?.kyc_status === 'approved' ||
+    (user as any)?.vendorProfile?.kyc_status === 'approved'
+  );
+
   const VENDOR_SECTIONS: DrawerSection[] = [
     {
       key: 'MAIN',
@@ -116,7 +126,7 @@ export function VendorDrawerModal({ isOpen, onClose }: VendorDrawerModalProps) {
       items: [
         { title: 'Business Profile', route: '/vendor/profile', icon: 'person-outline' },
         { title: 'Onboarding Details', route: '/vendor/onboarding', icon: 'document-text-outline' },
-        { title: 'Verification Center', route: '/vendor/verification', icon: 'shield-checkmark-outline', badge: 'VERIFIED' },
+        { title: 'Verification Center', route: '/vendor/verification', icon: 'shield-checkmark-outline', badge: isUserVerified ? 'VERIFIED' : 'VERIFY NOW' },
         { title: 'Analytics', route: '/vendor/analytics', icon: 'stats-chart-outline' },
         { title: 'Hire Creator', route: '/vendor/hire-creator', icon: 'people-outline' },
         { title: 'Refer & Earn', route: '/vendor/referrals', icon: 'person-add-outline' },
@@ -151,7 +161,7 @@ export function VendorDrawerModal({ isOpen, onClose }: VendorDrawerModalProps) {
       items: [
         { title: 'Profile', route: '/creator/profile', icon: 'person-outline' },
         { title: 'Onboarding Details', route: '/creator/onboarding', icon: 'document-text-outline' },
-        { title: 'Verification Center', route: '/creator/verification', icon: 'shield-checkmark-outline', badge: 'VERIFIED' },
+        { title: 'Verification Center', route: '/creator/verification', icon: 'shield-checkmark-outline', badge: isUserVerified ? 'VERIFIED' : 'VERIFY NOW' },
         { title: 'Portfolio', route: '/creator/portfolio', icon: 'film-outline' },
         { title: 'Pricing Rates', route: '/creator/pricing', icon: 'pricetag-outline' },
         { title: 'Availability', route: '/creator/availability', icon: 'calendar-outline' },
@@ -251,8 +261,14 @@ export function VendorDrawerModal({ isOpen, onClose }: VendorDrawerModalProps) {
                             </Text>
 
                             {item.badge && (
-                              <View style={styles.itemBadge}>
-                                <Text style={styles.itemBadgeText}>
+                              <View style={[
+                                styles.itemBadge,
+                                item.badge === 'VERIFY NOW' && { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }
+                              ]}>
+                                <Text style={[
+                                  styles.itemBadgeText,
+                                  item.badge === 'VERIFY NOW' && { color: '#B45309' }
+                                ]}>
                                   {item.badge}
                                 </Text>
                               </View>
@@ -280,11 +296,17 @@ export function VendorDrawerModal({ isOpen, onClose }: VendorDrawerModalProps) {
                   <Text style={styles.profileName} numberOfLines={1}>
                     {!user ? 'Welcome to BizReels' : displayName}
                   </Text>
-                  {isVendor && (
+                  {isUserVerified ? (
                     <View style={styles.verifiedBadge}>
                       <Ionicons name="checkmark-circle" size={12} color="#D99A3D" />
                     </View>
-                  )}
+                  ) : (isVendor || activeRole === 'creator') && user ? (
+                    <TouchableOpacity
+                      style={[styles.verifiedBadge, { backgroundColor: '#FEF3C7', paddingHorizontal: 6 }]}
+                      onPress={() => handleNavigate(activeRole === 'creator' ? '/creator/verification' : '/vendor/verification')}>
+                      <Text style={{ fontSize: 9, fontWeight: '900', color: '#B45309' }}>Verify</Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
                 <Text style={styles.profileEmail} numberOfLines={1}>
                   {!user ? 'Sign in to access all features' : displayEmail}

@@ -699,7 +699,9 @@ export const ReelItem = memo(function ReelItem({ reel, isActive, height, userLat
                 <Text style={styles.creatorName} numberOfLines={1}>
                   {reel.creatorName}
                 </Text>
-                <Ionicons name="checkmark-circle" size={14} color={BrandColors.primaryLight} />
+                {Boolean((reel as any).isVerified || (reel as any).is_verified || (reel as any).is_subscribed_verified || (reel as any).vendor?.isVerified || (reel as any).creator?.isVerified) && (
+                  <Ionicons name="checkmark-circle" size={14} color={BrandColors.primaryLight} />
+                )}
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1, flexWrap: 'wrap' }}>
                 <Text style={styles.creatorRole}>{reel.creatorRole || 'Store Vendor'}</Text>
