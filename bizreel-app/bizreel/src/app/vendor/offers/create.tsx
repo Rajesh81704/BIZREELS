@@ -396,13 +396,13 @@ export default function CreateOfferScreen() {
       {/* Header Bar */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={18} color="#0F172A" />
+          <Ionicons name="arrow-back" size={18} color="#241B15" />
         </TouchableOpacity>
         <View style={{ flex: 1, paddingHorizontal: 8 }}>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            CREATE NEW PROMOTIONAL OFFER
+            CREATE PROMOTIONAL OFFER
           </Text>
-          <Text style={styles.headerSub}>19 Offer Engine Types Parity with Frontend</Text>
+          <Text style={styles.headerSub}>General Details & Campaign Configuration</Text>
         </View>
       </View>
 
@@ -412,7 +412,7 @@ export default function CreateOfferScreen() {
           style={[styles.stepTab, step === 1 && styles.stepTabActive]}
           onPress={() => setStep(1)}>
           <Text style={[styles.stepTabText, step === 1 && styles.stepTabTextActive]}>
-            1. Category Type
+            1. Category
           </Text>
         </TouchableOpacity>
 
@@ -434,27 +434,27 @@ export default function CreateOfferScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* ── STEP 1: CATEGORY ENGINE SELECTION (MATCHING FRONTEND BENTO GRID) ── */}
+        {/* ── STEP 1: CATEGORY ENGINE SELECTION ── */}
         {step === 1 && (
           <View style={styles.stepContainer}>
-            <Text style={styles.sectionHeaderTitle}>SELECT ONE OF 19 OFFER ENGINE TYPES *</Text>
+            <Text style={styles.sectionHeaderTitle}>SELECT OFFER ENGINE CATEGORY *</Text>
             <Text style={styles.sectionHeaderSub}>
-              Launch high-conversion coupons, BOGO deals, flash sales, combo bundles, & cashback deals
+              Choose from 19 high-conversion promotional engine types tailored for your store
             </Text>
 
             {/* Search Bar */}
             <View style={styles.searchBarBox}>
-              <Ionicons name="search-outline" size={16} color="#64748B" />
+              <Ionicons name="search-outline" size={16} color="#7A6E65" />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search offer engine (e.g. Buy 1 Get 1, Coupon, Flash Sale)..."
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor="#9E9287"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Ionicons name="close-circle" size={16} color="#94A3B8" />
+                  <Ionicons name="close-circle" size={16} color="#7A6E65" />
                 </TouchableOpacity>
               )}
             </View>
@@ -509,7 +509,7 @@ export default function CreateOfferScreen() {
                             {cat.offerNames?.[0] || 'Dynamic Engine'}
                           </Text>
                         </View>
-                        {isSelected && <Ionicons name="checkmark-circle" size={16} color="#7C3AED" />}
+                        {isSelected && <Ionicons name="checkmark-circle" size={16} color="#D99A3D" />}
                       </TouchableOpacity>
                     );
                   })}
@@ -522,17 +522,19 @@ export default function CreateOfferScreen() {
         {/* ── STEP 2: GENERAL & TARGETING DETAILS ── */}
         {step === 2 && (
           <View style={styles.stepContainer}>
-            {/* Selected Engine Summary Banner */}
+            {/* Selected Engine Summary Banner with Fixed Overflow Change Button */}
             <View style={styles.selectedMetaBanner}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Text style={{ fontSize: 28 }}>{currentCatMeta.icon}</Text>
+              <View style={styles.selectedMetaLeft}>
+                <Text style={{ fontSize: 26 }}>{currentCatMeta.icon}</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.selectedMetaTitle}>{currentCatMeta.label}</Text>
+                  <Text style={styles.selectedMetaTitle} numberOfLines={1}>
+                    {currentCatMeta.label}
+                  </Text>
                   <Text style={styles.selectedMetaSub}>{currentCatMeta.group} Engine</Text>
                 </View>
               </View>
               <TouchableOpacity style={styles.changeBtn} onPress={() => setStep(1)}>
-                <Text style={styles.changeTypeLink}>Change Engine →</Text>
+                <Text style={styles.changeTypeLink}>Change →</Text>
               </TouchableOpacity>
             </View>
 
@@ -542,7 +544,7 @@ export default function CreateOfferScreen() {
               <TextInput
                 style={styles.inputBox}
                 placeholder="e.g. Festival Special 20% OFF"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor="#9E9287"
                 value={title}
                 onChangeText={setTitle}
               />
@@ -1285,7 +1287,7 @@ export default function CreateOfferScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1, backgroundColor: '#F8F4EC' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1293,55 +1295,55 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#E3DCCB',
   },
   backBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F4EFE6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
-    color: '#0F172A',
+    color: '#241B15',
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
     letterSpacing: 0.5,
   },
   headerSub: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 9.5,
   },
   stepsRow: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F4EC',
     paddingHorizontal: Spacing.four,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#E3DCCB',
     gap: 6,
   },
   stepTab: {
     flex: 1,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E3DCCB',
   },
   stepTabActive: {
-    backgroundColor: '#0F172A',
-    borderColor: '#F59E0B',
+    backgroundColor: '#241B15',
+    borderColor: '#D99A3D',
   },
   stepTabText: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 10,
     fontWeight: '700',
   },
   stepTabTextActive: {
-    color: '#F59E0B',
+    color: '#D99A3D',
     fontWeight: '900',
   },
   scrollContent: {
@@ -1352,13 +1354,13 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   sectionHeaderTitle: {
-    color: '#D97706',
+    color: '#241B15',
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
     letterSpacing: 0.5,
   },
   sectionHeaderSub: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 10,
     lineHeight: 14,
   },
@@ -1366,17 +1368,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FDFBF7',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#E3DCCB',
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 11,
-    color: '#0F172A',
+    color: '#241B15',
   },
   groupPill: {
     paddingHorizontal: 12,
@@ -1384,26 +1386,26 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E3DCCB',
   },
   groupPillActive: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#7C3AED',
+    backgroundColor: '#241B15',
+    borderColor: '#D99A3D',
   },
   groupPillText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#475569',
+    color: '#7A6E65',
   },
   groupPillTextActive: {
-    color: '#FFFFFF',
+    color: '#D99A3D',
   },
   groupSectionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E3DCCB',
     gap: 10,
   },
   groupHeaderRow: {
@@ -1411,11 +1413,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#F4EFE6',
     paddingBottom: 6,
   },
   groupHeaderTitle: {
-    color: '#0F172A',
+    color: '#241B15',
     fontSize: 10.5,
     fontWeight: FontWeight.bold,
     letterSpacing: 0.5,
@@ -1430,15 +1432,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FDFBF7',
     borderRadius: 12,
     padding: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E3DCCB',
   },
   engineCardActive: {
-    backgroundColor: '#F3E8FF',
-    borderColor: '#7C3AED',
+    backgroundColor: '#FAF5EA',
+    borderColor: '#D99A3D',
   },
   engineIconCircle: {
     width: 32,
@@ -1449,47 +1451,57 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   engineTitle: {
-    color: '#0F172A',
+    color: '#241B15',
     fontSize: 11,
     fontWeight: '800',
   },
   engineTitleActive: {
-    color: '#6D28D9',
+    color: '#241B15',
     fontWeight: '900',
   },
   engineSubText: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 8.5,
   },
   selectedMetaBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#FAF5EA',
     padding: 12,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#F59E0B',
+    borderWidth: 1.5,
+    borderColor: '#D99A3D',
+    gap: 8,
+  },
+  selectedMetaLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    marginRight: 6,
   },
   selectedMetaTitle: {
-    color: '#B45309',
-    fontSize: 12,
+    color: '#241B15',
+    fontSize: 12.5,
     fontWeight: FontWeight.bold,
   },
   selectedMetaSub: {
-    color: '#D97706',
+    color: '#D99A3D',
     fontSize: 10,
+    fontWeight: '700',
   },
   changeBtn: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: '#241B15',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#F59E0B',
+    borderColor: '#D99A3D',
+    flexShrink: 0,
   },
   changeTypeLink: {
-    color: '#B45309',
+    color: '#D99A3D',
     fontSize: 9.5,
     fontWeight: '800',
   },
@@ -1502,81 +1514,83 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   subLabel: {
-    color: '#475569',
+    color: '#241B15',
     fontSize: 9.5,
     fontWeight: FontWeight.bold,
     letterSpacing: 0.5,
   },
   helperNote: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 9,
   },
   generateCodeText: {
-    color: '#D97706',
+    color: '#D99A3D',
     fontSize: 10,
     fontWeight: '800',
   },
   inputBox: {
-    backgroundColor: '#F1F5F9',
-    color: '#0F172A',
+    backgroundColor: '#FDFBF7',
+    color: '#241B15',
     fontSize: FontSize.xs,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#E3DCCB',
     padding: 10,
   },
   typeBtn: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
     paddingVertical: 8,
     borderRadius: 10,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E3DCCB',
   },
   typeBtnActive: {
-    backgroundColor: '#0F172A',
-    borderColor: '#F59E0B',
+    backgroundColor: '#241B15',
+    borderColor: '#D99A3D',
   },
   typeBtnText: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 11,
     fontWeight: '700',
   },
   typeBtnTextActive: {
-    color: '#F59E0B',
+    color: '#D99A3D',
     fontWeight: '900',
   },
   variantChip: {
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 14,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E3DCCB',
   },
   variantChipActive: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#7C3AED',
+    backgroundColor: '#241B15',
+    borderColor: '#D99A3D',
   },
   variantChipText: {
-    color: '#475569',
+    color: '#7A6E65',
     fontSize: 10,
     fontWeight: '700',
   },
   variantChipTextActive: {
-    color: '#FFFFFF',
+    color: '#D99A3D',
     fontWeight: '800',
   },
   presetDateBtn: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#241B15',
+    borderWidth: 1,
+    borderColor: '#D99A3D',
   },
   presetDateText: {
     fontSize: 9.5,
-    color: '#334155',
+    color: '#D99A3D',
     fontWeight: '700',
   },
   dropdownTriggerBox: {
@@ -1586,7 +1600,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#F59E0B',
+    borderColor: '#D99A3D',
     padding: 10,
   },
   dropdownTriggerLeft: {
@@ -1596,12 +1610,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dropdownTriggerTitle: {
-    color: '#0F172A',
+    color: '#241B15',
     fontSize: 11,
     fontWeight: FontWeight.bold,
   },
   dropdownTriggerSub: {
-    color: '#D97706',
+    color: '#D99A3D',
     fontSize: 9.5,
     marginTop: 1,
   },
@@ -1615,16 +1629,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#FAF5EA',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#F59E0B',
+    borderColor: '#D99A3D',
     maxWidth: 200,
   },
   selectedItemTagText: {
-    color: '#B45309',
+    color: '#241B15',
     fontSize: 9.5,
     fontWeight: '700',
   },
@@ -1635,49 +1649,49 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E3DCCB',
     gap: 10,
   },
   switchTitle: {
-    color: '#0F172A',
+    color: '#241B15',
     fontSize: 11,
     fontWeight: FontWeight.bold,
   },
   switchSub: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 9.5,
   },
   actionNavBtn: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#241B15',
     paddingVertical: 14,
     borderRadius: 9999,
     borderWidth: 1.5,
-    borderColor: '#F59E0B',
+    borderColor: '#D99A3D',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
   },
   actionNavBtnText: {
-    color: '#F59E0B',
+    color: '#D99A3D',
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
     letterSpacing: 0.5,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: 'rgba(36, 27, 21, 0.65)',
     justifyContent: 'flex-end',
   },
   modalCloseBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F4EFE6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   productModalContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F4EC',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '85%',
@@ -1690,15 +1704,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#E3DCCB',
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
   productModalTitle: {
-    color: '#0F172A',
+    color: '#241B15',
     fontSize: 12,
     fontWeight: FontWeight.bold,
   },
   productModalSub: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 10,
     marginTop: 1,
   },
@@ -1706,19 +1723,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FDFBF7',
     marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#E3DCCB',
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   modalSearchInput: {
     flex: 1,
     fontSize: 11,
-    color: '#0F172A',
+    color: '#241B15',
   },
   modalFilterRow: {
     flexDirection: 'row',
@@ -1730,21 +1747,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 14,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E3DCCB',
   },
   modalFilterPillActive: {
-    backgroundColor: '#0F172A',
-    borderColor: '#F59E0B',
+    backgroundColor: '#241B15',
+    borderColor: '#D99A3D',
   },
   modalFilterPillText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#64748B',
+    color: '#7A6E65',
   },
   modalFilterPillTextActive: {
-    color: '#F59E0B',
+    color: '#D99A3D',
     fontWeight: '900',
   },
   selectionControlRow: {
@@ -1755,15 +1772,15 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingBottom: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#E3DCCB',
   },
   selectAllText: {
-    color: '#D97706',
+    color: '#D99A3D',
     fontSize: 10,
     fontWeight: FontWeight.bold,
   },
   clearAllText: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 10,
     fontWeight: '700',
   },
@@ -1778,26 +1795,26 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyListTitle: {
-    color: '#0F172A',
+    color: '#241B15',
     fontSize: 12,
     fontWeight: FontWeight.bold,
   },
   emptyListSub: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 10,
     textAlign: 'center',
   },
   addListingBtn: {
     marginTop: 8,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#241B15',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#F59E0B',
+    borderColor: '#D99A3D',
   },
   addListingBtnText: {
-    color: '#F59E0B',
+    color: '#D99A3D',
     fontSize: 10.5,
     fontWeight: FontWeight.bold,
   },
@@ -1805,15 +1822,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     padding: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E3DCCB',
   },
   productListItemActive: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#F59E0B',
+    backgroundColor: '#FAF5EA',
+    borderColor: '#D99A3D',
   },
   productCheckCircle: {
     alignItems: 'center',
@@ -1823,7 +1840,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#F4EFE6',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -1834,54 +1851,54 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   productItemTitle: {
-    color: '#0F172A',
+    color: '#241B15',
     fontSize: 11,
     fontWeight: FontWeight.bold,
     flexShrink: 1,
   },
   productItemSub: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 9,
     marginTop: 1,
   },
   typeBadge: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#F4EFE6',
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: 4,
   },
   typeBadgeText: {
-    color: '#334155',
+    color: '#241B15',
     fontSize: 8,
     fontWeight: '800',
   },
   productItemPrice: {
-    color: '#0F172A',
+    color: '#241B15',
     fontSize: 11,
     fontWeight: FontWeight.bold,
   },
   productItemSalePrice: {
-    color: '#D97706',
+    color: '#D99A3D',
     fontSize: 9,
     textDecorationLine: 'line-through',
   },
   modalFooterBar: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#E3DCCB',
     backgroundColor: '#FFFFFF',
   },
   doneSelectBtn: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#241B15',
     paddingVertical: 12,
     borderRadius: 9999,
-    borderWidth: 1,
-    borderColor: '#F59E0B',
+    borderWidth: 1.5,
+    borderColor: '#D99A3D',
     alignItems: 'center',
     justifyContent: 'center',
   },
   doneSelectBtnText: {
-    color: '#F59E0B',
+    color: '#D99A3D',
     fontSize: 11,
     fontWeight: FontWeight.bold,
     letterSpacing: 0.5,

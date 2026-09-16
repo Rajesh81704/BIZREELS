@@ -272,13 +272,13 @@ export default function VendorOffersScreen() {
       {/* Top Header Bar */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
+          <Ionicons name="arrow-back" size={20} color="#241B15" />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
-          Dynamic Offers Engine (19 Types)
+          OFFERS & COUPONS ENGINE
         </Text>
         <TouchableOpacity style={styles.addHeaderBtn} onPress={handleOpenCreateModal}>
-          <Ionicons name="add" size={20} color={BLACK} />
+          <Ionicons name="add" size={20} color="#D99A3D" />
         </TouchableOpacity>
       </View>
 
@@ -714,22 +714,22 @@ export default function VendorOffersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1, backgroundColor: '#F8F4EC' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
-    backgroundColor: '#241B15',
-    borderBottomWidth: 2,
-    borderBottomColor: '#D99A3D',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E3DCCB',
   },
   backBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#F4EFE6',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -737,12 +737,14 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#D99A3D',
+    backgroundColor: '#241B15',
+    borderWidth: 1,
+    borderColor: '#D99A3D',
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
-    color: '#FFFFFF',
+    color: '#241B15',
     fontSize: FontSize.xs,
     fontWeight: '900',
     letterSpacing: 0.5,
@@ -750,11 +752,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   filterSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F4EC',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    ...Shadows.sm,
+    borderBottomColor: '#E3DCCB',
   },
   filterScroll: {
     paddingHorizontal: Spacing.four,
@@ -764,12 +765,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 9999,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E3DCCB',
   },
   filterPillActive: {
     backgroundColor: '#241B15',
@@ -779,7 +780,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   filterText: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -800,10 +801,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E3DCCB',
     padding: 16,
     gap: 12,
-    ...Shadows.sm,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -814,18 +814,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FAF5EA',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 9999,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#D99A3D',
   },
   catBadgeIcon: {
     fontSize: 11,
   },
   catBadgeText: {
-    color: '#0F172A',
+    color: '#241B15',
     fontSize: 10,
     fontWeight: '800',
   },
@@ -849,7 +849,7 @@ const styles = StyleSheet.create({
     borderColor: '#EF4444',
   },
   statusToggleText: {
-    color: '#0F172A',
+    color: '#241B15',
     fontSize: 9,
     fontWeight: '900',
   },
@@ -858,7 +858,7 @@ const styles = StyleSheet.create({
   },
   highlightBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#241B15',
     borderWidth: 1,
     borderColor: '#D99A3D',
     paddingHorizontal: 8,
@@ -871,13 +871,13 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   offerTitle: {
-    color: '#0F172A',
+    color: '#241B15',
     fontSize: FontSize.sm,
     fontWeight: '900',
     marginTop: 2,
   },
   offerDesc: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 11,
   },
   cardFooter: {
@@ -885,14 +885,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#F4EFE6',
     paddingTop: 10,
   },
   couponCodePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#241B15',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 9999,
@@ -906,7 +906,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   validText: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 10,
   },
   emptyContainer: {
@@ -916,12 +916,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emptyTitle: {
-    color: '#0F172A',
+    color: '#241B15',
     fontSize: FontSize.md,
     fontWeight: '900',
   },
   emptySub: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: FontSize.xs,
     textAlign: 'center',
     paddingHorizontal: 40,
@@ -935,7 +935,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 9999,
     marginTop: 8,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#D99A3D',
   },
   createBtnText: {
@@ -945,11 +945,11 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15,23,42,0.6)',
+    backgroundColor: 'rgba(36, 27, 21, 0.65)',
   },
   modalContent: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F8F4EC',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
@@ -958,12 +958,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
-    backgroundColor: '#241B15',
-    borderBottomWidth: 2,
-    borderBottomColor: '#D99A3D',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E3DCCB',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   modalTitle: {
-    color: '#FFFFFF',
+    color: '#241B15',
     fontSize: FontSize.sm,
     fontWeight: '900',
   },
@@ -976,33 +978,33 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#F4EFE6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   wizardPillRow: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F4EC',
     padding: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#E3DCCB',
     gap: 6,
   },
   wizardStepBtn: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
     paddingVertical: 8,
     alignItems: 'center',
     borderRadius: 9999,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E3DCCB',
   },
   wizardStepBtnActive: {
     backgroundColor: '#241B15',
     borderColor: '#D99A3D',
   },
   wizardStepText: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 10,
     fontWeight: '700',
   },
@@ -1024,7 +1026,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   wizardSectionSub: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 11,
   },
   categoryGrid: {
@@ -1038,13 +1040,12 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E3DCCB',
     gap: 4,
-    ...Shadows.sm,
   },
   categoryCardActive: {
     borderColor: '#D99A3D',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#FAF5EA',
   },
   categoryCardTop: {
     flexDirection: 'row',
@@ -1055,22 +1056,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   categoryLabel: {
-    color: '#0F172A',
+    color: '#241B15',
     fontSize: 12,
     fontWeight: '900',
   },
   categoryLabelActive: {
-    color: '#D99A3D',
+    color: '#241B15',
   },
   categoryDesc: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 9,
   },
   selectedMetaBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#FAF5EA',
     padding: 14,
     borderRadius: 14,
     borderWidth: 1.5,
@@ -1080,12 +1081,12 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   metaTitle: {
-    color: '#D99A3D',
+    color: '#241B15',
     fontSize: 12,
     fontWeight: '900',
   },
   metaDesc: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 10,
   },
   changeBtnText: {
@@ -1098,7 +1099,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   fieldLabel: {
-    color: '#0F172A',
+    color: '#241B15',
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 0.5,
@@ -1107,19 +1108,19 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   chip: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 9999,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E3DCCB',
   },
   chipActive: {
     backgroundColor: '#241B15',
     borderColor: '#D99A3D',
   },
   chipText: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -1128,11 +1129,11 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    color: '#0F172A',
+    backgroundColor: '#FDFBF7',
+    color: '#241B15',
     fontSize: FontSize.xs,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E3DCCB',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1157,7 +1158,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#D99A3D',
   },
   nextWizardBtnText: {
@@ -1172,20 +1173,20 @@ const styles = StyleSheet.create({
   },
   typeChip: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 9999,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E3DCCB',
   },
   typeChipActive: {
     backgroundColor: '#241B15',
     borderColor: '#D99A3D',
   },
   typeChipText: {
-    color: '#64748B',
+    color: '#7A6E65',
     fontSize: 11,
     fontWeight: '700',
   },
