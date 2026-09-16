@@ -28,21 +28,21 @@ router.post('/me/verification/upi', authenticate, creatorVerificationController.
  * Creator Studio Routes — /api/v1/creator
  */
 
-router.get('/dashboard', authenticate, creatorController.getDashboard);
+router.get(['/dashboard', '/me/dashboard'], authenticate, creatorController.getDashboard);
 
-router.get('/portfolio', authenticate, creatorController.getPortfolio);
-router.post('/portfolio/reels', authenticate, creatorController.addPortfolioReel);
-router.post('/portfolio/images', authenticate, creatorController.addPortfolioImage);
-router.delete('/portfolio/:type/:id', authenticate, creatorController.deletePortfolioItem);
+router.get(['/portfolio', '/me/portfolio'], authenticate, creatorController.getPortfolio);
+router.post(['/portfolio/reels', '/me/portfolio/reels'], authenticate, creatorController.addPortfolioReel);
+router.post(['/portfolio/images', '/me/portfolio/images'], authenticate, creatorController.addPortfolioImage);
+router.delete(['/portfolio/:type/:id', '/me/portfolio/:type/:id'], authenticate, creatorController.deletePortfolioItem);
 
-router.get('/pricing', authenticate, creatorController.getPricing);
-router.patch('/pricing', authenticate, creatorController.updatePricing);
+router.get(['/pricing', '/me/pricing'], authenticate, creatorController.getPricing);
+router.patch(['/pricing', '/me/pricing'], authenticate, creatorController.updatePricing);
 
-router.get('/availability', authenticate, creatorController.getAvailability);
-router.patch('/availability', authenticate, creatorController.updateAvailability);
+router.get(['/availability', '/me/availability'], authenticate, creatorController.getAvailability);
+router.patch(['/availability', '/me/availability'], authenticate, creatorController.updateAvailability);
 
-router.get('/orders', authenticate, creatorController.getOrders);
-router.patch('/orders/:id/status', authenticate, creatorController.updateOrderStatus);
+router.get(['/orders', '/me/orders'], authenticate, creatorController.getOrders);
+router.patch(['/orders/:id/status', '/me/orders/:id/status'], authenticate, creatorController.updateOrderStatus);
 
 module.exports = router;
 

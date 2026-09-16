@@ -3,6 +3,7 @@ const Listing = require('../models/Listing');
 const Order = require('../models/Order');
 const HireRequest = require('../models/HireRequest');
 const User = require('../models/User');
+const Campaign = require('../models/Campaign');
 const ApiResponse = require('../utils/ApiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
