@@ -261,7 +261,7 @@ export default function CheckoutScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.bannerBadge}>PURCHASER DETAILS</Text>
             <Text style={styles.bannerName}>{user?.name || 'Customer'}</Text>
-            <Text style={styles.bannerSub}>{user?.email || user?.phone || 'Contact Verified'}</Text>
+            <Text style={styles.bannerSub}>{user?.email || (user as any)?.phone || (user as any)?.mobile || 'Contact Verified'}</Text>
           </View>
           <View style={styles.bannerIconBox}>
             <Ionicons name="person-circle" size={26} color={ESPRESSO} />
