@@ -68,8 +68,9 @@ class WhatsAppService {
     const effectiveAccountSid = accountSid || config.sms?.twilio?.accountSid;
     const effectiveAuthToken = authToken || config.sms?.twilio?.authToken;
 
-    if (!effectiveAccountSid || !effectiveAuthToken || !from) {
-      logger.warn(`[TWILIO WHATSAPP CONFIG REQUIRED] ⚠️ Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_WHATSAPP_FROM in backend/.env to deliver live WhatsApp OTP. 💬 Mock OTP for ${phone}: ${otp}`);
+    const isPlaceholderFrom = !from || from.includes('555') || from.includes('123456') || from.includes('000000');
+    if (!effectiveAccountSid || !effectiveAuthToken || isPlaceholderFrom) {
+      logger.warn(`[TWILIO WHATSAPP CONFIG REQUIRED] ⚠️ TWILIO_WHATSAPP_FROM "${from}" is missing or a placeholder number (e.g. 555). Returning fallback OTP for ${phone}: ${otp}`);
       return { success: true, provider: 'mock_fallback', phone, otp };
     }
 

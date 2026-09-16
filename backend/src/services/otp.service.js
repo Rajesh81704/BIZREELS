@@ -90,13 +90,15 @@ class OtpService {
       cooldownSeconds: config.otp.cooldownSeconds || 60,
     };
 
-    // Include OTP when provider is mock, fallback, or no live message SID
+    // Include OTP when provider is mock, fallback, no live SID, or OTP_DEV_MODE enabled
     const isMock = (cleanChannel === 'sms' && (config.sms?.provider || 'mock') === 'mock') ||
       (cleanChannel === 'whatsapp' && (config.whatsapp?.provider || 'mock') === 'mock') ||
       dispatchResult?.provider === 'mock' ||
       dispatchResult?.provider === 'mock_fallback' ||
       !dispatchResult?.sid ||
-      process.env.NODE_ENV === 'development';
+      process.env.NODE_ENV === 'development' ||
+      process.env.OTP_DEV_MODE === 'true' ||
+      config.otpDevMode;
 
     if (isMock) {
       response.otp = otp;
