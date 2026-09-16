@@ -9,11 +9,21 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FontSize, Spacing } from '@/constants/theme';
 import { api } from '@/lib/api';
 
+const GOLD = '#D99A3D';
+const ESPRESSO = '#241B15';
+const BG_MATTE = '#F8F4EC';
+const CARD_BG = '#FFFFFF';
+const BORDER_COLOR = '#E3DCCB';
+const TEXT_MAIN = '#0F172A';
+const TEXT_MUTED = '#64748B';
+
 export default function CreatorAnalyticsScreen() {
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<any>(null);
 
@@ -36,42 +46,50 @@ export default function CreatorAnalyticsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={YELLOW} />
+        <ActivityIndicator size="large" color={GOLD} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.headerBar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.replace('/(tabs)/home')}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
+          <Ionicons name="arrow-back" size={20} color={GOLD} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
+          <Text style={styles.headerBadge}>CREATOR STUDIO</Text>
           <Text style={styles.headerTitle}>CREATOR ANALYTICS</Text>
-          <Text style={styles.headerSub}>Reels Reach & Performance Insights</Text>
         </View>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <View style={styles.grid}>
           <View style={styles.card}>
-            <Ionicons name="eye-outline" size={22} color={YELLOW} />
+            <View style={styles.iconBox}>
+              <Ionicons name="eye-outline" size={20} color={GOLD} />
+            </View>
             <Text style={styles.val}>{(analytics?.totalReelViews || analytics?.views || 1240).toLocaleString()}</Text>
             <Text style={styles.label}>Total Reel Views</Text>
           </View>
           <View style={styles.card}>
-            <Ionicons name="heart-outline" size={22} color="#EF4444" />
+            <View style={styles.iconBox}>
+              <Ionicons name="heart-outline" size={20} color="#EF4444" />
+            </View>
             <Text style={styles.val}>{(analytics?.totalLikes || 184).toLocaleString()}</Text>
             <Text style={styles.label}>Reel Likes</Text>
           </View>
           <View style={styles.card}>
-            <Ionicons name="share-social-outline" size={22} color="#3B82F6" />
+            <View style={styles.iconBox}>
+              <Ionicons name="share-social-outline" size={20} color="#3B82F6" />
+            </View>
             <Text style={styles.val}>{(analytics?.totalShares || 62).toLocaleString()}</Text>
             <Text style={styles.label}>Content Shares</Text>
           </View>
           <View style={styles.card}>
-            <Ionicons name="people-outline" size={22} color="#10B981" />
+            <View style={styles.iconBox}>
+              <Ionicons name="people-outline" size={20} color="#059669" />
+            </View>
             <Text style={styles.val}>{(analytics?.profileImpressions || 450).toLocaleString()}</Text>
             <Text style={styles.label}>Profile Impressions</Text>
           </View>
@@ -81,32 +99,52 @@ export default function CreatorAnalyticsScreen() {
   );
 }
 
-const YELLOW = '#F59E0B';
-const BLACK = '#0F0F12';
-const DARK_CARD = '#18181C';
-const BORDER = '#2D2D36';
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BLACK },
-  loadingContainer: { flex: 1, backgroundColor: BLACK, alignItems: 'center', justifyContent: 'center' },
+  container: { flex: 1, backgroundColor: BG_MATTE },
+  loadingContainer: { flex: 1, backgroundColor: BG_MATTE, alignItems: 'center', justifyContent: 'center' },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.six,
-    paddingBottom: Spacing.three,
-    backgroundColor: DARK_CARD,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    paddingVertical: Spacing.three,
+    backgroundColor: ESPRESSO,
+    borderBottomWidth: 2,
+    borderBottomColor: GOLD,
     gap: Spacing.three,
   },
-  backBtn: { width: 36, height: 36, backgroundColor: BLACK, borderWidth: 1, borderColor: BORDER, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: YELLOW, fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 1 },
-  headerSub: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
+  backBtn: { width: 38, height: 38, backgroundColor: '#1A1410', borderWidth: 1, borderColor: '#3A2C22', borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  headerBadge: { color: GOLD, fontSize: 9.5, fontWeight: '900', letterSpacing: 1.5 },
+  headerTitle: { color: '#FFFFFF', fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 0.5 },
+
   scroll: { flex: 1 },
-  scrollContent: { padding: Spacing.four },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  card: { width: '48%', backgroundColor: DARK_CARD, borderWidth: 1, borderColor: BORDER, padding: Spacing.four, gap: 6 },
-  val: { color: '#fff', fontSize: FontSize.xl, fontWeight: '900' },
-  label: { color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '700' },
+  scrollContent: { padding: Spacing.four, paddingBottom: 40 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  card: {
+    width: '48%',
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 14,
+    padding: Spacing.four,
+    gap: 6,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  iconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: BG_MATTE,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  val: { color: ESPRESSO, fontSize: FontSize.xl, fontWeight: '900' },
+  label: { color: TEXT_MUTED, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
 });
+

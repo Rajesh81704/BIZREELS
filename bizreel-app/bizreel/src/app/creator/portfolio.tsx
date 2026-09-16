@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Modal,
   ScrollView,
   StyleSheet,
@@ -13,9 +12,19 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FontSize, Spacing } from '@/constants/theme';
 import { api } from '@/lib/api';
+
+const GOLD = '#D99A3D';
+const ESPRESSO = '#241B15';
+const BG_MATTE = '#F8F4EC';
+const CARD_BG = '#FFFFFF';
+const INPUT_BG = '#F8FAFC';
+const BORDER_COLOR = '#E3DCCB';
+const TEXT_MAIN = '#0F172A';
+const TEXT_MUTED = '#64748B';
 
 interface PortfolioReel {
   id: string;
@@ -31,6 +40,7 @@ interface PortfolioImage {
 }
 
 export default function CreatorPortfolioScreen() {
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'reels' | 'images'>('reels');
   const [reels, setReels] = useState<PortfolioReel[]>([]);
@@ -105,23 +115,23 @@ export default function CreatorPortfolioScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={YELLOW} />
+        <ActivityIndicator size="large" color={GOLD} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.headerBar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.replace('/(tabs)/home')}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
+          <Ionicons name="arrow-back" size={20} color={GOLD} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
+          <Text style={styles.headerBadge}>CREATOR STUDIO</Text>
           <Text style={styles.headerTitle}>CREATOR PORTFOLIO</Text>
-          <Text style={styles.headerSub}>Video Reels & Shoot Gallery</Text>
         </View>
         <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
-          <Ionicons name="add" size={20} color={BLACK} />
+          <Ionicons name="add" size={20} color={ESPRESSO} />
         </TouchableOpacity>
       </View>
 
@@ -145,18 +155,22 @@ export default function CreatorPortfolioScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {(activeTab === 'reels' ? reels : images).length === 0 ? (
           <View style={styles.emptyCard}>
-            <Ionicons name="film-outline" size={32} color="rgba(255,255,255,0.4)" />
-            <Text style={styles.emptyText}>No portfolio items added yet</Text>
+            <Ionicons name="film-outline" size={36} color={TEXT_MUTED} />
+            <Text style={styles.emptyTitle}>No Portfolio Items Added</Text>
+            <Text style={styles.emptySub}>Add sample video reels or photos to showcase your work to brands.</Text>
           </View>
         ) : (
           (activeTab === 'reels' ? reels : images).map((item) => (
             <View key={item.id} style={styles.itemCard}>
+              <View style={styles.itemIconBox}>
+                <Ionicons name={activeTab === 'reels' ? "videocam" : "image"} size={20} color={ESPRESSO} />
+              </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemTitle}>{item.title}</Text>
                 <Text style={styles.itemUrl} numberOfLines={1}>
                   {(item as any).url}
                 </Text>
-                {(item as any).views ? <Text style={styles.itemViews}>{(item as any).views}</Text> : null}
+                {(item as any).views ? <Text style={styles.itemViews}>{(item as any).views} views</Text> : null}
               </View>
               <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteItem(item.id)}>
                 <Ionicons name="trash-outline" size={18} color="#EF4444" />
@@ -175,7 +189,7 @@ export default function CreatorPortfolioScreen() {
                 Add {activeTab === 'reels' ? 'Sample Video Reel' : 'Photo Gallery Item'}
               </Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={22} color="#fff" />
+                <Ionicons name="close" size={22} color={TEXT_MAIN} />
               </TouchableOpacity>
             </View>
 
@@ -183,7 +197,7 @@ export default function CreatorPortfolioScreen() {
             <TextInput
               style={styles.modalInput}
               placeholder="e.g. Brand Promo Shoot"
-              placeholderTextColor="rgba(255,255,255,0.4)"
+              placeholderTextColor="#94A3B8"
               value={newTitle}
               onChangeText={setNewTitle}
             />
@@ -194,14 +208,14 @@ export default function CreatorPortfolioScreen() {
             <TextInput
               style={styles.modalInput}
               placeholder="https://..."
-              placeholderTextColor="rgba(255,255,255,0.4)"
+              placeholderTextColor="#94A3B8"
               value={newUrl}
               onChangeText={setNewUrl}
               autoCapitalize="none"
             />
 
             <TouchableOpacity style={styles.modalSubmitBtn} onPress={handleAddItem} disabled={submitting}>
-              {submitting ? <ActivityIndicator color={BLACK} /> : <Text style={styles.modalSubmitText}>Save to Portfolio</Text>}
+              {submitting ? <ActivityIndicator color={GOLD} /> : <Text style={styles.modalSubmitText}>Save to Portfolio</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -210,49 +224,108 @@ export default function CreatorPortfolioScreen() {
   );
 }
 
-const YELLOW = '#F59E0B';
-const BLACK = '#0F0F12';
-const DARK_CARD = '#18181C';
-const BORDER = '#2D2D36';
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BLACK },
-  loadingContainer: { flex: 1, backgroundColor: BLACK, alignItems: 'center', justifyContent: 'center' },
+  container: { flex: 1, backgroundColor: BG_MATTE },
+  loadingContainer: { flex: 1, backgroundColor: BG_MATTE, alignItems: 'center', justifyContent: 'center' },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.six,
-    paddingBottom: Spacing.three,
-    backgroundColor: DARK_CARD,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    paddingVertical: Spacing.three,
+    backgroundColor: ESPRESSO,
+    borderBottomWidth: 2,
+    borderBottomColor: GOLD,
     gap: Spacing.three,
   },
-  backBtn: { width: 36, height: 36, backgroundColor: BLACK, borderWidth: 1, borderColor: BORDER, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: YELLOW, fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 1 },
-  headerSub: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
-  addBtn: { width: 36, height: 36, backgroundColor: YELLOW, alignItems: 'center', justifyContent: 'center' },
-  tabHeaderRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: BORDER },
+  backBtn: { width: 38, height: 38, backgroundColor: '#1A1410', borderWidth: 1, borderColor: '#3A2C22', borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  headerBadge: { color: GOLD, fontSize: 9.5, fontWeight: '900', letterSpacing: 1.5 },
+  headerTitle: { color: '#FFFFFF', fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 0.5 },
+  addBtn: { width: 38, height: 38, backgroundColor: GOLD, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+
+  tabHeaderRow: { flexDirection: 'row', backgroundColor: CARD_BG, borderBottomWidth: 1, borderBottomColor: BORDER_COLOR },
   tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabBtnActive: { borderBottomColor: YELLOW },
-  tabBtnText: { color: 'rgba(255,255,255,0.5)', fontSize: FontSize.xs, fontWeight: '700' },
-  tabBtnTextActive: { color: YELLOW, fontWeight: '900' },
+  tabBtnActive: { borderBottomColor: GOLD },
+  tabBtnText: { color: TEXT_MUTED, fontSize: FontSize.xs, fontWeight: '700' },
+  tabBtnTextActive: { color: ESPRESSO, fontWeight: '900' },
+
   scroll: { flex: 1 },
-  scrollContent: { padding: Spacing.four, gap: Spacing.three },
-  emptyCard: { backgroundColor: DARK_CARD, borderWidth: 1, borderColor: BORDER, padding: 30, alignItems: 'center', gap: 8 },
-  emptyText: { color: 'rgba(255,255,255,0.5)', fontSize: FontSize.xs },
-  itemCard: { backgroundColor: DARK_CARD, borderWidth: 1, borderColor: BORDER, padding: Spacing.three, flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  itemTitle: { color: '#fff', fontSize: FontSize.xs, fontWeight: '900' },
-  itemUrl: { color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 2 },
-  itemViews: { color: YELLOW, fontSize: 10, fontWeight: '700', marginTop: 2 },
+  scrollContent: { padding: Spacing.four, gap: Spacing.three, paddingBottom: 40 },
+
+  emptyCard: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 14,
+    padding: 30,
+    alignItems: 'center',
+    gap: 8,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  emptyTitle: { color: TEXT_MAIN, fontSize: FontSize.sm, fontWeight: '900' },
+  emptySub: { color: TEXT_MUTED, fontSize: FontSize.xs, textAlign: 'center' },
+
+  itemCard: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 14,
+    padding: Spacing.three,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  itemIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: BG_MATTE,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemTitle: { color: TEXT_MAIN, fontSize: FontSize.xs, fontWeight: '900' },
+  itemUrl: { color: TEXT_MUTED, fontSize: 10, marginTop: 2 },
+  itemViews: { color: GOLD, fontSize: 10, fontWeight: '800', marginTop: 2 },
   deleteBtn: { padding: 8 },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', padding: Spacing.four },
-  modalContent: { backgroundColor: DARK_CARD, borderWidth: 2, borderColor: YELLOW, padding: Spacing.five, gap: Spacing.three },
+
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: Spacing.four },
+  modalContent: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 16,
+    padding: Spacing.five,
+    gap: Spacing.three,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+  },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  modalTitle: { color: YELLOW, fontSize: FontSize.base, fontWeight: '900' },
-  modalLabel: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
-  modalInput: { backgroundColor: BLACK, borderWidth: 1, borderColor: BORDER, color: '#fff', paddingHorizontal: Spacing.three, height: 44, fontSize: FontSize.xs },
-  modalSubmitBtn: { backgroundColor: YELLOW, height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
-  modalSubmitText: { color: BLACK, fontSize: FontSize.sm, fontWeight: '900' },
+  modalTitle: { color: ESPRESSO, fontSize: FontSize.base, fontWeight: '900' },
+  modalLabel: { color: '#334155', fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8 },
+  modalInput: {
+    backgroundColor: INPUT_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    color: TEXT_MAIN,
+    paddingHorizontal: Spacing.three,
+    height: 44,
+    fontSize: FontSize.xs,
+    borderRadius: 8,
+  },
+  modalSubmitBtn: { backgroundColor: ESPRESSO, height: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  modalSubmitText: { color: GOLD, fontSize: FontSize.xs, fontWeight: '900', letterSpacing: 1 },
 });
+

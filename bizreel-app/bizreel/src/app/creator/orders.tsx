@@ -10,9 +10,18 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FontSize, Spacing } from '@/constants/theme';
 import { api } from '@/lib/api';
+
+const GOLD = '#D99A3D';
+const ESPRESSO = '#241B15';
+const BG_MATTE = '#F8F4EC';
+const CARD_BG = '#FFFFFF';
+const BORDER_COLOR = '#E3DCCB';
+const TEXT_MAIN = '#0F172A';
+const TEXT_MUTED = '#64748B';
 
 interface CreatorOrder {
   _id: string;
@@ -26,6 +35,7 @@ interface CreatorOrder {
 }
 
 export default function CreatorOrdersScreen() {
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<CreatorOrder[]>([]);
 
@@ -58,44 +68,51 @@ export default function CreatorOrdersScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={YELLOW} />
+        <ActivityIndicator size="large" color={GOLD} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.headerBar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.replace('/(tabs)/home')}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
+          <Ionicons name="arrow-back" size={20} color={GOLD} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>MY ORDERS & PROJECTS</Text>
-          <Text style={styles.headerSub}>Manage Shoot Collaborations</Text>
+          <Text style={styles.headerBadge}>CREATOR STUDIO</Text>
+          <Text style={styles.headerTitle}>ORDERS &amp; PROJECTS</Text>
         </View>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {orders.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Ionicons name="briefcase-outline" size={32} color="rgba(255,255,255,0.4)" />
-            <Text style={styles.emptyText}>No orders or projects found</Text>
+            <Ionicons name="briefcase-outline" size={36} color={TEXT_MUTED} />
+            <Text style={styles.emptyTitle}>No Orders Found</Text>
+            <Text style={styles.emptySub}>Direct campaign requests &amp; orders from local vendors will appear here.</Text>
           </View>
         ) : (
           orders.map((item) => (
             <View key={item._id || item.id} style={styles.orderCard}>
               <View style={styles.orderHeader}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.orderTitle}>{item.title}</Text>
-                  <Text style={styles.orderVendor}>Vendor Client: {item.vendor_name}</Text>
+                  <Text style={styles.orderVendor}>Brand Client: {item.vendor_name || 'Local Vendor'}</Text>
+                  <Text style={styles.orderTitle}>{item.title || 'Reel Shoot Campaign'}</Text>
                 </View>
-                <Text style={styles.orderAmount}>₹{item.amount}</Text>
+                <View style={styles.priceTag}>
+                  <Text style={styles.priceTagText}>₹{(item.amount || 0).toLocaleString('en-IN')}</Text>
+                </View>
               </View>
 
               <View style={styles.orderBadgeRow}>
-                <View style={styles.typeBadge}><Text style={styles.typeText}>{item.type}</Text></View>
+                <View style={styles.typeBadge}>
+                  <Text style={styles.typeText}>{(item.type || 'Shoot').toUpperCase()}</Text>
+                </View>
                 <View style={[styles.statusBadge, item.status === 'completed' && styles.statusCompleted]}>
-                  <Text style={styles.statusText}>{item.status?.toUpperCase()}</Text>
+                  <Text style={[styles.statusText, item.status === 'completed' && styles.statusCompletedText]}>
+                    {(item.status || 'Active').toUpperCase()}
+                  </Text>
                 </View>
               </View>
 
@@ -104,6 +121,7 @@ export default function CreatorOrdersScreen() {
                   <TouchableOpacity
                     style={styles.completeBtn}
                     onPress={() => handleUpdateStatus(item._id || item.id, 'completed')}>
+                    <Ionicons name="checkmark-circle" size={16} color="#0F172A" />
                     <Text style={styles.completeBtnText}>Mark Completed</Text>
                   </TouchableOpacity>
                 </View>
@@ -116,44 +134,78 @@ export default function CreatorOrdersScreen() {
   );
 }
 
-const YELLOW = '#F59E0B';
-const BLACK = '#0F0F12';
-const DARK_CARD = '#18181C';
-const BORDER = '#2D2D36';
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BLACK },
-  loadingContainer: { flex: 1, backgroundColor: BLACK, alignItems: 'center', justifyContent: 'center' },
+  container: { flex: 1, backgroundColor: BG_MATTE },
+  loadingContainer: { flex: 1, backgroundColor: BG_MATTE, alignItems: 'center', justifyContent: 'center' },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.six,
-    paddingBottom: Spacing.three,
-    backgroundColor: DARK_CARD,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    paddingVertical: Spacing.three,
+    backgroundColor: ESPRESSO,
+    borderBottomWidth: 2,
+    borderBottomColor: GOLD,
     gap: Spacing.three,
   },
-  backBtn: { width: 36, height: 36, backgroundColor: BLACK, borderWidth: 1, borderColor: BORDER, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: YELLOW, fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 1 },
-  headerSub: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
+  backBtn: { width: 38, height: 38, backgroundColor: '#1A1410', borderWidth: 1, borderColor: '#3A2C22', borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  headerBadge: { color: GOLD, fontSize: 9.5, fontWeight: '900', letterSpacing: 1.5 },
+  headerTitle: { color: '#FFFFFF', fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 0.5 },
   scroll: { flex: 1 },
-  scrollContent: { padding: Spacing.four, gap: Spacing.three },
-  emptyCard: { backgroundColor: DARK_CARD, borderWidth: 1, borderColor: BORDER, padding: 30, alignItems: 'center', gap: 8 },
-  emptyText: { color: 'rgba(255,255,255,0.5)', fontSize: FontSize.xs },
-  orderCard: { backgroundColor: DARK_CARD, borderWidth: 1, borderColor: BORDER, padding: Spacing.four, gap: Spacing.two },
+  scrollContent: { padding: Spacing.four, gap: Spacing.three, paddingBottom: 40 },
+
+  emptyCard: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 14,
+    padding: 30,
+    alignItems: 'center',
+    gap: 8,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  emptyTitle: { color: TEXT_MAIN, fontSize: FontSize.sm, fontWeight: '900' },
+  emptySub: { color: TEXT_MUTED, fontSize: FontSize.xs, textAlign: 'center' },
+
+  orderCard: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 14,
+    padding: Spacing.four,
+    gap: Spacing.two,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
   orderHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  orderTitle: { color: '#fff', fontSize: FontSize.sm, fontWeight: '900' },
-  orderVendor: { color: YELLOW, fontSize: 10, fontWeight: '700', marginTop: 2 },
-  orderAmount: { color: '#10B981', fontSize: FontSize.base, fontWeight: '900' },
+  orderVendor: { color: GOLD, fontSize: 10, fontWeight: '900' },
+  orderTitle: { color: TEXT_MAIN, fontSize: FontSize.sm, fontWeight: '900', marginTop: 2 },
+  priceTag: { backgroundColor: '#ECFDF5', borderWidth: 1, borderColor: '#059669', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 9999 },
+  priceTagText: { color: '#059669', fontSize: FontSize.xs, fontWeight: '900' },
+
   orderBadgeRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  typeBadge: { backgroundColor: BLACK, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: BORDER },
-  typeText: { color: 'rgba(255,255,255,0.7)', fontSize: 9, fontWeight: '700' },
-  statusBadge: { backgroundColor: 'rgba(245,158,11,0.15)', paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: YELLOW },
-  statusCompleted: { backgroundColor: 'rgba(16,185,129,0.15)', borderColor: '#10B981' },
-  statusText: { color: '#fff', fontSize: 9, fontWeight: '900' },
-  actionRow: { marginTop: 8 },
-  completeBtn: { height: 38, backgroundColor: '#10B981', alignItems: 'center', justifyContent: 'center' },
-  completeBtnText: { color: BLACK, fontSize: FontSize.xs, fontWeight: '900' },
+  typeBadge: { backgroundColor: BG_MATTE, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: BORDER_COLOR },
+  typeText: { color: TEXT_MUTED, fontSize: 9.5, fontWeight: '800' },
+  statusBadge: { backgroundColor: '#FFFBEB', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: GOLD },
+  statusCompleted: { backgroundColor: '#ECFDF5', borderColor: '#059669' },
+  statusText: { color: GOLD, fontSize: 9.5, fontWeight: '900' },
+  statusCompletedText: { color: '#059669' },
+
+  actionRow: { marginTop: 6 },
+  completeBtn: {
+    flexDirection: 'row',
+    height: 42,
+    backgroundColor: GOLD,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  completeBtnText: { color: '#0F172A', fontSize: FontSize.xs, fontWeight: '900' },
 });

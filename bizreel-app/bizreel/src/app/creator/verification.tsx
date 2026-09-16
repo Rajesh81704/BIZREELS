@@ -11,11 +11,22 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FontSize, Spacing } from '@/constants/theme';
 import { api } from '@/lib/api';
 
+const GOLD = '#D99A3D';
+const ESPRESSO = '#241B15';
+const BG_MATTE = '#F8F4EC';
+const CARD_BG = '#FFFFFF';
+const INPUT_BG = '#F8FAFC';
+const BORDER_COLOR = '#E3DCCB';
+const TEXT_MAIN = '#0F172A';
+const TEXT_MUTED = '#64748B';
+
 export default function CreatorVerificationScreen() {
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<any>(null);
 
@@ -147,20 +158,20 @@ export default function CreatorVerificationScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={YELLOW} />
+        <ActivityIndicator size="large" color={GOLD} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.headerBar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.replace('/(tabs)/home')}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
+          <Ionicons name="arrow-back" size={20} color={GOLD} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
+          <Text style={styles.headerBadge}>CREATOR STUDIO</Text>
           <Text style={styles.headerTitle}>VERIFICATION CENTER</Text>
-          <Text style={styles.headerSub}>KYC Identity & Payout Verification</Text>
         </View>
       </View>
 
@@ -176,28 +187,28 @@ export default function CreatorVerificationScreen() {
           return (
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
-                <Ionicons name="card-outline" size={20} color={YELLOW} />
+                <Ionicons name="card-outline" size={20} color={GOLD} />
                 <Text style={styles.cardTitle}>1. PAN Card Verification</Text>
                 {isApproved ? (
                   <View style={styles.verifiedBadge}><Text style={styles.verifiedBadgeText}>VERIFIED</Text></View>
                 ) : isPending ? (
                   <View style={[styles.verifiedBadge, { backgroundColor: '#F59E0B' }]}><Text style={styles.verifiedBadgeText}>PENDING</Text></View>
                 ) : isRejected ? (
-                  <View style={[styles.verifiedBadge, { backgroundColor: '#EF4444' }]}><Text style={styles.verifiedBadgeText}>REJECTED</Text></View>
+                  <View style={[styles.verifiedBadge, { backgroundColor: '#DC2626' }]}><Text style={styles.verifiedBadgeText}>REJECTED</Text></View>
                 ) : null}
               </View>
 
               {isRejected && (
-                <View style={{ backgroundColor: '#2D1517', padding: 10, borderWidth: 1, borderColor: '#EF4444', marginBottom: 8 }}>
-                  <Text style={{ color: '#EF4444', fontSize: 11, fontWeight: '900' }}>❌ Verification Rejected</Text>
-                  <Text style={{ color: '#FCA5A5', fontSize: 10, marginTop: 2 }}>{reason || 'Uploaded PAN document did not pass compliance inspection.'}</Text>
+                <View style={styles.rejectedBox}>
+                  <Text style={styles.rejectedTitle}>❌ Verification Rejected</Text>
+                  <Text style={styles.rejectedSub}>{reason || 'Uploaded PAN document did not pass compliance inspection.'}</Text>
                 </View>
               )}
 
               {isPending && (
-                <View style={{ backgroundColor: '#2B2314', padding: 10, borderWidth: 1, borderColor: '#F59E0B', marginBottom: 8 }}>
-                  <Text style={{ color: '#F59E0B', fontSize: 11, fontWeight: '900' }}>⏳ Verification Pending Admin Review</Text>
-                  <Text style={{ color: '#FDE68A', fontSize: 10, marginTop: 2 }}>Submitted and currently being verified by compliance team.</Text>
+                <View style={styles.pendingBox}>
+                  <Text style={styles.pendingTitle}>⏳ Verification Pending Review</Text>
+                  <Text style={styles.pendingSub}>Submitted and currently being verified by compliance team.</Text>
                 </View>
               )}
 
@@ -206,14 +217,14 @@ export default function CreatorVerificationScreen() {
                   <TextInput
                     style={styles.input}
                     placeholder="Enter 10-character PAN (e.g. ABCDE1234F)"
-                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    placeholderTextColor="#94A3B8"
                     value={panNumber}
                     onChangeText={setPanNumber}
                     autoCapitalize="characters"
                     maxLength={10}
                   />
-                  <TouchableOpacity style={styles.submitBtn} onPress={handleVerifyPan} disabled={verifyingPan}>
-                    {verifyingPan ? <ActivityIndicator color={BLACK} /> : <Text style={styles.submitBtnText}>{isRejected ? 'Re-Submit PAN Card' : 'Verify PAN Card'}</Text>}
+                  <TouchableOpacity style={styles.submitBtn} onPress={handleVerifyPan} disabled={verifyingPan} activeOpacity={0.85}>
+                    {verifyingPan ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>{isRejected ? 'Re-Submit PAN Card' : 'Verify PAN Card'}</Text>}
                   </TouchableOpacity>
                 </>
               ) : (
@@ -234,28 +245,28 @@ export default function CreatorVerificationScreen() {
           return (
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
-                <Ionicons name="finger-print-outline" size={20} color={YELLOW} />
+                <Ionicons name="finger-print-outline" size={20} color={GOLD} />
                 <Text style={styles.cardTitle}>2. Aadhaar Identity (OTP)</Text>
                 {isApproved ? (
                   <View style={styles.verifiedBadge}><Text style={styles.verifiedBadgeText}>VERIFIED</Text></View>
                 ) : isPending ? (
                   <View style={[styles.verifiedBadge, { backgroundColor: '#F59E0B' }]}><Text style={styles.verifiedBadgeText}>PENDING</Text></View>
                 ) : isRejected ? (
-                  <View style={[styles.verifiedBadge, { backgroundColor: '#EF4444' }]}><Text style={styles.verifiedBadgeText}>REJECTED</Text></View>
+                  <View style={[styles.verifiedBadge, { backgroundColor: '#DC2626' }]}><Text style={styles.verifiedBadgeText}>REJECTED</Text></View>
                 ) : null}
               </View>
 
               {isRejected && (
-                <View style={{ backgroundColor: '#2D1517', padding: 10, borderWidth: 1, borderColor: '#EF4444', marginBottom: 8 }}>
-                  <Text style={{ color: '#EF4444', fontSize: 11, fontWeight: '900' }}>❌ Aadhaar Verification Rejected</Text>
-                  <Text style={{ color: '#FCA5A5', fontSize: 10, marginTop: 2 }}>{reason || 'Aadhaar identity proof did not pass review.'}</Text>
+                <View style={styles.rejectedBox}>
+                  <Text style={styles.rejectedTitle}>❌ Aadhaar Verification Rejected</Text>
+                  <Text style={styles.rejectedSub}>{reason || 'Aadhaar identity proof did not pass review.'}</Text>
                 </View>
               )}
 
               {isPending && (
-                <View style={{ backgroundColor: '#2B2314', padding: 10, borderWidth: 1, borderColor: '#F59E0B', marginBottom: 8 }}>
-                  <Text style={{ color: '#F59E0B', fontSize: 11, fontWeight: '900' }}>⏳ Verification Pending Admin Review</Text>
-                  <Text style={{ color: '#FDE68A', fontSize: 10, marginTop: 2 }}>Aadhaar submitted and under compliance check.</Text>
+                <View style={styles.pendingBox}>
+                  <Text style={styles.pendingTitle}>⏳ Verification Pending Review</Text>
+                  <Text style={styles.pendingSub}>Aadhaar submitted and under compliance check.</Text>
                 </View>
               )}
 
@@ -265,14 +276,14 @@ export default function CreatorVerificationScreen() {
                     <TextInput
                       style={styles.input}
                       placeholder="Enter 12-digit Aadhaar Number"
-                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      placeholderTextColor="#94A3B8"
                       value={aadhaarNumber}
                       onChangeText={setAadhaarNumber}
                       keyboardType="number-pad"
                       maxLength={12}
                     />
-                    <TouchableOpacity style={styles.submitBtn} onPress={handleInitiateAadhaar} disabled={verifyingAadhaar}>
-                      {verifyingAadhaar ? <ActivityIndicator color={BLACK} /> : <Text style={styles.submitBtnText}>{isRejected ? 'Re-Request Aadhaar OTP' : 'Get Aadhaar OTP'}</Text>}
+                    <TouchableOpacity style={styles.submitBtn} onPress={handleInitiateAadhaar} disabled={verifyingAadhaar} activeOpacity={0.85}>
+                      {verifyingAadhaar ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>{isRejected ? 'Re-Request Aadhaar OTP' : 'Get Aadhaar OTP'}</Text>}
                     </TouchableOpacity>
                   </>
                 ) : (
@@ -280,14 +291,14 @@ export default function CreatorVerificationScreen() {
                     <TextInput
                       style={styles.input}
                       placeholder="Enter 6-digit OTP sent to mobile"
-                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      placeholderTextColor="#94A3B8"
                       value={aadhaarOtp}
                       onChangeText={setAadhaarOtp}
                       keyboardType="number-pad"
                       maxLength={6}
                     />
-                    <TouchableOpacity style={styles.submitBtn} onPress={handleVerifyAadhaarOtp} disabled={verifyingAadhaar}>
-                      {verifyingAadhaar ? <ActivityIndicator color={BLACK} /> : <Text style={styles.submitBtnText}>Verify Aadhaar OTP</Text>}
+                    <TouchableOpacity style={styles.submitBtn} onPress={handleVerifyAadhaarOtp} disabled={verifyingAadhaar} activeOpacity={0.85}>
+                      {verifyingAadhaar ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>Verify Aadhaar OTP</Text>}
                     </TouchableOpacity>
                   </>
                 )
@@ -301,7 +312,7 @@ export default function CreatorVerificationScreen() {
         {/* Bank Account Verification */}
         <View style={styles.card}>
           <View style={styles.cardTitleRow}>
-            <Ionicons name="business-outline" size={20} color={YELLOW} />
+            <Ionicons name="business-outline" size={20} color={GOLD} />
             <Text style={styles.cardTitle}>3. Bank Account Penny Drop</Text>
             {status?.bankVerified && (
               <View style={styles.verifiedBadge}><Text style={styles.verifiedBadgeText}>VERIFIED</Text></View>
@@ -312,7 +323,7 @@ export default function CreatorVerificationScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Bank Account Number"
-                placeholderTextColor="rgba(255,255,255,0.4)"
+                placeholderTextColor="#94A3B8"
                 value={accountNumber}
                 onChangeText={setAccountNumber}
                 keyboardType="number-pad"
@@ -320,13 +331,13 @@ export default function CreatorVerificationScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="IFSC Code (e.g. SBIN0001234)"
-                placeholderTextColor="rgba(255,255,255,0.4)"
+                placeholderTextColor="#94A3B8"
                 value={ifscCode}
                 onChangeText={setIfscCode}
                 autoCapitalize="characters"
               />
-              <TouchableOpacity style={styles.submitBtn} onPress={handleVerifyBank} disabled={verifyingBank}>
-                {verifyingBank ? <ActivityIndicator color={BLACK} /> : <Text style={styles.submitBtnText}>Verify Bank Account</Text>}
+              <TouchableOpacity style={styles.submitBtn} onPress={handleVerifyBank} disabled={verifyingBank} activeOpacity={0.85}>
+                {verifyingBank ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>Verify Bank Account</Text>}
               </TouchableOpacity>
             </>
           ) : (
@@ -337,7 +348,7 @@ export default function CreatorVerificationScreen() {
         {/* UPI Verification */}
         <View style={styles.card}>
           <View style={styles.cardTitleRow}>
-            <Ionicons name="flash-outline" size={20} color={YELLOW} />
+            <Ionicons name="flash-outline" size={20} color={GOLD} />
             <Text style={styles.cardTitle}>4. Instant UPI Payout Handle</Text>
             {status?.upiVerified && (
               <View style={styles.verifiedBadge}><Text style={styles.verifiedBadgeText}>VERIFIED</Text></View>
@@ -348,13 +359,13 @@ export default function CreatorVerificationScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Enter UPI ID (e.g. mobile@upi)"
-                placeholderTextColor="rgba(255,255,255,0.4)"
+                placeholderTextColor="#94A3B8"
                 value={upiId}
                 onChangeText={setUpiId}
                 autoCapitalize="none"
               />
-              <TouchableOpacity style={styles.submitBtn} onPress={handleVerifyUpi} disabled={verifyingUpi}>
-                {verifyingUpi ? <ActivityIndicator color={BLACK} /> : <Text style={styles.submitBtnText}>Verify UPI ID</Text>}
+              <TouchableOpacity style={styles.submitBtn} onPress={handleVerifyUpi} disabled={verifyingUpi} activeOpacity={0.85}>
+                {verifyingUpi ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>Verify UPI ID</Text>}
               </TouchableOpacity>
             </>
           ) : (
@@ -366,37 +377,78 @@ export default function CreatorVerificationScreen() {
   );
 }
 
-const YELLOW = '#F59E0B';
-const BLACK = '#0F0F12';
-const DARK_CARD = '#18181C';
-const BORDER = '#2D2D36';
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BLACK },
-  loadingContainer: { flex: 1, backgroundColor: BLACK, alignItems: 'center', justifyContent: 'center' },
+  container: { flex: 1, backgroundColor: BG_MATTE },
+  loadingContainer: { flex: 1, backgroundColor: BG_MATTE, alignItems: 'center', justifyContent: 'center' },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.six,
-    paddingBottom: Spacing.three,
-    backgroundColor: DARK_CARD,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    paddingVertical: Spacing.three,
+    backgroundColor: ESPRESSO,
+    borderBottomWidth: 2,
+    borderBottomColor: GOLD,
     gap: Spacing.three,
   },
-  backBtn: { width: 36, height: 36, backgroundColor: BLACK, borderWidth: 1, borderColor: BORDER, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: YELLOW, fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 1 },
-  headerSub: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
+  backBtn: { width: 38, height: 38, backgroundColor: '#1A1410', borderWidth: 1, borderColor: '#3A2C22', borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  headerBadge: { color: GOLD, fontSize: 9.5, fontWeight: '900', letterSpacing: 1.5 },
+  headerTitle: { color: '#FFFFFF', fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 0.5 },
+
   scroll: { flex: 1 },
-  scrollContent: { padding: Spacing.four, gap: Spacing.four },
-  card: { backgroundColor: DARK_CARD, borderWidth: 1, borderColor: BORDER, padding: Spacing.four, gap: Spacing.three },
+  scrollContent: { padding: Spacing.four, gap: Spacing.four, paddingBottom: 40 },
+
+  card: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 14,
+    padding: Spacing.four,
+    gap: Spacing.three,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardTitle: { color: '#fff', fontSize: FontSize.sm, fontWeight: '900', flex: 1 },
-  verifiedBadge: { backgroundColor: '#10B981', paddingHorizontal: 6, paddingVertical: 2 },
-  verifiedBadgeText: { color: BLACK, fontSize: 9, fontWeight: '900' },
-  input: { backgroundColor: BLACK, borderWidth: 1, borderColor: BORDER, color: '#fff', paddingHorizontal: Spacing.three, height: 44, fontSize: FontSize.xs },
-  submitBtn: { backgroundColor: YELLOW, height: 44, alignItems: 'center', justifyContent: 'center' },
-  submitBtnText: { color: BLACK, fontSize: FontSize.xs, fontWeight: '900' },
-  successNote: { color: '#10B981', fontSize: FontSize.xs, fontWeight: '700' },
+  cardTitle: { color: ESPRESSO, fontSize: FontSize.xs, fontWeight: '900', flex: 1, textTransform: 'uppercase', letterSpacing: 0.5 },
+  verifiedBadge: { backgroundColor: '#059669', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  verifiedBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
+
+  rejectedBox: { backgroundColor: '#FEF2F2', padding: 10, borderWidth: 1, borderColor: '#FCA5A5', borderRadius: 8 },
+  rejectedTitle: { color: '#DC2626', fontSize: 11, fontWeight: '900' },
+  rejectedSub: { color: '#7F1D1D', fontSize: 10, marginTop: 2 },
+
+  pendingBox: { backgroundColor: '#FFFBEB', padding: 10, borderWidth: 1, borderColor: GOLD, borderRadius: 8 },
+  pendingTitle: { color: ESPRESSO, fontSize: 11, fontWeight: '900' },
+  pendingSub: { color: TEXT_MUTED, fontSize: 10, marginTop: 2 },
+
+  input: {
+    backgroundColor: INPUT_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    color: TEXT_MAIN,
+    paddingHorizontal: Spacing.three,
+    height: 44,
+    fontSize: FontSize.xs,
+    borderRadius: 8,
+  },
+  submitBtn: {
+    backgroundColor: ESPRESSO,
+    borderWidth: 1,
+    borderColor: ESPRESSO,
+    height: 46,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  submitBtnText: { color: GOLD, fontSize: FontSize.xs, fontWeight: '900', letterSpacing: 0.5 },
+  successNote: { color: '#059669', fontSize: FontSize.xs, fontWeight: '700' },
 });
+

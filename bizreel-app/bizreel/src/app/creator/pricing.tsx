@@ -11,11 +11,22 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FontSize, Spacing } from '@/constants/theme';
 import { api } from '@/lib/api';
 
+const GOLD = '#D99A3D';
+const ESPRESSO = '#241B15';
+const BG_MATTE = '#F8F4EC';
+const CARD_BG = '#FFFFFF';
+const INPUT_BG = '#F8FAFC';
+const BORDER_COLOR = '#E3DCCB';
+const TEXT_MAIN = '#0F172A';
+const TEXT_MUTED = '#64748B';
+
 export default function CreatorPricingScreen() {
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -66,33 +77,36 @@ export default function CreatorPricingScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={YELLOW} />
+        <ActivityIndicator size="large" color={GOLD} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.headerBar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.replace('/(tabs)/home')}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
+          <Ionicons name="arrow-back" size={20} color={GOLD} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>PRICING & PACKAGES</Text>
-          <Text style={styles.headerSub}>Set Your Brand Collaboration Rates</Text>
+          <Text style={styles.headerBadge}>CREATOR STUDIO</Text>
+          <Text style={styles.headerTitle}>PRICING &amp; PACKAGES</Text>
         </View>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Video Reel Shoot Packages</Text>
+          <View style={styles.cardTitleRow}>
+            <Ionicons name="pricetag" size={18} color={GOLD} />
+            <Text style={styles.cardTitle}>Video Reel Shoot Packages</Text>
+          </View>
           <Text style={styles.cardSub}>Set custom prices for vendors to hire you per video deliverable.</Text>
 
           <Text style={styles.label}>1 Video Reel Rate (₹)</Text>
           <TextInput
             style={styles.input}
             placeholder="e.g. 1500"
-            placeholderTextColor="rgba(255,255,255,0.4)"
+            placeholderTextColor="#94A3B8"
             keyboardType="number-pad"
             value={reel1}
             onChangeText={setReel1}
@@ -102,7 +116,7 @@ export default function CreatorPricingScreen() {
           <TextInput
             style={styles.input}
             placeholder="e.g. 4000"
-            placeholderTextColor="rgba(255,255,255,0.4)"
+            placeholderTextColor="#94A3B8"
             keyboardType="number-pad"
             value={reel3}
             onChangeText={setReel3}
@@ -112,7 +126,7 @@ export default function CreatorPricingScreen() {
           <TextInput
             style={styles.input}
             placeholder="e.g. 12000"
-            placeholderTextColor="rgba(255,255,255,0.4)"
+            placeholderTextColor="#94A3B8"
             keyboardType="number-pad"
             value={reel10}
             onChangeText={setReel10}
@@ -120,14 +134,17 @@ export default function CreatorPricingScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>On-Site Shoot Rates</Text>
+          <View style={styles.cardTitleRow}>
+            <Ionicons name="time" size={18} color={GOLD} />
+            <Text style={styles.cardTitle}>On-Site Shoot Rates</Text>
+          </View>
           <Text style={styles.cardSub}>Set hourly or full-day shoot rates for store visits and event coverage.</Text>
 
           <Text style={styles.label}>Hourly Shoot Rate (₹/hr)</Text>
           <TextInput
             style={styles.input}
             placeholder="e.g. 800"
-            placeholderTextColor="rgba(255,255,255,0.4)"
+            placeholderTextColor="#94A3B8"
             keyboardType="number-pad"
             value={hourlyRate}
             onChangeText={setHourlyRate}
@@ -137,50 +154,81 @@ export default function CreatorPricingScreen() {
           <TextInput
             style={styles.input}
             placeholder="e.g. 5000"
-            placeholderTextColor="rgba(255,255,255,0.4)"
+            placeholderTextColor="#94A3B8"
             keyboardType="number-pad"
             value={dayRate}
             onChangeText={setDayRate}
           />
         </View>
 
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSavePricing} disabled={saving}>
-          {saving ? <ActivityIndicator color={BLACK} /> : <Text style={styles.saveBtnText}>Save Creator Rates</Text>}
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSavePricing} disabled={saving} activeOpacity={0.85}>
+          {saving ? <ActivityIndicator color={GOLD} /> : <Text style={styles.saveBtnText}>SAVE CREATOR RATES</Text>}
         </TouchableOpacity>
       </ScrollView>
     </View>
   );
 }
 
-const YELLOW = '#F59E0B';
-const BLACK = '#0F0F12';
-const DARK_CARD = '#18181C';
-const BORDER = '#2D2D36';
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BLACK },
-  loadingContainer: { flex: 1, backgroundColor: BLACK, alignItems: 'center', justifyContent: 'center' },
+  container: { flex: 1, backgroundColor: BG_MATTE },
+  loadingContainer: { flex: 1, backgroundColor: BG_MATTE, alignItems: 'center', justifyContent: 'center' },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.six,
-    paddingBottom: Spacing.three,
-    backgroundColor: DARK_CARD,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    paddingVertical: Spacing.three,
+    backgroundColor: ESPRESSO,
+    borderBottomWidth: 2,
+    borderBottomColor: GOLD,
     gap: Spacing.three,
   },
-  backBtn: { width: 36, height: 36, backgroundColor: BLACK, borderWidth: 1, borderColor: BORDER, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: YELLOW, fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 1 },
-  headerSub: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
+  backBtn: { width: 38, height: 38, backgroundColor: '#1A1410', borderWidth: 1, borderColor: '#3A2C22', borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  headerBadge: { color: GOLD, fontSize: 9.5, fontWeight: '900', letterSpacing: 1.5 },
+  headerTitle: { color: '#FFFFFF', fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 0.5 },
   scroll: { flex: 1 },
-  scrollContent: { padding: Spacing.four, gap: Spacing.four },
-  card: { backgroundColor: DARK_CARD, borderWidth: 1, borderColor: BORDER, padding: Spacing.four, gap: Spacing.two },
-  cardTitle: { color: YELLOW, fontSize: FontSize.sm, fontWeight: '900' },
-  cardSub: { color: 'rgba(255,255,255,0.6)', fontSize: FontSize.xs, marginBottom: 4 },
-  label: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700', marginTop: 4 },
-  input: { backgroundColor: BLACK, borderWidth: 1, borderColor: BORDER, color: '#fff', paddingHorizontal: Spacing.three, height: 44, fontSize: FontSize.xs },
-  saveBtn: { backgroundColor: YELLOW, height: 48, alignItems: 'center', justifyContent: 'center' },
-  saveBtnText: { color: BLACK, fontSize: FontSize.sm, fontWeight: '900' },
+  scrollContent: { padding: Spacing.four, gap: Spacing.four, paddingBottom: 40 },
+  card: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 14,
+    padding: Spacing.four,
+    gap: Spacing.two,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, borderBottomWidth: 1, borderBottomColor: BORDER_COLOR, paddingBottom: 8 },
+  cardTitle: { color: ESPRESSO, fontSize: FontSize.xs, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
+  cardSub: { color: TEXT_MUTED, fontSize: FontSize.xs, marginVertical: 4 },
+  label: { color: '#334155', fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 4 },
+  input: {
+    backgroundColor: INPUT_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    color: TEXT_MAIN,
+    paddingHorizontal: Spacing.three,
+    height: 44,
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    borderRadius: 8,
+  },
+  saveBtn: {
+    backgroundColor: ESPRESSO,
+    borderWidth: 1,
+    borderColor: ESPRESSO,
+    height: 50,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  saveBtnText: { color: GOLD, fontSize: FontSize.xs, fontWeight: '900', letterSpacing: 1 },
 });

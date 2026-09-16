@@ -9,9 +9,18 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FontSize, Spacing } from '@/constants/theme';
 import { api } from '@/lib/api';
+
+const GOLD = '#D99A3D';
+const ESPRESSO = '#241B15';
+const BG_MATTE = '#F8F4EC';
+const CARD_BG = '#FFFFFF';
+const BORDER_COLOR = '#E3DCCB';
+const TEXT_MAIN = '#0F172A';
+const TEXT_MUTED = '#64748B';
 
 interface Review {
   _id: string;
@@ -22,6 +31,7 @@ interface Review {
 }
 
 export default function CreatorReviewsScreen() {
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState<Review[]>([]);
 
@@ -45,35 +55,43 @@ export default function CreatorReviewsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={YELLOW} />
+        <ActivityIndicator size="large" color={GOLD} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.headerBar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.replace('/(tabs)/home')}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
+          <Ionicons name="arrow-back" size={20} color={GOLD} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
+          <Text style={styles.headerBadge}>CREATOR STUDIO</Text>
           <Text style={styles.headerTitle}>CLIENT REVIEWS</Text>
-          <Text style={styles.headerSub}>Vendor Ratings & Feedback</Text>
         </View>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {reviews.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Ionicons name="star-outline" size={32} color="rgba(255,255,255,0.4)" />
-            <Text style={styles.emptyText}>No client reviews received yet</Text>
+            <Ionicons name="star-outline" size={36} color={TEXT_MUTED} />
+            <Text style={styles.emptyTitle}>No Reviews Yet</Text>
+            <Text style={styles.emptySub}>Feedback and star ratings from brand clients will appear here.</Text>
           </View>
         ) : (
           reviews.map((rev) => (
             <View key={rev._id} style={styles.reviewCard}>
               <View style={styles.revHeader}>
-                <Text style={styles.revUser}>{rev.user?.name || 'Client Vendor'}</Text>
-                <Text style={styles.revRating}>{'★'.repeat(rev.rating)} {rev.rating}.0</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.revUser}>{rev.user?.name || 'Client Vendor'}</Text>
+                  <Text style={styles.revDate}>
+                    {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString() : 'Recent Client'}
+                  </Text>
+                </View>
+                <View style={styles.ratingBadge}>
+                  <Text style={styles.ratingBadgeText}>★ {rev.rating}.0</Text>
+                </View>
               </View>
               <Text style={styles.revComment}>{rev.comment}</Text>
             </View>
@@ -84,35 +102,61 @@ export default function CreatorReviewsScreen() {
   );
 }
 
-const YELLOW = '#F59E0B';
-const BLACK = '#0F0F12';
-const DARK_CARD = '#18181C';
-const BORDER = '#2D2D36';
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BLACK },
-  loadingContainer: { flex: 1, backgroundColor: BLACK, alignItems: 'center', justifyContent: 'center' },
+  container: { flex: 1, backgroundColor: BG_MATTE },
+  loadingContainer: { flex: 1, backgroundColor: BG_MATTE, alignItems: 'center', justifyContent: 'center' },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.six,
-    paddingBottom: Spacing.three,
-    backgroundColor: DARK_CARD,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    paddingVertical: Spacing.three,
+    backgroundColor: ESPRESSO,
+    borderBottomWidth: 2,
+    borderBottomColor: GOLD,
     gap: Spacing.three,
   },
-  backBtn: { width: 36, height: 36, backgroundColor: BLACK, borderWidth: 1, borderColor: BORDER, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: YELLOW, fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 1 },
-  headerSub: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
+  backBtn: { width: 38, height: 38, backgroundColor: '#1A1410', borderWidth: 1, borderColor: '#3A2C22', borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  headerBadge: { color: GOLD, fontSize: 9.5, fontWeight: '900', letterSpacing: 1.5 },
+  headerTitle: { color: '#FFFFFF', fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 0.5 },
+
   scroll: { flex: 1 },
-  scrollContent: { padding: Spacing.four, gap: Spacing.three },
-  emptyCard: { backgroundColor: DARK_CARD, borderWidth: 1, borderColor: BORDER, padding: 30, alignItems: 'center', gap: 8 },
-  emptyText: { color: 'rgba(255,255,255,0.5)', fontSize: FontSize.xs },
-  reviewCard: { backgroundColor: DARK_CARD, borderWidth: 1, borderColor: BORDER, padding: Spacing.four, gap: Spacing.two },
+  scrollContent: { padding: Spacing.four, gap: Spacing.three, paddingBottom: 40 },
+
+  emptyCard: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 14,
+    padding: 30,
+    alignItems: 'center',
+    gap: 8,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  emptyTitle: { color: TEXT_MAIN, fontSize: FontSize.sm, fontWeight: '900' },
+  emptySub: { color: TEXT_MUTED, fontSize: FontSize.xs, textAlign: 'center' },
+
+  reviewCard: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 14,
+    padding: Spacing.four,
+    gap: Spacing.two,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
   revHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  revUser: { color: '#fff', fontSize: FontSize.xs, fontWeight: '900' },
-  revRating: { color: YELLOW, fontSize: FontSize.xs, fontWeight: '900' },
-  revComment: { color: 'rgba(255,255,255,0.7)', fontSize: FontSize.xs, lineHeight: 18 },
+  revUser: { color: TEXT_MAIN, fontSize: FontSize.xs, fontWeight: '900' },
+  revDate: { color: TEXT_MUTED, fontSize: 10, marginTop: 1 },
+  ratingBadge: { backgroundColor: '#FFFBEB', borderWidth: 1, borderColor: GOLD, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  ratingBadgeText: { color: GOLD, fontSize: FontSize.xs, fontWeight: '900' },
+  revComment: { color: TEXT_MAIN, fontSize: FontSize.xs, lineHeight: 18, marginTop: 2 },
 });
+
