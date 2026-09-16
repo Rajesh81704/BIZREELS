@@ -107,9 +107,12 @@ class RedisOtpService {
       throw ApiError.badRequest('OTP was issued for a different purpose.');
     }
 
-    // Channel validation if specified
-    if (expectedChannel && otpData.channel && otpData.channel !== expectedChannel) {
-      throw ApiError.badRequest(`OTP was requested via ${otpData.channel.toUpperCase()}, please verify on the correct channel.`);
+    // Channel validation if specified (lenient for phone channels SMS/WhatsApp)
+    if (expectedChannel && otpData.channel && expectedChannel !== otpData.channel) {
+      const isPhoneChannel = (c) => ['sms', 'whatsapp', 'phone', 'mobile'].includes(String(c).toLowerCase());
+      if (!isPhoneChannel(expectedChannel) || !isPhoneChannel(otpData.channel)) {
+        throw ApiError.badRequest(`OTP was requested via ${otpData.channel.toUpperCase()}, please verify on the correct channel.`);
+      }
     }
 
     const maxAttempts = otpData.maxAttempts || config.otp.maxAttempts || 5;
