@@ -41,18 +41,28 @@ export async function fetchUserProfile(): Promise<AuthUser> {
   return response.data.user;
 }
 
-export async function switchUserRole(role: 'customer' | 'vendor' | 'creator'): Promise<AuthUser> {
+export interface SwitchRoleResult {
+  user: AuthUser;
+  isOnboardingRequired?: boolean;
+  targetOnboardingPath?: string;
+  redirectTo?: string;
+}
+
+export async function switchUserRole(role: 'customer' | 'vendor' | 'creator'): Promise<SwitchRoleResult> {
+  let resData: any;
   try {
-    const response = await api.patch<{ success: boolean; data?: { user: AuthUser }; user?: AuthUser }>(
-      '/auth/switch-role',
-      { role }
-    );
-    return response.data.data?.user || response.data.user || (response.data as any);
+    const response = await api.patch('/auth/switch-role', { role });
+    resData = response.data?.data || response.data;
   } catch (err) {
-    const response = await api.post<{ success: boolean; data?: { user: AuthUser }; user?: AuthUser }>(
-      '/auth/add-role',
-      { role }
-    );
-    return response.data.data?.user || response.data.user || (response.data as any);
+    const response = await api.post('/auth/add-role', { role });
+    resData = response.data?.data || response.data;
   }
+
+  const user = resData.user || resData;
+  return {
+    user,
+    isOnboardingRequired: resData.isOnboardingRequired,
+    targetOnboardingPath: resData.targetOnboardingPath,
+    redirectTo: resData.redirectTo,
+  };
 }

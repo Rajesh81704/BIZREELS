@@ -80,6 +80,12 @@ export default function HomeScreen() {
   const activeRole = user?.activeRole || user?.current_role || 'customer';
   const isVendor = activeRole === 'vendor';
   const isCreator = activeRole === 'creator';
+  const custp = (user as any)?.customerProfile || {};
+  const isCustomerUnonboarded =
+    activeRole === 'customer' &&
+    !custp.interestsSelectedAt &&
+    (!Array.isArray(custp.interests) || custp.interests.length < 5) &&
+    (!Array.isArray((user as any)?.interests) || (user as any)?.interests.length < 5);
   const reels = reelsData?.pages?.flatMap((p) => p.data || []) || [];
   const cartItemCount = cart?.total_items || 0;
 
@@ -225,6 +231,23 @@ export default function HomeScreen() {
             colors={[BrandColors.primary]}
           />
         }>
+        {/* Customer Onboarding Incomplete Banner */}
+        {isCustomerUnonboarded && (
+          <TouchableOpacity
+            style={styles.customerOnboardingCard}
+            onPress={() => router.push('/customer/choose-interests')}
+            activeOpacity={0.88}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.customerOnboardingBadge}>CUSTOMER SETUP REQUIRED ✦</Text>
+              <Text style={styles.customerOnboardingTitle}>Personalize Feed &amp; Interests</Text>
+              <Text style={styles.customerOnboardingDesc}>Choose your favorite categories to unlock tailored video reels and local seller deals.</Text>
+            </View>
+            <View style={styles.customerOnboardingBtn}>
+              <Text style={styles.customerOnboardingBtnText}>Setup ›</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* Highlighted Search Bar (Customer & Vendor mode only) */}
         {!isCreator && (
           <TouchableOpacity
@@ -1719,5 +1742,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  customerOnboardingCard: {
+    backgroundColor: '#241B15',
+    borderWidth: 1,
+    borderColor: '#D99A3D',
+    borderRadius: 12,
+    padding: Spacing.four,
+    marginBottom: Spacing.three,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  customerOnboardingBadge: { color: '#D99A3D', fontSize: 9.5, fontWeight: '900', letterSpacing: 1.2 },
+  customerOnboardingTitle: { color: '#FFFFFF', fontSize: FontSize.sm, fontWeight: '900', marginTop: 2 },
+  customerOnboardingDesc: { color: '#CBD5E1', fontSize: 11, marginTop: 2, lineHeight: 15 },
+  customerOnboardingBtn: {
+    backgroundColor: '#D99A3D',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  customerOnboardingBtnText: { color: '#241B15', fontSize: 11, fontWeight: '900' },
 });
 

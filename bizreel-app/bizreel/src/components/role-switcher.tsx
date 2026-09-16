@@ -57,10 +57,11 @@ export function RoleSwitcher() {
 
   const switchMutation = useMutation({
     mutationFn: (role: UserRole) => switchUserRole(role),
-    onSuccess: (updatedUser, newRole) => {
+    onSuccess: (res, newRole) => {
+      const fetchedUser = res.user || res;
       const finalUser = {
         ...user,
-        ...updatedUser,
+        ...fetchedUser,
         activeRole: newRole,
         current_role: newRole,
       } as any;
@@ -69,13 +70,28 @@ export function RoleSwitcher() {
       queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
       setModalVisible(false);
 
-      const isVendorUnonboarded = newRole === 'vendor' && (!finalUser?.vendorProfile || (!finalUser?.vendorProfile?.shopName && !finalUser?.vendorProfile?.businessName));
-      const isCreatorUnonboarded = newRole === 'creator' && (!finalUser?.creatorProfile || (!finalUser?.creatorProfile?.displayName && !finalUser?.creatorProfile?.name));
+      const vp = finalUser?.vendorProfile || {};
+      const cp = finalUser?.creatorProfile || {};
+      const custp = finalUser?.customerProfile || {};
 
-      if (isVendorUnonboarded) {
+      const isVendorUnonboarded = newRole === 'vendor' && (!vp.shopName && !vp.businessName && !vp.store_name);
+      const isCreatorUnonboarded = newRole === 'creator' && (!cp.displayName && !cp.name);
+      const isCustomerUnonboarded =
+        newRole === 'customer' &&
+        !custp.interestsSelectedAt &&
+        (!Array.isArray(custp.interests) || custp.interests.length < 5) &&
+        (!Array.isArray(finalUser?.interests) || finalUser?.interests.length < 5);
+
+      if (res.redirectTo) {
+        router.replace(res.redirectTo as any);
+      } else if (res.isOnboardingRequired && res.targetOnboardingPath) {
+        router.replace(res.targetOnboardingPath as any);
+      } else if (isVendorUnonboarded) {
         router.replace('/vendor/onboarding');
       } else if (isCreatorUnonboarded) {
         router.replace('/creator/onboarding');
+      } else if (isCustomerUnonboarded) {
+        router.replace('/customer/choose-interests');
       } else {
         Alert.alert('Role Switched', `Switched to ${ROLES_CONFIG[newRole].label} mode.`);
       }
