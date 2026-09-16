@@ -228,13 +228,8 @@ class OrderController {
       }
     }
 
-    // Verify supplier identity and KYC status
-    const identityService = require('../services/identity.service');
     const vendorId = listing.vendor?._id || listing.vendor;
-    const isVerified = await identityService.hasVerifiedIdentity(vendorId);
-    if (!isVerified) {
-      throw ApiError.badRequest('Orders cannot be placed with unverified suppliers. Supplier business verification (KYC) is pending approval.');
-    }
+
 
     const unitPriceCandidates = [
       listing.salePrice,

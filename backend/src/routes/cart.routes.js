@@ -252,33 +252,11 @@ const Order = require('../models/Order');
 const Notification = require('../models/Notification');
 
 router.post(['/checkout', '/me/checkout'], requireAuth, catchAsync(async (req, res) => {
-  const { couponCode, couponDiscount = 0, shippingCharges = 0, address, pincode } = req.body || {};
+  const { couponCode, couponDiscount = 0, shippingCharges = 0, address, pincode, paymentMethod = 'cod' } = req.body || {};
   const cart = await getCart(req.user._id.toString());
   const hydrated = await hydrateCart(cart);
   if (!hydrated || !hydrated.groups || hydrated.groups.length === 0) {
     throw ApiError.badRequest('Cart is empty');
-  }
-
-  // Block checkout if any vendor is unverified
-  const unverifiedVendorIds = [];
-  const unverifiedVendorNames = [];
-  for (const group of hydrated.groups) {
-    const vid = group.vendor_id;
-    const verified = await identityService.hasVerifiedIdentity(vid);
-    if (!verified) {
-      unverifiedVendorIds.push(vid);
-      const vname = group.vendor ? group.vendor.name : `Vendor ${vid.slice(-4)}`;
-      unverifiedVendorNames.push(vname);
-    }
-  }
-
-  if (unverifiedVendorIds.length > 0) {
-    return res.status(403).json({
-      code: 'vendor_unverified',
-      message: `Cannot place this order — ${unverifiedVendorIds.length} vendor(s) haven't verified their identity yet. Please ask them to verify to accept orders.`,
-      vendor_ids: unverifiedVendorIds,
-      vendor_names: unverifiedVendorNames,
-    });
   }
 
   const now = new Date().toISOString();
@@ -317,7 +295,7 @@ router.post(['/checkout', '/me/checkout'], requireAuth, catchAsync(async (req, r
       console.warn('Failed to get/create chat conversation during cart checkout:', err);
     }
 
-    // 2. Validate buyer & seller before Deal creation to prevent raw Mongoose ValidationError
+    // 2. Validate buyer & seller before Deal & Order creation
     const buyerId = req.user?._id ? req.user._id.toString() : null;
     const sellerId = vendorId && vendorId !== 'default_vendor' ? vendorId.toString() : null;
 
@@ -367,34 +345,48 @@ router.post(['/checkout', '/me/checkout'], requireAuth, catchAsync(async (req, r
       const itemShipping = Math.round(allocatedShipping * itemShare);
       const orderPrice = Math.max(0, itemLineTotal - itemDiscount + itemShipping);
 
-      // Atomic conditional stock decrement
-      const updatedListing = await Listing.findOneAndUpdate(
-        { _id: item.listing_id, stock: { $gte: reqQty } },
-        { $inc: { stock: -reqQty } },
-        { new: true }
-      );
+      // Fetch target listing safely to check stock without crashing
+      const targetListing = await Listing.findById(item.listing_id).lean();
+      const listingTitle = targetListing?.title || item.title || 'Product';
+      const listingStock = targetListing?.stock;
 
-      if (!updatedListing) {
-        throw ApiError.badRequest(
-          `Insufficient stock available for "${item.title || 'Product'}". Please update your cart quantity.`
-        );
+      // Safely check & decrement stock if stock management is explicitly active (number >= 0)
+      if (typeof listingStock === 'number' && listingStock >= 0) {
+        if (listingStock > 0 && listingStock < reqQty) {
+          throw ApiError.badRequest(
+            `Insufficient stock available for "${listingTitle}". Only ${listingStock} remaining.`
+          );
+        }
+        if (listingStock > 0) {
+          await Listing.updateOne(
+            { _id: item.listing_id },
+            {
+              $inc: { stock: -reqQty },
+              ...(listingStock - reqQty <= 0 ? { $set: { status: 'out_of_stock' } } : {})
+            }
+          ).catch(() => {});
+        }
       }
 
       let order;
       try {
         const itemSnapshot = {
-          title: updatedListing.title || item.title || 'Product',
-          sku: updatedListing.sku || '',
+          title: listingTitle,
+          sku: targetListing?.sku || '',
           unitPrice: Number(item.price) || 0,
-          images: Array.isArray(updatedListing.images) && updatedListing.images.length > 0
-            ? updatedListing.images
-            : (updatedListing.media?.url ? [updatedListing.media.url] : (updatedListing.thumbnail ? [updatedListing.thumbnail] : [])),
+          images: Array.isArray(targetListing?.images) && targetListing.images.length > 0
+            ? targetListing.images
+            : (targetListing?.media?.url ? [targetListing.media.url] : (targetListing?.thumbnail ? [targetListing.thumbnail] : [])),
           variantDetails: item.variant || null,
           vendorShopName: group.vendor_name || group.shop_name || 'Vendor',
           vendorId: vendorId,
-          category: updatedListing.category || '',
-          listingType: 'product',
+          category: targetListing?.category || '',
+          listingType: targetListing?.type || 'product',
         };
+
+        const validPaymentMethod = ['wallet', 'vendor_upi', 'vendor_qr', 'vendor_bank', 'cod', 'razorpay'].includes(paymentMethod)
+          ? paymentMethod
+          : 'cod';
 
         order = await Order.create({
           customer: req.user._id,
@@ -410,25 +402,23 @@ router.post(['/checkout', '/me/checkout'], requireAuth, catchAsync(async (req, r
           status: 'pending',
           paymentStatus: 'unpaid',
           revenueRecognized: false,
-          paymentMethod: 'vendor_upi',
+          paymentMethod: validPaymentMethod,
           address: address || req.user.location?.address || req.user.address || 'Customer Address',
           itemSnapshot,
         });
 
-        // Update listing orders_count (revenue is recognized only upon payment or confirmation)
+        // Update listing orders_count
         await Listing.updateOne(
           { _id: item.listing_id },
-          {
-            $inc: { orders_count: reqQty },
-            ...(updatedListing.stock <= 0 ? { $set: { status: 'out_of_stock' } } : {})
-          }
+          { $inc: { orders_count: reqQty } }
         ).catch(() => {});
 
         // Emit socket events to vendor
         try {
           const { emitToUser } = require('../sockets');
-          emitToUser(vendorId.toString(), 'listing:stock_updated', { id: item.listing_id.toString(), stock: updatedListing.stock });
-          emitToUser(vendorId.toString(), 'listing:updated', { id: item.listing_id.toString() });
+          if (targetListing && typeof targetListing.stock === 'number') {
+            emitToUser(vendorId.toString(), 'listing:stock_updated', { id: item.listing_id.toString(), stock: targetListing.stock - reqQty });
+          }
           emitToUser(vendorId.toString(), 'order:new', { orderId: order._id });
         } catch {}
 
@@ -440,18 +430,14 @@ router.post(['/checkout', '/me/checkout'], requireAuth, catchAsync(async (req, r
           title: 'New Product Order Received',
           message: `${req.user.name || 'Customer'} placed order for ${reqQty}x "${item.title}" (Total: ₹${Math.round(orderPrice)}).`,
           data: { orderId: order._id },
-        });
+        }).catch(() => {});
       } catch (orderErr) {
-        // Roll back stock decrement if Order.create fails
-        await Listing.updateOne(
-          { _id: item.listing_id },
-          { $inc: { stock: reqQty } }
-        ).catch(() => {});
+        console.error('Order creation error during cart checkout:', orderErr);
         throw orderErr;
       }
     }
 
-    // 5. Send summary chat message
+    // 5. Send summary chat message to vendor
     try {
       const summaryLines = [`🛒 Order request — ${itemsSnapshot.length} item(s)`];
       for (const i of itemsSnapshot) {
@@ -488,7 +474,7 @@ router.post(['/checkout', '/me/checkout'], requireAuth, catchAsync(async (req, r
     });
   }
 
-  // Clear cart
+  // 6. Clear cart items in database
   const coll = getCartCollection();
   await coll.updateOne({ _id: cart._id }, { $set: { items: [], updated_at: now } });
 

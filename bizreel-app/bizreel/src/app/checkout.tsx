@@ -155,34 +155,19 @@ export default function CheckoutScreen() {
     setSubmitting(true);
 
     try {
-      // 1. Create order records for tracking
-      if (displayGroups.length > 0) {
-        for (const group of displayGroups) {
-          for (const item of group.items) {
-            if (item.listing_id && item.listing_id !== 'direct_item') {
-              try {
-                await createOrder({
-                  listingId: item.listing_id,
-                  quantity: item.quantity || 1,
-                  address: address.trim(),
-                  paymentMethod,
-                });
-              } catch (err) {
-                console.warn('Direct order record creation notice', err);
-              }
-            }
-          }
-        }
-      }
-
-      // 2. Perform cart checkout & clearing
-      try {
+      if (params.listingId) {
+        // Direct single item purchase
+        await createOrder({
+          listingId: params.listingId as string,
+          quantity: Number(params.quantity || 1),
+          address: address.trim(),
+          paymentMethod,
+        });
+      } else {
+        // Full shopping cart checkout
         await checkoutCart();
-      } catch (err: any) {
-        console.warn('Cart checkout API notice', err);
+        await refetchCart();
       }
-
-      await refetchCart();
 
       Alert.alert(
         '🎉 Order Placed Successfully!',
@@ -195,12 +180,13 @@ export default function CheckoutScreen() {
         ]
       );
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || 'Could not place order. Please check supplier verification status.';
-      Alert.alert('Checkout Restricted', errMsg);
+      const errMsg = err?.response?.data?.message || err?.message || 'Could not place order. Please check supplier details and try again.';
+      Alert.alert('Checkout Notice', errMsg);
     } finally {
       setSubmitting(false);
     }
   };
+
 
   if (isLoading && !hasDirectItem) {
     return (
