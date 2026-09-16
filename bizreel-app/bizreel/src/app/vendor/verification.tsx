@@ -493,6 +493,7 @@ export default function VendorVerificationCenterScreen() {
     (docsObj.udyamRegistration?.status === 'approved' ? 1 : 0);
 
   const bankVerifiedCount = (status?.bankVerified ? 1 : 0) + (status?.paymentVerified ? 1 : 0);
+  const paymentVerified = Boolean(status?.bankVerified || status?.paymentVerified);
   const totalVerifiedCount = contactsVerifiedCount + docsVerifiedCount + bankVerifiedCount;
   const progressPercent = Math.min(100, Math.round((totalVerifiedCount / 11) * 100));
 
