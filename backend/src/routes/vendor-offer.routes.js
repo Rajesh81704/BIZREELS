@@ -146,16 +146,17 @@ router.post(['/', '/me/offers', '/offers'], requireAuth, catchAsync(async (req, 
       customers = [];
     } else if (isSelected && config?.selectedCustomerIds?.length > 0) {
       customers = await User.find({
-        _id: { $in: config.selectedCustomerIds },
+        _id: { $in: config.selectedCustomerIds, $ne: req.user._id },
         is_deleted: { $ne: true },
       });
     } else if (category === 'customer_specific' && config?.customerSelectionIds?.length > 0) {
       customers = await User.find({
-        _id: { $in: config.customerSelectionIds },
+        _id: { $in: config.customerSelectionIds, $ne: req.user._id },
         is_deleted: { $ne: true },
       });
     } else {
       customers = await User.find({
+        _id: { $ne: req.user._id },
         roles: 'customer',
         is_deleted: { $ne: true },
       });
@@ -178,7 +179,8 @@ router.post(['/', '/me/offers', '/offers'], requireAuth, catchAsync(async (req, 
           category,
           offerName: offerName || categoryLabel,
         },
-        '/customer/notifications'
+        '/customer/notifications',
+        'customer'
       )
     );
 

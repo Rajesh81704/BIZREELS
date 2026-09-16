@@ -778,9 +778,6 @@ export default function CustomerHomePage() {
           onTabChange={setActiveTab}
         />
 
-        {/* Active Special Offers & Deals */}
-        <ActiveOffersPanel role="customer" />
-
         {/* Feed Header Section */}
         <div className="w-full max-w-5xl mx-auto px-1 py-0.5 flex items-center justify-between">
           <h3 className="text-[11px] font-black text-[#1a1a1a] uppercase tracking-wider flex items-center gap-1.5">
@@ -795,6 +792,11 @@ export default function CustomerHomePage() {
 
       {/* ── SCROLLABLE POSTS CONTAINER (Only posts scroll) ── */}
       <div className="flex-1 overflow-y-auto p-2 sm:p-4 min-h-0">
+        {/* Active Special Offers Banner (Aligned to feed width, scrolls naturally) */}
+        <div className="w-full max-w-xl mx-auto mb-3 font-sans">
+          <ActiveOffersPanel role="customer" />
+        </div>
+
         {loading ? (
           <div className="max-w-xl mx-auto space-y-6 pb-12 pt-2">
             <InstagramPostSkeleton />

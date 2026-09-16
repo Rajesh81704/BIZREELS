@@ -37,7 +37,10 @@ class NotificationRepository {
       } else {
         // vendor, creator, admin
         query.$or = [
-          { recipientRole: role },
+          {
+            recipientRole: role,
+            actionUrl: { $not: { $regex: '^/customer', $options: 'i' } }
+          },
           // Legacy: no recipientRole set AND actionUrl starts with /role
           {
             recipientRole: { $in: [null, undefined] },
@@ -72,7 +75,10 @@ class NotificationRepository {
         ];
       } else {
         query.$or = [
-          { recipientRole: role },
+          {
+            recipientRole: role,
+            actionUrl: { $not: { $regex: '^/customer', $options: 'i' } }
+          },
           {
             recipientRole: { $in: [null, undefined] },
             actionUrl: { $regex: `^/${role}`, $options: 'i' },
@@ -116,7 +122,10 @@ class NotificationRepository {
         ];
       } else {
         query.$or = [
-          { recipientRole: role },
+          {
+            recipientRole: role,
+            actionUrl: { $not: { $regex: '^/customer', $options: 'i' } }
+          },
           {
             recipientRole: { $in: [null, undefined] },
             actionUrl: { $regex: `^/${role}`, $options: 'i' },

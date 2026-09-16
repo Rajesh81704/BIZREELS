@@ -86,7 +86,12 @@ router.get(
   catchAsync(async (req, res) => {
     const { vendorId, orderAmount, role } = req.query;
     const activeRole = role ? String(role).toLowerCase().trim() : (req.user.activeRole || 'customer');
-    const data = await clientOfferService.getApplicableCoupons({ vendorId, orderAmount, role: activeRole });
+    const data = await clientOfferService.getApplicableCoupons({
+      vendorId,
+      orderAmount,
+      role: activeRole,
+      userId: req.user?._id
+    });
     res.json({ success: true, data });
   })
 );

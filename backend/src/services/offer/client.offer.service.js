@@ -104,6 +104,7 @@ class ClientOfferService {
     }
 
     const cleanCode = couponCode.trim().toUpperCase();
+    await this.ensureDefaultPlatformOffers();
     const parsedAmount = Math.max(0, parseFloat(orderAmount) || 0);
     const now = new Date();
 
@@ -236,9 +237,90 @@ class ClientOfferService {
   }
 
   /**
-   * Retrieves list of available and active coupons for user selection.
+   * Ensures essential platform-wide starter coupons (WELCOME10, BIZREELS50, WELCOME50)
+   * exist in the database so they validate and redeem properly.
    */
-  async getApplicableCoupons({ vendorId, orderAmount = 0, role = 'customer' }) {
+  async ensureDefaultPlatformOffers() {
+    try {
+      const count = await Offer.countDocuments({
+        code: { $in: ['WELCOME10', 'BIZREELS50', 'WELCOME50'] }
+      });
+      if (count >= 3) return;
+
+      const User = require('../../models/User');
+      const admin = await User.findOne({ roles: 'admin' }).select('_id').lean();
+      const adminId = admin?._id || new (require('mongoose').Types.ObjectId)();
+
+      const defaults = [
+        {
+          title: 'Welcome Offer',
+          description: 'Get 10% instant discount on your order up to ₹200.',
+          code: 'WELCOME10',
+          targetRoles: ['customer'],
+          discountType: 'percentage',
+          discountValue: 10,
+          minOrderAmount: 0,
+          maxDiscountLimit: 200,
+          perUserLimit: 1,
+          startTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          endTime: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          status: 'Active',
+          priority: 10,
+          createdBy: adminId
+        },
+        {
+          title: 'Flat ₹50 Super Saver',
+          description: 'Flat ₹50 OFF on orders above ₹299.',
+          code: 'BIZREELS50',
+          targetRoles: ['customer'],
+          discountType: 'fixed',
+          discountValue: 50,
+          minOrderAmount: 299,
+          maxDiscountLimit: 50,
+          perUserLimit: 1,
+          startTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          endTime: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          status: 'Active',
+          priority: 9,
+          createdBy: adminId
+        },
+        {
+          title: 'Welcome ₹50 Discount',
+          description: 'Flat ₹50 OFF on orders above ₹299.',
+          code: 'WELCOME50',
+          targetRoles: ['customer'],
+          discountType: 'fixed',
+          discountValue: 50,
+          minOrderAmount: 299,
+          maxDiscountLimit: 50,
+          perUserLimit: 1,
+          startTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          endTime: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          status: 'Active',
+          priority: 8,
+          createdBy: adminId
+        }
+      ];
+
+      for (const d of defaults) {
+        await Offer.findOneAndUpdate(
+          { code: d.code },
+          { $setOnInsert: d },
+          { upsert: true, returnDocument: 'after' }
+        );
+      }
+    } catch (e) {
+      console.warn('ensureDefaultPlatformOffers warning:', e.message);
+    }
+  }
+
+  /**
+   * Retrieves list of available and active coupons for user selection.
+   * Automatically filters out coupons the user has already redeemed.
+   */
+  async getApplicableCoupons({ vendorId, orderAmount = 0, role = 'customer', userId = null }) {
+    await this.ensureDefaultPlatformOffers();
+
     const now = new Date();
     const parsedAmount = Math.max(0, parseFloat(orderAmount) || 0);
 
@@ -261,6 +343,18 @@ class ClientOfferService {
         continue;
       }
 
+      // Check if logged-in customer has already used this coupon up to perUserLimit
+      if (userId) {
+        const userRedemptions = (o.redemptions || []).filter(
+          r => r.userId && r.userId.toString() === userId.toString()
+        );
+        const perUser = o.perUserLimit || o.config?.usagePerCustomer || 1;
+        if (userRedemptions.length >= perUser) {
+          // As they used it, remove from available coupons list!
+          continue;
+        }
+      }
+
       const minAmount = o.minOrderAmount || o.config?.minOrderAmount || 0;
       const discountType = o.discountType || o.config?.couponType || 'percentage';
       const discountValue = o.discountValue || o.config?.discountValue || 0;
@@ -278,36 +372,6 @@ class ClientOfferService {
         endTime: o.endTime,
         isEligible: parsedAmount === 0 || parsedAmount >= minAmount
       });
-    }
-
-    // Default fallback coupons if none found
-    if (applicable.length === 0) {
-      applicable.push(
-        {
-          id: 'promo_welcome10',
-          code: 'WELCOME10',
-          title: 'Welcome Offer',
-          description: 'Get 10% instant discount on your order up to ₹200.',
-          discountType: 'percentage',
-          discountValue: 10,
-          minOrderAmount: 0,
-          maxDiscountLimit: 200,
-          endTime: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          isEligible: true
-        },
-        {
-          id: 'promo_bizreels50',
-          code: 'BIZREELS50',
-          title: 'Flat ₹50 Super Saver',
-          description: 'Flat ₹50 OFF on orders above ₹299.',
-          discountType: 'fixed',
-          discountValue: 50,
-          minOrderAmount: 299,
-          maxDiscountLimit: 50,
-          endTime: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          isEligible: parsedAmount >= 299 || parsedAmount === 0
-        }
-      );
     }
 
     return applicable;

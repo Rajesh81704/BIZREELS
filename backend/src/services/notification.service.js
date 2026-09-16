@@ -81,7 +81,8 @@ class NotificationService {
       // If no explicit recipientRole was given, auto-detect from actionUrl or user's activeRole
       if (!resolvedRole) {
         if (resolvedUrl) {
-          if (resolvedUrl.startsWith('/vendor')) resolvedRole = 'vendor';
+          if (resolvedUrl.startsWith('/customer')) resolvedRole = 'customer';
+          else if (resolvedUrl.startsWith('/vendor')) resolvedRole = 'vendor';
           else if (resolvedUrl.startsWith('/creator')) resolvedRole = 'creator';
           else if (resolvedUrl.startsWith('/admin')) resolvedRole = 'admin';
           else resolvedRole = activeRole;
