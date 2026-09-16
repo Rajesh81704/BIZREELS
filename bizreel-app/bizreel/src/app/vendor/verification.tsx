@@ -495,8 +495,34 @@ export default function VendorVerificationCenterScreen() {
   const bankVerifiedCount = (status?.bankVerified ? 1 : 0) + (status?.paymentVerified ? 1 : 0);
   const paymentVerified = Boolean(status?.bankVerified || status?.paymentVerified);
 
-  const totalVerifiedCount = contactsVerifiedCount + docsVerifiedCount + bankVerifiedCount;
-  const progressPercent = Math.min(100, Math.round((totalVerifiedCount / 11) * 100));
+  const isPart1Complete = Boolean(contactsVerifiedCount >= 1);
+  const isPart2Complete = Boolean(docsVerifiedCount >= 1);
+
+  useEffect(() => {
+    if (activeTab === 3 && (!isPart1Complete || !isPart2Complete)) {
+      setActiveTab(isPart1Complete ? 2 : 1);
+    } else if (activeTab === 2 && !isPart1Complete) {
+      setActiveTab(1);
+    }
+  }, [activeTab, isPart1Complete, isPart2Complete]);
+
+  const handleTabClick = (tabNum: 1 | 2 | 3) => {
+    if (tabNum === 2 && !isPart1Complete) {
+      Alert.alert('Part 2 Locked 🔒', 'Please complete Part 1 (Contact Channels Verification) first to unlock Part 2.');
+      return;
+    }
+    if (tabNum === 3) {
+      if (!isPart1Complete) {
+        Alert.alert('Part 3 Locked 🔒', 'Please complete Part 1 (Contact Channels Verification) first to unlock Part 3.');
+        return;
+      }
+      if (!isPart2Complete) {
+        Alert.alert('Part 3 Locked 🔒', 'Please complete Part 2 (Business Documents Verification) first to unlock Part 3.');
+        return;
+      }
+    }
+    setActiveTab(tabNum);
+  };
 
   const isKycApproved =
     uData.kyc_status === 'approved' ||
@@ -684,7 +710,7 @@ export default function VendorVerificationCenterScreen() {
           contentContainerStyle={styles.tabsRowScroll}>
           <TouchableOpacity
             style={[styles.tabBtn, activeTab === 1 && styles.tabBtnActive]}
-            onPress={() => setActiveTab(1)}
+            onPress={() => handleTabClick(1)}
             activeOpacity={0.8}>
             <View style={[styles.stepNumBadge, activeTab === 1 && styles.stepNumBadgeActive]}>
               <Text style={[styles.stepNumText, activeTab === 1 && styles.stepNumTextActive]}>1</Text>
@@ -693,7 +719,7 @@ export default function VendorVerificationCenterScreen() {
             <Text style={[styles.tabBtnText, activeTab === 1 && styles.tabBtnTextActive]}>
               Part 1: Contact Channels
             </Text>
-            {contactsVerifiedCount >= 2 && (
+            {contactsVerifiedCount >= 1 && (
               <View style={[styles.doneBadge, activeTab === 1 && styles.doneBadgeActive]}>
                 <Text style={[styles.doneBadgeText, activeTab === 1 && styles.doneBadgeTextActive]}>✓ Done</Text>
               </View>
@@ -701,8 +727,8 @@ export default function VendorVerificationCenterScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.tabBtn, activeTab === 2 && styles.tabBtnActive]}
-            onPress={() => setActiveTab(2)}
+            style={[styles.tabBtn, activeTab === 2 && styles.tabBtnActive, !isPart1Complete && { opacity: 0.6 }]}
+            onPress={() => handleTabClick(2)}
             activeOpacity={0.8}>
             <View style={[styles.stepNumBadge, activeTab === 2 && styles.stepNumBadgeActive]}>
               <Text style={[styles.stepNumText, activeTab === 2 && styles.stepNumTextActive]}>2</Text>
@@ -711,28 +737,32 @@ export default function VendorVerificationCenterScreen() {
             <Text style={[styles.tabBtnText, activeTab === 2 && styles.tabBtnTextActive]}>
               Part 2: Business Documents
             </Text>
-            {docsVerifiedCount >= 2 && (
+            {isPart2Complete ? (
               <View style={[styles.doneBadge, activeTab === 2 && styles.doneBadgeActive]}>
                 <Text style={[styles.doneBadgeText, activeTab === 2 && styles.doneBadgeTextActive]}>✓ Done</Text>
               </View>
+            ) : !isPart1Complete && (
+              <Ionicons name="lock-closed" size={12} color="#D99A3D" />
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.tabBtn, activeTab === 3 && styles.tabBtnActive]}
-            onPress={() => setActiveTab(3)}
+            style={[styles.tabBtn, activeTab === 3 && styles.tabBtnActive, (!isPart1Complete || !isPart2Complete) && { opacity: 0.6 }]}
+            onPress={() => handleTabClick(3)}
             activeOpacity={0.8}>
             <View style={[styles.stepNumBadge, activeTab === 3 && styles.stepNumBadgeActive]}>
               <Text style={[styles.stepNumText, activeTab === 3 && styles.stepNumTextActive]}>3</Text>
             </View>
             <Ionicons name="card" size={16} color={activeTab === 3 ? '#D99A3D' : '#64748B'} />
-            <Text style={[styles.tabBtnText, activeTab === 3 && styles.tabBtnTextActive]}>
+            <Text style={[styles.tabBtnText, activeTab === 3 && styles.tabBtnTextActive, (!isPart1Complete || !isPart2Complete) && { color: '#94A3B8' }]}>
               Part 3: Bank & Settlement
             </Text>
-            {paymentVerified && (
+            {paymentVerified ? (
               <View style={[styles.doneBadge, activeTab === 3 && styles.doneBadgeActive]}>
                 <Text style={[styles.doneBadgeText, activeTab === 3 && styles.doneBadgeTextActive]}>✓ Done</Text>
               </View>
+            ) : (!isPart1Complete || !isPart2Complete) && (
+              <Ionicons name="lock-closed" size={12} color="#D99A3D" />
             )}
           </TouchableOpacity>
         </ScrollView>
@@ -1008,8 +1038,12 @@ export default function VendorVerificationCenterScreen() {
               {renderDocCard('custom', 'Custom Business Document', 'Additional trade licenses or certifications.', 'folder-open-outline', () => setActiveModal('custom'))}
             </View>
 
-            <TouchableOpacity style={styles.nextPartBtn} onPress={() => setActiveTab(3)}>
-              <Text style={styles.nextPartBtnText}>Continue to Part 3: Bank & Settlement →</Text>
+            <TouchableOpacity
+              style={[styles.nextPartBtn, !isPart2Complete && { backgroundColor: '#E2E8F0', borderColor: '#CBD5E1' }]}
+              onPress={() => handleTabClick(3)}>
+              <Text style={[styles.nextPartBtnText, !isPart2Complete && { color: '#64748B' }]}>
+                {isPart2Complete ? 'Continue to Part 3: Bank & Settlement →' : 'Verify at least 1 document to unlock Part 3 🔒'}
+              </Text>
             </TouchableOpacity>
           </View>
         )}

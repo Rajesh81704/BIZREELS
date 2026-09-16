@@ -778,14 +778,28 @@ export default function VendorVerificationPage() {
     statusData.bankVerified || statusData.paymentDetails?.accountNumber || statusData.paymentDetails?.upiId
   );
 
+  useEffect(() => {
+    if (activeTab === 'payment' && (!isPart1Complete || !isPart2Complete)) {
+      setActiveTab(isPart1Complete ? 'documents' : 'contacts');
+    } else if (activeTab === 'documents' && !isPart1Complete) {
+      setActiveTab('contacts');
+    }
+  }, [activeTab, isPart1Complete, isPart2Complete]);
+
   const handleTabClick = (tab) => {
     if (tab === 'documents' && !isPart1Complete) {
-      toast.error('🔒 Complete Part 1 (Contact Verification) to unlock Part 2.');
+      toast.error('🔒 Complete Part 1 (Contact Verification) first to unlock Part 2.');
       return;
     }
-    if (tab === 'payment' && (!isPart1Complete || !isPart2Complete)) {
-      toast.error('🔒 Complete Part 1 & Part 2 first to unlock Part 3.');
-      return;
+    if (tab === 'payment') {
+      if (!isPart1Complete) {
+        toast.error('🔒 Complete Part 1 (Contact Verification) first to unlock Part 3.');
+        return;
+      }
+      if (!isPart2Complete) {
+        toast.error('🔒 Complete Part 2 (Business Documents Verification) first to unlock Part 3.');
+        return;
+      }
     }
     setActiveTab(tab);
   };
