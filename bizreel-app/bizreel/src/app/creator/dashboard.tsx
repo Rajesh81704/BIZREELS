@@ -108,7 +108,7 @@ export default function CreatorDashboardScreen({ embedded }: { embedded?: boolea
       const dData = dashRes.data?.data || dashRes.data || {};
       setStats(dData);
 
-      const hItems = hiresRes.data?.data?.items || hiresRes.data?.items || hiresRes.data || [];
+      const hItems = hiresRes.data?.data?.hireRequests || hiresRes.data?.data?.items || hiresRes.data?.items || hiresRes.data?.data || hiresRes.data || [];
       setCampaigns(Array.isArray(hItems) ? hItems : []);
 
       const rItems = reelsRes.data?.data?.reels || reelsRes.data?.reels || reelsRes.data?.items || reelsRes.data || [];

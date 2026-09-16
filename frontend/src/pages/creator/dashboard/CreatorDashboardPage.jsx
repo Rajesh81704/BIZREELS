@@ -85,7 +85,8 @@ export default function CreatorDashboardPage() {
     setLoadingCampaigns(true);
     try {
       const res = await api.get('/v1/hires?role=creator');
-      setCampaigns(res.data?.data?.hireRequests || []);
+      const rawList = res.data?.data?.hireRequests || res.data?.data?.items || res.data?.items || res.data?.data || res.data || [];
+      setCampaigns(Array.isArray(rawList) ? rawList : []);
     } catch (err) {
       console.error('Failed to load creator campaigns:', err);
       setCampaigns([]);
