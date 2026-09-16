@@ -479,7 +479,16 @@ export default function CreatorDashboardScreen({ embedded }: { embedded?: boolea
     </View>
   );
 
-  if (embedded) return content;
+  if (embedded) {
+    return (
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GOLD} colors={[GOLD]} />}>
+        {content}
+      </ScrollView>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: BG_COLOR, paddingTop: insets.top }}>
@@ -593,15 +602,15 @@ const styles = StyleSheet.create({
   sectionHeaderRow: { marginTop: 4 },
   sectionHeader: { color: ESPRESSO, fontSize: FontSize.xs, fontWeight: '900', letterSpacing: 1 },
 
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   statCard: {
-    width: '48.5%',
+    width: '47.5%',
     backgroundColor: CARD_BG,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: BORDER_COLOR,
-    padding: 14,
-    gap: 6,
+    padding: 12,
+    gap: 4,
     ...Shadows.sm,
   },
   statHeaderRow: {
