@@ -159,7 +159,8 @@ export default function CheckoutScreen() {
         // Direct single item purchase
         await createOrder({
           listingId: params.listingId as string,
-          quantity: Number(params.quantity || 1),
+          quantity: Number((params as any).quantity || 1),
+
           address: address.trim(),
           paymentMethod,
         });
