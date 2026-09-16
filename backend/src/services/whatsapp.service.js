@@ -125,14 +125,11 @@ class WhatsAppService {
         moreInfo: err.moreInfo,
       });
 
-      logger.info(`[TWILIO WHATSAPP FALLBACK OTP] 💬 Phone: ${targetWhatsApp} | OTP: ${otp}`);
-      return {
-        success: true,
-        provider: 'mock_fallback',
-        phone: targetWhatsApp,
-        otp,
-        error: err.message
-      };
+      if (config.env !== 'production') {
+        logger.info(`[TWILIO WHATSAPP FALLBACK OTP] 💬 Phone: ${targetWhatsApp} | OTP: ${otp}`);
+      }
+
+      throw err;
     }
   }
 }

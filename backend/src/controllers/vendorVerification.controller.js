@@ -150,13 +150,11 @@ const sendContactOtp = catchAsync(async (req, res) => {
       console.error('Error dispatching OTP:', smsErr.message);
     }
 
-    const isMock = !dispatchResult?.sid || dispatchResult?.provider === 'mock' || dispatchResult?.provider === 'mock_fallback' || process.env.NODE_ENV === 'development';
-
     return res.json({
       success: true,
       message: `Verification ${isWhatsApp ? 'WhatsApp' : 'Mobile'} OTP sent to +91${cleanPhone}`,
       channel: isWhatsApp ? 'whatsapp' : 'sms',
-      otp: isMock ? otpCode : undefined
+      otp: process.env.NODE_ENV === 'development' ? otpCode : undefined
     });
   }
 });

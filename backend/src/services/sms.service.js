@@ -124,14 +124,13 @@ class SmsService {
         moreInfo: err.moreInfo,
       });
 
-      logger.info(`[TWILIO FALLBACK MOCK OTP] 📲 Phone: ${targetMobile} | OTP: ${otp}`);
-      return {
-        success: true,
-        provider: 'mock_fallback',
-        phone: targetMobile,
-        otp,
-        error: err.message,
-      };
+      // In non-production or on carrier error, log fallback OTP to prevent developer lockout
+      if (config.env !== 'production' || process.env.OTP_DEV_MODE === 'true' || config.otpDevMode) {
+        logger.info(`[TWILIO FALLBACK MOCK OTP] 📲 Phone: ${targetMobile} | OTP: ${otp}`);
+        return { success: true, provider: 'mock_fallback', phone: targetMobile, otp };
+      }
+
+      throw err;
     }
   }
 }
