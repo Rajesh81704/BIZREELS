@@ -407,12 +407,17 @@ export default function ProductFormModal({
   const handleVariantImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error(`File "${file.name}" exceeds maximum allowed size of 20MB.`);
+      return;
+    }
     setVariantUploading(true);
     const toastId = toast.loading('Uploading variant photo...');
     try {
       const formData = new FormData();
+      formData.append('image', file);
       formData.append('file', file);
-      const res = await mediaApi.post('/v1/upload/image', formData, {
+      const res = await api.post('/v1/upload/image', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       const url = res.data?.url || res.data?.data?.url;
@@ -420,10 +425,12 @@ export default function ProductFormModal({
         setVariantImageUrl(url);
         toast.success('Variant photo attached!', { id: toastId });
       }
-    } catch {
-      toast.error('Failed to upload variant image', { id: toastId });
+    } catch (err) {
+      const errMsg = err.response?.data?.message || err.message || 'Failed to upload variant image';
+      toast.error(errMsg, { id: toastId });
     } finally {
       setVariantUploading(false);
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -542,14 +549,22 @@ export default function ProductFormModal({
       return;
     }
 
+    for (const file of files) {
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error(`File "${file.name}" exceeds maximum allowed size of 20MB.`);
+        return;
+      }
+    }
+
     setUploading(true);
     const toastId = toast.loading(`Uploading ${files.length} image(s)...`);
     try {
       const uploadedUrls = [];
       for (const file of files) {
         const formData = new FormData();
+        formData.append('image', file);
         formData.append('file', file);
-        const res = await mediaApi.post('/v1/upload/image', formData, {
+        const res = await api.post('/v1/upload/image', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
         const url = res.data?.url || res.data?.data?.url;
@@ -557,10 +572,12 @@ export default function ProductFormModal({
       }
       updateForm('images', [...form.images, ...uploadedUrls]);
       toast.success('Images uploaded successfully!', { id: toastId });
-    } catch {
-      toast.error('Image upload failed. Check file size.', { id: toastId });
+    } catch (err) {
+      const errMsg = err.response?.data?.message || err.message || 'Image upload failed. Check connection or file size.';
+      toast.error(errMsg, { id: toastId });
     } finally {
       setUploading(false);
+      if (e.target) e.target.value = '';
     }
   };
 

@@ -219,6 +219,7 @@ export const listingApi = {
 
 // ---- Media ----
 export const mediaApi = {
+  post: (url, data, config) => api.post(url, data, config),
   sign: (folder, resource_type) => api.post("/v1/media/sign", { folder, resource_type }),
   upload: (file, folder = "listings/misc", resource_type = "image", onProgress) => {
     const form = new FormData();

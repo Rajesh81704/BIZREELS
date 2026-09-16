@@ -443,14 +443,22 @@ export default function ServiceFormModal({
       return;
     }
 
+    for (const file of files) {
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error(`File "${file.name}" exceeds maximum allowed size of 20MB.`);
+        return;
+      }
+    }
+
     setUploading(true);
     const toastId = toast.loading(`Uploading ${files.length} image(s)...`);
     try {
       const uploadedUrls = [];
       for (const file of files) {
         const formData = new FormData();
+        formData.append('image', file);
         formData.append('file', file);
-        const res = await mediaApi.post('/v1/upload/image', formData, {
+        const res = await api.post('/v1/upload/image', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
         const url = res.data?.url || res.data?.data?.url;
@@ -462,10 +470,12 @@ export default function ServiceFormModal({
         updateForm('galleryImages', [...form.galleryImages, ...uploadedUrls]);
       }
       toast.success('Images uploaded successfully!', { id: toastId });
-    } catch {
-      toast.error('Image upload failed. Check connection/file size.', { id: toastId });
+    } catch (err) {
+      const errMsg = err.response?.data?.message || err.message || 'Image upload failed. Check connection/file size.';
+      toast.error(errMsg, { id: toastId });
     } finally {
       setUploading(false);
+      if (e.target) e.target.value = '';
     }
   };
 
