@@ -143,6 +143,8 @@ export default function CheckoutScreen() {
     (acc, g) => acc + (g.items || []).reduce((iAcc: number, it: any) => iAcc + (it.quantity || 1), 0),
     0
   );
+  const DELIVERY_FEE = 40;
+  const grandTotal = displayTotal > 0 ? displayTotal + DELIVERY_FEE : 0;
 
   const handlePlaceOrder = async () => {
     if (!address.trim()) {
@@ -391,9 +393,7 @@ export default function CheckoutScreen() {
           </View>
           <View style={styles.billRow}>
             <Text style={styles.billLabel}>Shipping &amp; Delivery</Text>
-            <View style={styles.freeTag}>
-              <Text style={styles.freeTagText}>FREE</Text>
-            </View>
+            <Text style={styles.billValue}>₹{DELIVERY_FEE}</Text>
           </View>
           <View style={styles.billRow}>
             <Text style={styles.billLabel}>Platform Guarantee Fee</Text>
@@ -404,7 +404,7 @@ export default function CheckoutScreen() {
 
           <View style={styles.totalBillRow}>
             <Text style={styles.totalBillLabel}>Grand Total</Text>
-            <Text style={styles.totalBillValue}>₹{displayTotal.toLocaleString('en-IN')}</Text>
+            <Text style={styles.totalBillValue}>₹{grandTotal.toLocaleString('en-IN')}</Text>
           </View>
         </View>
 
@@ -430,12 +430,13 @@ export default function CheckoutScreen() {
             <View style={styles.placeOrderRow}>
               <Ionicons name="lock-closed" size={16} color={GOLD} />
               <Text style={styles.placeOrderBtnText}>
-                CONFIRM &amp; PLACE ORDER • ₹{displayTotal.toLocaleString('en-IN')}
+                CONFIRM &amp; PLACE ORDER • ₹{grandTotal.toLocaleString('en-IN')}
               </Text>
             </View>
           )}
         </TouchableOpacity>
       </View>
+
     </View>
   );
 }

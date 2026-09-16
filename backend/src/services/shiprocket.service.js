@@ -68,15 +68,12 @@ class ShiprocketService {
     orderAmount = 0,
     isCod = false,
   }) {
-    // 1. Free Shipping rule if order value >= ₹499 (Flipkart e-commerce standard)
-    const FREE_SHIPPING_THRESHOLD = 500;
-    const isFreeEligible = orderAmount >= FREE_SHIPPING_THRESHOLD;
-
+    // Always 40 RS delivery charge standard
     if (!deliveryPincode) {
       return {
-        shippingFee: isFreeEligible ? 0 : 40,
+        shippingFee: 40,
         originalFee: 40,
-        isFree: isFreeEligible,
+        isFree: false,
         courierName: 'Shiprocket Standard Surface',
         estimatedDays: '3-5 business days',
         isServiceable: true,
@@ -99,15 +96,13 @@ class ShiprocketService {
 
         const availableCouriers = res.data?.data?.available_courier_companies || [];
         if (availableCouriers.length > 0) {
-          // Sort by lowest freight charge
           const sorted = [...availableCouriers].sort((a, b) => (a.rate || 0) - (b.rate || 0));
           const bestCourier = sorted[0];
-          const rawRate = Math.round(bestCourier.rate || 40);
 
           return {
-            shippingFee: isFreeEligible ? 0 : rawRate,
-            originalFee: rawRate,
-            isFree: isFreeEligible,
+            shippingFee: 40,
+            originalFee: 40,
+            isFree: false,
             courierName: bestCourier.courier_name || 'Shiprocket Express',
             estimatedDays: bestCourier.etd || '2-4 business days',
             courierCompanyId: bestCourier.courier_company_id,
@@ -119,16 +114,15 @@ class ShiprocketService {
       }
     }
 
-    // Dynamic fallback rate based on Flipkart standards (Free above ₹499, else ₹40 standard)
-    const fallbackRate = isFreeEligible ? 0 : 40;
     return {
-      shippingFee: fallbackRate,
+      shippingFee: 40,
       originalFee: 40,
-      isFree: isFreeEligible,
+      isFree: false,
       courierName: 'Shiprocket Fast Courier Network',
       estimatedDays: '3-5 business days',
       isServiceable: true,
     };
+
   }
 
   /**

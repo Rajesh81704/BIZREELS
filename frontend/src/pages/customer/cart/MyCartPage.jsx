@@ -78,10 +78,11 @@ export default function MyCartPage() {
   const groups = cart?.groups || [];
   const totalItems = cart?.total_items || 0;
   const totalAmount = cart?.total_amount || 0;
-  const isFreeDelivery = totalAmount >= 499 || totalAmount === 0;
-  const deliveryFee = isFreeDelivery ? 0 : 40;
+  const isFreeDelivery = false;
+  const deliveryFee = totalAmount > 0 ? 40 : 0;
   const couponDiscount = appliedCoupon ? Number(appliedCoupon.discountAmount || 0) : 0;
   const finalPayable = Math.max(0, totalAmount - couponDiscount + deliveryFee);
+
 
   const handleCheckout = async () => {
     setCheckingOut(true);

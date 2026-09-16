@@ -204,18 +204,12 @@ export default function CartOrderSummary({
           </div>
         )}
 
-        {/* Delivery Charges (Shiprocket standard) */}
+        {/* Delivery Charges (Standard 40 RS) */}
         <div className="flex items-center justify-between">
           <span>Delivery Charges</span>
-          {isFreeDelivery ? (
-            <div className="text-right">
-              <span className="line-through text-slate-400 text-[10.5px] mr-1">₹40</span>
-              <span className="text-emerald-700 font-black uppercase text-[11px]">FREE</span>
-            </div>
-          ) : (
-            <span className="text-[#1a1a1a] font-bold">₹{deliveryFee}</span>
-          )}
+          <span className="text-[#1a1a1a] font-bold">₹{deliveryFee || 40}</span>
         </div>
+
 
         <div className="flex items-center justify-between text-slate-500 text-[11px]">
           <span>Packaging / Platform Fee</span>

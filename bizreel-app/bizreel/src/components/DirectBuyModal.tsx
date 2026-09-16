@@ -158,7 +158,9 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
   const vendorObj = targetItem.vendor || targetItem.vendorId || item?.vendor || item?.creator || {};
   const vendorName = vendorObj.shopName || vendorObj.businessName || vendorObj.name || item?.creatorName || 'Verified Supplier';
 
+  const DELIVERY_FEE = 40;
   const totalPrice = activePrice * quantity;
+  const grandTotal = totalPrice > 0 ? totalPrice + DELIVERY_FEE : 0;
 
   const { user } = useAuth();
 
@@ -398,21 +400,12 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
 
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Delivery Charges</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={{ fontSize: 11, color: MUTED_TEXT, textDecorationLine: 'line-through' }}>₹40</Text>
-                    <Text style={{ fontSize: 12, fontWeight: '900', color: '#16A34A' }}>FREE</Text>
-                  </View>
+                  <Text style={styles.summaryVal}>₹{DELIVERY_FEE}</Text>
                 </View>
 
                 <View style={[styles.summaryRow, { borderTopWidth: 1, borderTopColor: BORDER_COLOR, paddingTop: 8, marginTop: 4 }]}>
                   <Text style={styles.totalLabel}>TOTAL AMOUNT</Text>
-                  <Text style={styles.totalVal}>₹{totalPrice.toLocaleString('en-IN')}</Text>
-                </View>
-
-                {/* Green Savings Pill Badge */}
-                <View style={styles.savingsPill}>
-                  <Ionicons name="sparkles" size={12} color="#15803D" />
-                  <Text style={styles.savingsPillText}>You will save ₹40 on this order</Text>
+                  <Text style={styles.totalVal}>₹{grandTotal.toLocaleString('en-IN')}</Text>
                 </View>
               </View>
 
@@ -426,10 +419,11 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
                 ) : (
                   <>
                     <Ionicons name="flash" size={16} color={GOLD} />
-                    <Text style={styles.confirmBtnText}>Place Order (₹{totalPrice.toLocaleString('en-IN')})</Text>
+                    <Text style={styles.confirmBtnText}>Place Order (₹{grandTotal.toLocaleString('en-IN')})</Text>
                   </>
                 )}
               </TouchableOpacity>
+
             </ScrollView>
           )}
         </View>

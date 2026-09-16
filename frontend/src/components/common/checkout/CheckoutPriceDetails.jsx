@@ -55,20 +55,13 @@ export default function CheckoutPriceDetails({
           </div>
         )}
 
-        {/* Delivery Charges (Shiprocket) */}
+        {/* Delivery Charges (Standard 40 RS) */}
         {!isService && (
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-1">
               <FiTruck size={12} className="text-[#d99a3d]" /> Delivery Charges
             </span>
-            {deliveryFee === 0 ? (
-              <div className="text-right">
-                <span className="line-through text-slate-400 text-[10.5px] mr-1">₹40</span>
-                <span className="text-emerald-700 font-black uppercase text-[11px]">FREE</span>
-              </div>
-            ) : (
-              <span className="text-[#1a1a1a] font-bold">₹{deliveryFee}</span>
-            )}
+            <span className="text-[#1a1a1a] font-bold">₹{deliveryFee || 40}</span>
           </div>
         )}
 
@@ -81,14 +74,6 @@ export default function CheckoutPriceDetails({
         </div>
       </div>
 
-      {/* Flipkart Signature Green Savings Banner */}
-      {totalCustomerSavings > 0 && (
-        <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 text-center space-y-0.5">
-          <p className="text-xs font-black text-emerald-800">
-            🎉 You will save ₹{totalCustomerSavings.toLocaleString('en-IN')} on this order
-          </p>
-        </div>
-      )}
 
       {/* Place Order CTA Button */}
       <button

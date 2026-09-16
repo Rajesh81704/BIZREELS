@@ -76,12 +76,13 @@ export default function DirectBuyModal({
 
   // Shipping State (Shiprocket calculation)
   const [shippingRate, setShippingRate] = useState({
-    shippingFee: 0,
+    shippingFee: 40,
     originalFee: 40,
-    isFree: true,
+    isFree: false,
     courierName: 'Shiprocket Fast Express',
     estimatedDays: '2-4 business days',
   });
+
 
   const formatTime12h = (time24) => {
     if (!time24) return '';
@@ -118,9 +119,9 @@ export default function DirectBuyModal({
   const itemMrpTotal = isService ? originalPrice : originalPrice * quantity;
   const itemRetailSavings = Math.max(0, itemMrpTotal - itemTotal);
   const couponDiscount = appliedCoupon ? Number(appliedCoupon.discountAmount || 0) : 0;
-  const deliveryFee = isService ? 0 : (shippingRate.isFree ? 0 : shippingRate.shippingFee);
+  const deliveryFee = isService ? 0 : 40;
   const totalAmount = Math.max(0, itemTotal - couponDiscount + deliveryFee);
-  const totalCustomerSavings = itemRetailSavings + couponDiscount + (isService ? 0 : (shippingRate.isFree ? (shippingRate.originalFee || 40) : 0));
+  const totalCustomerSavings = itemRetailSavings + couponDiscount;
 
   const mediaImage = (Array.isArray(item?.images) && item.images[0]) ||
     item?.thumbnailUrl || item?.image || (Array.isArray(item?.mediaUrls) && item.mediaUrls[0]) ||
