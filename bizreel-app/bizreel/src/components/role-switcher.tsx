@@ -93,7 +93,13 @@ export function RoleSwitcher() {
       } else if (isCustomerUnonboarded) {
         router.replace('/customer/choose-interests');
       } else {
-        Alert.alert('Role Switched', `Switched to ${ROLES_CONFIG[newRole].label} mode.`);
+        if (newRole === 'vendor') {
+          router.replace('/vendor/dashboard' as any);
+        } else if (newRole === 'creator') {
+          router.replace('/creator/dashboard' as any);
+        } else {
+          router.replace('/(tabs)/home' as any);
+        }
       }
     },
     onError: (err: any) => {

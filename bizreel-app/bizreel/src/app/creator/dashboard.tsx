@@ -15,9 +15,11 @@ import {
   View,
 } from 'react-native';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontSize, FontWeight, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/context';
 import { api } from '@/lib/api';
+import { VendorDrawerModal } from '@/components/vendor-drawer-modal';
 
 const GOLD = '#D99A3D';
 const ESPRESSO = '#241B15';
@@ -80,6 +82,8 @@ interface ReelItemData {
 
 export default function CreatorDashboardScreen({ embedded }: { embedded?: boolean } = {}) {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -478,16 +482,27 @@ export default function CreatorDashboardScreen({ embedded }: { embedded?: boolea
   if (embedded) return content;
 
   return (
-    <View style={{ flex: 1, backgroundColor: BG_COLOR }}>
+    <View style={{ flex: 1, backgroundColor: BG_COLOR, paddingTop: insets.top }}>
+      {/* Top Bar Header */}
       <View style={styles.headerBar}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.iconBtn} onPress={() => setDrawerOpen(true)}>
+          <Ionicons name="menu-outline" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={{ flex: 1, alignItems: 'center' }}
+          onPress={() => router.push('/creator/profile' as any)}>
+          <Text style={styles.headerTitle}>CREATOR STUDIO</Text>
+          <Text style={styles.headerSub}>
+            {(user as any)?.creatorProfile?.displayName || user?.name || 'Content Creator'} • Edit Profile ›
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.iconBtn} onPress={() => router.replace('/(tabs)/home')}>
           <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>CREATOR DASHBOARD</Text>
-          <Text style={styles.headerSub}>Portfolio & Brand Deals</Text>
-        </View>
       </View>
+
+      <VendorDrawerModal isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -500,22 +515,22 @@ export default function CreatorDashboardScreen({ embedded }: { embedded?: boolea
 
 const styles = StyleSheet.create({
   loadingContainer: { flex: 1, backgroundColor: BG_COLOR, alignItems: 'center', justifyContent: 'center' },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.six,
+    paddingTop: Spacing.three,
     paddingBottom: Spacing.three,
     backgroundColor: ESPRESSO,
     borderBottomWidth: 2,
     borderBottomColor: GOLD,
     gap: Spacing.three,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   headerTitle: { color: '#FFFFFF', fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 1 },
   headerSub: { color: GOLD, fontSize: FontSize.xs, fontWeight: '700' },
