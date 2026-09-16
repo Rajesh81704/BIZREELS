@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FiPhone, FiPhoneCall, FiPhoneForwarded, FiCopy, FiCheck, FiX,
   FiMessageSquare, FiShield, FiCheckCircle, FiClock, FiAlertTriangle
@@ -19,10 +19,41 @@ export default function ClickToCallModal({
   const { bi } = useLanguage();
   const [copied, setCopied] = useState(false);
   const [requestingCallback, setRequestingCallback] = useState(false);
+  const [checkingAvailability, setCheckingAvailability] = useState(true);
+  const [isAvailable, setIsAvailable] = useState(true);
+  const [availabilityMsg, setAvailabilityMsg] = useState('');
+
+  const vendorObj = item?.vendor || item?.vendorId || {};
+  const targetUserId = vendorObj?._id || vendorObj?.id;
+
+  useEffect(() => {
+    if (!isOpen || !item || !targetUserId) {
+      setCheckingAvailability(false);
+      return;
+    }
+    setCheckingAvailability(true);
+    api.post('/v1/calls/check-availability', { vendorId: targetUserId })
+      .then((res) => {
+        if (res.data?.data) {
+          setIsAvailable(res.data.data.available !== false);
+          if (res.data.data.available === false) {
+            setAvailabilityMsg(
+              res.data.data.message ||
+              bi('Vendor is currently unavailable for voice calls. Please connect via WhatsApp or Chat.', 'विक्रेता वर्तमान में कॉल के लिए उपलब्ध नहीं है। कृपया व्हाट्सएप या चैट पर संपर्क करें।')
+            );
+          }
+        }
+      })
+      .catch(() => {
+        setIsAvailable(true); // graceful fallback
+      })
+      .finally(() => {
+        setCheckingAvailability(false);
+      });
+  }, [isOpen, targetUserId, bi]);
 
   if (!isOpen || !item) return null;
 
-  const vendorObj = item.vendor || item.vendorId || {};
   const vendorName = vendorObj.shopName || vendorObj.businessName || vendorObj.name || item.vendorName || 'Verified Vendor';
   const city = item.city || vendorObj.city || item.location?.city || 'Local Area';
   const vendorAvatar = vendorObj.avatarUrl || vendorObj.logo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80';
@@ -49,36 +80,6 @@ export default function ClickToCallModal({
   const displayPhone = rawPhone
     ? (rawPhone.startsWith('+') ? rawPhone : (cleanPhone.length === 12 ? `+${cleanPhone.slice(0, 2)} ${cleanPhone.slice(2, 7)} ${cleanPhone.slice(7)}` : rawPhone))
     : '+91 98765 43210 (Direct Line)';
-
-  const [checkingAvailability, setCheckingAvailability] = useState(true);
-  const [isAvailable, setIsAvailable] = useState(true);
-  const [availabilityMsg, setAvailabilityMsg] = useState('');
-
-  useEffect(() => {
-    const targetUserId = vendorObj._id || vendorObj.id;
-    if (!targetUserId) {
-      setCheckingAvailability(false);
-      return;
-    }
-    api.post('/v1/calls/check-availability', { vendorId: targetUserId })
-      .then((res) => {
-        if (res.data?.data) {
-          setIsAvailable(res.data.data.available !== false);
-          if (res.data.data.available === false) {
-            setAvailabilityMsg(
-              res.data.data.message ||
-              bi('Vendor is currently unavailable for voice calls. Please connect via WhatsApp or Chat.', 'विक्रेता वर्तमान में कॉल के लिए उपलब्ध नहीं है। कृपया व्हाट्सएप या चैट पर संपर्क करें।')
-            );
-          }
-        }
-      })
-      .catch(() => {
-        setIsAvailable(true); // graceful fallback
-      })
-      .finally(() => {
-        setCheckingAvailability(false);
-      });
-  }, [vendorObj, bi]);
 
   const handleDirectCall = async () => {
     try {
