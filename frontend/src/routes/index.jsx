@@ -42,7 +42,8 @@ const PostRequirementPage = React.lazy(() => import('../pages/customer/requireme
 const MyRequirementsPage = React.lazy(() => import('../pages/customer/requirements/MyRequirementsPage'));
 const SearchListingsPage = React.lazy(() => import('../pages/customer/search/SearchListingsPage'));
 const CustomerActivitiesPage = React.lazy(() => import('../pages/customer/activities/CustomerActivitiesPage'));
-const CustomerNotificationsPage = React.lazy(() => import('../pages/customer/notifications/CustomerNotificationsPage'));
+const NotificationsPage = React.lazy(() => import('../pages/notifications/NotificationsPage'));
+const CustomerNotificationsPage = NotificationsPage;
 const CustomerChatPage = React.lazy(() => import('../pages/customer/chat/CustomerChatPage'));
 const CustomerSettingsPage = React.lazy(() => import('../pages/customer/settings/CustomerSettingsPage'));
 const BecomeVendorPage = React.lazy(() => import('../pages/vendor/onboarding/BecomeVendorPage'));
@@ -181,7 +182,7 @@ const AppRoutes = () => {
         <Route path="product/:productId" element={<ListingDetailPage />} />
         <Route path="listing/:id" element={<ListingDetailPage />} />
         <Route path="activities" element={<CustomerActivitiesPage />} />
-        <Route path="notifications" element={<CustomerNotificationsPage />} />
+        <Route path="notifications" element={<NotificationsPage role="customer" />} />
         <Route path="chat" element={<CustomerChatPage />} />
         <Route path="settings" element={<CustomerSettingsPage />} />
         <Route path="mycart" element={<MyCartPage />} />
@@ -234,7 +235,7 @@ const AppRoutes = () => {
         <Route path="chat" element={<VendorChatPage />} />
         <Route path="followers" element={<VendorFollowersPage />} />
         <Route path="hire-creator" element={<VendorHireCreatorPage />} />
-        <Route path="notifications" element={<CustomerNotificationsPage />} />
+        <Route path="notifications" element={<NotificationsPage role="vendor" />} />
         <Route path="" element={<Navigate to="dashboard" replace />} />
       </Route>
 
@@ -274,7 +275,7 @@ const AppRoutes = () => {
         <Route path="analytics" element={<CreatorAnalyticsPage />} />
         <Route path="settings" element={<CreatorSettingsPage />} />
         <Route path="chat" element={<CreatorChatPage />} />
-        <Route path="notifications" element={<CustomerNotificationsPage />} />
+        <Route path="notifications" element={<NotificationsPage role="creator" />} />
         <Route path="" element={<Navigate to="dashboard" replace />} />
       </Route>
 

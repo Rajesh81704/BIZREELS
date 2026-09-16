@@ -64,6 +64,14 @@ const startServer = async () => {
     const { initReelScheduler } = require('./jobs/reelScheduler');
     initReelScheduler();
 
+    // Start BullMQ Notification Worker
+    try {
+      const { initNotificationWorker } = require('./queues/notification.worker');
+      initNotificationWorker();
+    } catch (workerErr) {
+      logger.warn(`BullMQ worker init skipped: ${workerErr.message}`, { service: 'server' });
+    }
+
     // Log Razorpay configuration status
     const razorpayService = require('./services/razorpay.service');
     razorpayService.logConfigStatus();

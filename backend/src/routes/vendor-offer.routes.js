@@ -166,25 +166,23 @@ router.post(['/', '/me/offers', '/offers'], requireAuth, catchAsync(async (req, 
     const vendorDisplayName = user?.name || user?.vendorProfile?.businessName || 'a local vendor';
 
     const categoryLabel = OFFER_CATEGORIES[category]?.label || category;
-    const notifyPromises = customers.map(cust =>
-      notificationService.create(
-        cust._id.toString(),
-        'offers',
-        `New ${categoryLabel} from ${vendorDisplayName}`,
-        `${offer.title}${offer.code ? ` — Use code "${offer.code}"` : ''}`,
-        {
-          offerId: offer._id.toString(),
-          vendorId: req.user._id.toString(),
-          vendorName: vendorDisplayName,
-          category,
-          offerName: offerName || categoryLabel,
-        },
-        '/customer/notifications',
-        'customer'
-      )
+    const customerIds = customers.map(cust => cust._id.toString());
+    await notificationService.createBulk(
+      customerIds,
+      'offers',
+      `New ${categoryLabel} from ${vendorDisplayName}`,
+      `${offer.title}${offer.code ? ` — Use code "${offer.code}"` : ''}`,
+      {
+        offerId: offer._id.toString(),
+        vendorId: req.user._id.toString(),
+        vendorName: vendorDisplayName,
+        category,
+        offerName: offerName || categoryLabel,
+      },
+      '/customer/notifications',
+      'customer',
+      `offer_created:${offer._id}`
     );
-
-    await Promise.all(notifyPromises);
   } catch (err) {
     console.error('Failed to notify customers about new offer:', err.message);
   }

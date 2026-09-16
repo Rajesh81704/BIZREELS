@@ -1050,13 +1050,28 @@ router.post('/notifications/broadcast', requireAuth, requireAdmin, catchAsync(as
   const User = require('../models/User');
   const q = { is_deleted: { $ne: true } };
   if (target_role && target_role !== 'all') q.roles = target_role;
-  const users = await User.find(q, { _id: 1 });
-  let count = 0;
-  for (const u of users) {
-    await notificationService.create(u._id.toString(), 'system', title, body, { channel }, '/notifications');
-    count++;
-  }
-  res.json({ ok: true, count, channel: channel || 'in_app' });
+  const users = await User.find(q, { _id: 1 }).lean();
+  
+  const targetRole = (target_role && target_role !== 'all') ? target_role : null;
+  const actionUrl = targetRole === 'vendor' 
+    ? '/vendor/notifications' 
+    : targetRole === 'creator' 
+    ? '/creator/notifications' 
+    : '/customer/notifications';
+
+  const userIds = users.map(u => u._id);
+  const result = await notificationService.createBulk(
+    userIds,
+    'system',
+    title,
+    body,
+    { channel: channel || 'in_app' },
+    actionUrl,
+    targetRole,
+    `broadcast:${Date.now()}`
+  );
+
+  res.json({ ok: true, count: result.count, queued: result.queued, channel: channel || 'in_app' });
 }));
 
 // ============================================================ COUPONS & OFFERS

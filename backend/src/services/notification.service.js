@@ -60,7 +60,61 @@ class NotificationService {
   }
 
   /**
-   * Create a notification.
+   * Directly save notification, invalidate cache, and emit socket events.
+   */
+  async createDirect({ recipient, userId, type, title, body, message, data, actionUrl, recipientRole, dedupKey }) {
+    const targetUserId = (userId || recipient).toString();
+    const contentText = body || message || title || '';
+    
+    let savedNotif = null;
+    try {
+      savedNotif = await notificationRepository.createNotification({
+        recipient: targetUserId,
+        type: type || 'system',
+        title: title || 'New Alert',
+        body: contentText,
+        message: contentText,
+        data: data || {},
+        actionUrl: actionUrl || null,
+        recipientRole: recipientRole || null,
+        dedupKey: dedupKey || null,
+      });
+    } catch (err) {
+      console.error('Error saving notification in DB:', err.message);
+    }
+
+    const payload = {
+      _id: savedNotif?._id ? savedNotif._id.toString() : Date.now().toString(),
+      id: savedNotif?._id ? savedNotif._id.toString() : Date.now().toString(),
+      userId: targetUserId,
+      recipient: targetUserId,
+      type: type || 'system',
+      title: title || 'New Alert',
+      body: contentText,
+      message: contentText,
+      data: data || {},
+      actionUrl: actionUrl || null,
+      action_url: actionUrl || null,
+      recipientRole: recipientRole || null,
+      dedupKey: dedupKey || null,
+      isRead: false,
+      is_read: false,
+      createdAt: savedNotif?.createdAt ? savedNotif.createdAt.toISOString() : new Date().toISOString(),
+      created_at: savedNotif?.createdAt ? savedNotif.createdAt.toISOString() : new Date().toISOString(),
+    };
+
+    // Invalidate recipient's notification caches
+    await this._invalidateUserNotifCache(targetUserId);
+
+    // Dual emit for complete frontend subscriber compatibility
+    emitToUser(targetUserId, 'notification:new', payload);
+    emitToUser(targetUserId, 'notification', payload);
+
+    return savedNotif || payload;
+  }
+
+  /**
+   * Create a single notification.
    * @param {string} userId - recipient user ID
    * @param {string} type - notification type (requirement, quote, payment, etc.)
    * @param {string} title - notification title
@@ -68,8 +122,9 @@ class NotificationService {
    * @param {object} data - extra data payload
    * @param {string|null} actionUrl - deep-link URL
    * @param {string|null} recipientRole - explicit target role (vendor/customer/creator/admin)
+   * @param {string|null} dedupKey - optional idempotency key to prevent duplicates
    */
-  async create(userId, type, title, body = null, data = {}, actionUrl = null, recipientRole = null) {
+  async create(userId, type, title, body = null, data = {}, actionUrl = null, recipientRole = null, dedupKey = null) {
     let resolvedUrl = actionUrl;
     let resolvedRole = recipientRole;
 
@@ -115,49 +170,55 @@ class NotificationService {
       console.error('Error resolving actionUrl for notification:', err.message);
     }
 
-    let savedNotif = null;
-    try {
-      savedNotif = await notificationRepository.createNotification({
-        recipient: userId,
+    return this.createDirect({
+      recipient: userId,
+      userId,
+      type,
+      title,
+      body,
+      data,
+      actionUrl: resolvedUrl,
+      recipientRole: resolvedRole,
+      dedupKey,
+    });
+  }
+
+  /**
+   * Bulk dispatch notifications using BullMQ queue.
+   * Offloads fanout to the background worker so HTTP requests respond in < 50ms.
+   * @param {Array<string>} userIds - array of recipient user IDs
+   * @param {string} type - notification type
+   * @param {string} title - notification title
+   * @param {string} body - notification message
+   * @param {object} data - metadata payload
+   * @param {string} actionUrl - redirect URL
+   * @param {string} recipientRole - target audience role
+   * @param {string|null} dedupKeyPrefix - optional prefix for idempotency
+   */
+  async createBulk(userIds, type, title, body = null, data = {}, actionUrl = null, recipientRole = null, dedupKeyPrefix = null) {
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return { success: true, count: 0, queued: 0 };
+    }
+
+    const { enqueueBulkNotifications } = require('../queues/notification.queue');
+    const payloads = userIds.map((uid) => {
+      const stringId = uid?._id ? uid._id.toString() : uid.toString();
+      return {
+        recipient: stringId,
+        userId: stringId,
         type: type || 'system',
         title: title || 'New Alert',
         body: body || title || '',
         message: body || title || '',
         data: data || {},
-        actionUrl: resolvedUrl || null,
-        recipientRole: resolvedRole || null,
-      });
-    } catch (err) {
-      console.error('Error saving notification in DB:', err.message);
-    }
+        actionUrl: actionUrl || null,
+        recipientRole: recipientRole || null,
+        dedupKey: dedupKeyPrefix ? `${dedupKeyPrefix}:${stringId}` : null,
+      };
+    });
 
-    const payload = {
-      _id: savedNotif?._id ? savedNotif._id.toString() : Date.now().toString(),
-      id: savedNotif?._id ? savedNotif._id.toString() : Date.now().toString(),
-      userId,
-      recipient: userId,
-      type: type || 'system',
-      title: title || 'New Alert',
-      body: body || title || '',
-      message: body || title || '',
-      data: data || {},
-      actionUrl: resolvedUrl || null,
-      action_url: resolvedUrl || null,
-      recipientRole: resolvedRole || null,
-      isRead: false,
-      is_read: false,
-      createdAt: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-    };
-
-    // Invalidate recipient's notification caches
-    await this._invalidateUserNotifCache(userId);
-
-    // Dual emit for complete frontend subscriber compatibility
-    emitToUser(userId.toString(), 'notification:new', payload);
-    emitToUser(userId.toString(), 'notification', payload);
-
-    return savedNotif || payload;
+    await enqueueBulkNotifications(payloads);
+    return { success: true, count: payloads.length, queued: payloads.length };
   }
 
   async listMine(userId, isRead = null, cursor = null, limit = 30, role = null) {

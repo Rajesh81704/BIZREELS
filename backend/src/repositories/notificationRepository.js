@@ -90,19 +90,36 @@ class NotificationRepository {
     return Notification.countDocuments(query);
   }
 
-  async createNotification({ recipient, sender, type, title, body, message, data, actionUrl, recipientRole }) {
-    return Notification.create({
-      recipient: recipient.toString(),
-      sender: sender ? sender.toString() : null,
-      recipientRole: recipientRole || null,
-      type: type || 'system',
-      title,
-      body: body || message || '',
-      message: message || body || '',
-      data: data || {},
-      actionUrl: actionUrl || null,
-      isRead: false,
-    });
+  async createNotification({ recipient, sender, type, title, body, message, data, actionUrl, recipientRole, dedupKey }) {
+    if (dedupKey) {
+      try {
+        const existing = await Notification.findOne({ dedupKey });
+        if (existing) return existing;
+      } catch (err) {
+        // Fall through to standard creation
+      }
+    }
+
+    try {
+      return await Notification.create({
+        recipient: recipient.toString(),
+        sender: sender ? sender.toString() : null,
+        recipientRole: recipientRole || null,
+        type: type || 'system',
+        title,
+        body: body || message || '',
+        message: message || body || '',
+        data: data || {},
+        actionUrl: actionUrl || null,
+        dedupKey: dedupKey || null,
+        isRead: false,
+      });
+    } catch (err) {
+      if (err.code === 11000 && dedupKey) {
+        return Notification.findOne({ dedupKey });
+      }
+      throw err;
+    }
   }
 
   async markAllAsRead(userId, role = null) {

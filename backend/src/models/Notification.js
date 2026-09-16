@@ -54,6 +54,11 @@ const notificationSchema = new Schema(
     data: {
       type: Schema.Types.Mixed,
     },
+    dedupKey: {
+      type: String,
+      default: null,
+      trim: true,
+    },
   },
   {
     timestamps: true,
@@ -75,5 +80,12 @@ notificationSchema.virtual('action_url').get(function () {
 notificationSchema.index({ createdAt: -1 });
 notificationSchema.index({ recipient: 1, isRead: 1 });
 notificationSchema.index({ recipient: 1, recipientRole: 1, isRead: 1, createdAt: -1 });
+notificationSchema.index({ dedupKey: 1 }, { unique: true, sparse: true });
+
+// Auto-archive/cleanup: automatically expire read notifications older than 90 days (7,776,000s)
+notificationSchema.index(
+  { createdAt: 1 },
+  { expireAfterSeconds: 90 * 24 * 60 * 60, partialFilterExpression: { isRead: true } }
+);
 
 module.exports = mongoose.models.Notification || mongoose.model('Notification', notificationSchema);

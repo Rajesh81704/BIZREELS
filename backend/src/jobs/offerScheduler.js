@@ -30,30 +30,23 @@ const activateOfferAndNotify = async (offer) => {
       targetRole = 'creator';
     }
 
-    // 2. Chunked batch creation of notifications to prevent event-loop starvation
-    const BATCH_SIZE = 50;
-    for (let i = 0; i < targetUsers.length; i += BATCH_SIZE) {
-      const batch = targetUsers.slice(i, i + BATCH_SIZE);
-      await Promise.allSettled(
-        batch.map(user =>
-          notificationService.create(
-            user._id.toString(),
-            'offer',
-            offer.title,
-            offer.description,
-            {
-              offerId: offer._id.toString(),
-              code: offer.code || '',
-              discountType: offer.discountType,
-              discountValue: offer.discountValue,
-              endTime: offer.endTime ? offer.endTime.toISOString() : ''
-            },
-            redirectPath,
-            targetRole
-          )
-        )
-      );
-    }
+    // 2. Asynchronous bulk enqueuing via BullMQ with deduplication
+    await notificationService.createBulk(
+      targetUsers.map(u => u._id),
+      'offer',
+      offer.title,
+      offer.description,
+      {
+        offerId: offer._id.toString(),
+        code: offer.code || '',
+        discountType: offer.discountType,
+        discountValue: offer.discountValue,
+        endTime: offer.endTime ? offer.endTime.toISOString() : ''
+      },
+      redirectPath,
+      targetRole,
+      `offer_activated:${offer._id.toString()}`
+    );
 
     // 3. Update offer recipient and notification status
     offer.status = 'Active';
