@@ -35,6 +35,7 @@ export default function LoginScreen() {
 
   // Auth Mode: 'email' or 'phone'
   const [authMode, setAuthMode] = useState<'email' | 'phone'>('email');
+  const [otpChannel, setOtpChannel] = useState<'sms' | 'whatsapp'>('sms');
 
   // Selected Role
   const [selectedRole, setSelectedRole] = useState<'customer' | 'vendor' | 'creator'>('customer');
@@ -132,7 +133,8 @@ export default function LoginScreen() {
     );
   }
 
-  function handleSendOtp() {
+  function handleSendOtp(channelChoice?: 'sms' | 'whatsapp') {
+    const activeChannel = channelChoice || otpChannel;
     setServerError(null);
     const cleaned = identifier.trim();
     if (!cleaned) {
@@ -156,16 +158,18 @@ export default function LoginScreen() {
     }
 
     const targetVal = isEmail ? emailVal : phoneVal;
+    const finalChannel = isEmail ? 'email' : activeChannel;
 
     triggerSendOtp(
       {
         phone: phoneVal,
         email: emailVal,
         identifier: targetVal,
+        channel: finalChannel as any,
         purpose: 'login',
       } as any,
       {
-        onSuccess: (data) => {
+        onSuccess: (data: any) => {
           setOtpSent(true);
           setCountdown(60);
           setOtpDigits(['', '', '', '', '', '']);
@@ -173,10 +177,17 @@ export default function LoginScreen() {
           setTimeout(() => {
             otpInputRefs.current[0]?.focus();
           }, 300);
-          Alert.alert(
-            'OTP Dispatched',
-            data.message || `A 6-digit verification code has been sent to ${targetVal}.`
-          );
+          if (data?.otp) {
+            Alert.alert(
+              'OTP Dispatched 📲',
+              `${data.message || `A 6-digit verification code has been sent via ${finalChannel.toUpperCase()} to ${targetVal}.`} (Dev Code: ${data.otp})`
+            );
+          } else {
+            Alert.alert(
+              'OTP Dispatched 📲',
+              data.message || `A 6-digit verification code has been sent via ${finalChannel.toUpperCase()} to ${targetVal}.`
+            );
+          }
         },
         onError: (err: any) => {
           setServerError(err?.response?.data?.message || err.message || 'Failed to send OTP. Please check your credentials.');
@@ -205,6 +216,7 @@ export default function LoginScreen() {
         email: emailVal,
         identifier: targetVal,
         otp: code.trim(),
+        channel: (isEmail ? 'email' : otpChannel) as any,
         purpose: 'login',
       } as any,
       {
@@ -470,7 +482,7 @@ export default function LoginScreen() {
 
                   <TouchableOpacity
                     disabled={countdown > 0 || isSendOtpPending}
-                    onPress={handleSendOtp}
+                    onPress={() => handleSendOtp(otpChannel)}
                     style={{ marginTop: 12, alignItems: 'center' }}>
                     <Text style={{ color: countdown > 0 ? TEXT_MUTED : AMBER_GOLD, fontSize: FontSize.xs, fontWeight: '700' }}>
                       {countdown > 0 ? `Resend OTP in ${countdown}s` : "Didn't receive OTP? Resend Now"}
@@ -479,11 +491,43 @@ export default function LoginScreen() {
                 </View>
               ) : (
                 <>
+                  {/* Channel Selector: SMS vs WhatsApp */}
+                  <View style={{ marginBottom: 14 }}>
+                    <Text style={s.label}>DISPATCH CHANNEL</Text>
+                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                      <TouchableOpacity
+                        onPress={() => setOtpChannel('sms')}
+                        style={[
+                          { flex: 1, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1.5, borderColor: '#334155', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, backgroundColor: '#0F172A' },
+                          otpChannel === 'sms' && { backgroundColor: '#241B15', borderColor: '#D99A3D' },
+                        ]}
+                      >
+                        <Ionicons name="phone-portrait-outline" size={16} color={otpChannel === 'sms' ? '#D99A3D' : '#94A3B8'} />
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: otpChannel === 'sms' ? '#D99A3D' : '#94A3B8' }}>
+                          SMS OTP
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => setOtpChannel('whatsapp')}
+                        style={[
+                          { flex: 1, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1.5, borderColor: '#334155', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, backgroundColor: '#0F172A' },
+                          otpChannel === 'whatsapp' && { backgroundColor: '#14532D', borderColor: '#25D366' },
+                        ]}
+                      >
+                        <Ionicons name="logo-whatsapp" size={16} color={otpChannel === 'whatsapp' ? '#25D366' : '#25D366'} />
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: otpChannel === 'whatsapp' ? '#25D366' : '#94A3B8' }}>
+                          WhatsApp OTP
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
                   {/* Email or Phone Input */}
                   <View style={s.fieldGroup}>
                     <Text style={s.label}>Email Address or Mobile Number</Text>
                     <View style={s.inputRow}>
-                      <Ionicons name="person-circle-outline" size={18} color={AMBER_GOLD} style={s.inputIcon} />
+                      <Ionicons name="person-circle-outline" size={18} color={otpChannel === 'whatsapp' ? '#25D366' : AMBER_GOLD} style={s.inputIcon} />
                       <TextInput
                         style={s.input}
                         placeholder="Enter email or 10-digit mobile number"
@@ -500,15 +544,25 @@ export default function LoginScreen() {
                   </View>
 
                   <TouchableOpacity
-                    style={[s.primaryButton, isSendOtpPending && s.primaryButtonDisabled]}
-                    onPress={handleSendOtp}
+                    style={[
+                      s.primaryButton,
+                      isSendOtpPending && s.primaryButtonDisabled,
+                      otpChannel === 'whatsapp' && { backgroundColor: '#14532D', borderColor: '#25D366' },
+                    ]}
+                    onPress={() => handleSendOtp(otpChannel)}
                     disabled={isSendOtpPending}>
                     {isSendOtpPending ? (
-                      <ActivityIndicator color="#F59E0B" />
+                      <ActivityIndicator color={otpChannel === 'whatsapp' ? '#25D366' : '#F59E0B'} />
                     ) : (
                       <>
-                        <Text style={s.primaryButtonText}>SEND OTP CODE</Text>
-                        <Ionicons name="send" size={16} color="#F59E0B" />
+                        <Text style={[s.primaryButtonText, otpChannel === 'whatsapp' && { color: '#25D366' }]}>
+                          {`SEND OTP VIA ${otpChannel.toUpperCase()}`}
+                        </Text>
+                        <Ionicons
+                          name={otpChannel === 'whatsapp' ? 'logo-whatsapp' : 'send'}
+                          size={16}
+                          color={otpChannel === 'whatsapp' ? '#25D366' : '#F59E0B'}
+                        />
                       </>
                     )}
                   </TouchableOpacity>

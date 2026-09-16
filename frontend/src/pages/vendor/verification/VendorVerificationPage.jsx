@@ -281,11 +281,15 @@ export default function VendorVerificationPage() {
     }
   };
 
-  // Contact Verification OTP trigger
   const handleOpenOtpModal = async (type, value, isReverify = false) => {
-    const targetValue = value || (type === 'email' ? (emailInput || vendorProfile.email || currentUser?.email) : type === 'whatsapp' ? (whatsappInput || vendorProfile.whatsappNumber || currentUser?.phone) : (mobileInput || vendorProfile.mobileNumber || currentUser?.phone));
+    const targetValue = value || (type === 'email' ? (emailInput || vendorProfile.email || currentUser?.email) : type === 'whatsapp' ? (whatsappInput || vendorProfile.whatsappNumber || vendorProfile.whatsapp) : (mobileInput || vendorProfile.mobileNumber || currentUser?.phone));
     if (!targetValue) {
-      toast.error(`Please enter a valid ${type} before verifying.`);
+      if (type === 'whatsapp') {
+        setEditContactMode(prev => ({ ...prev, whatsapp: true }));
+        toast.error('Please enter your WhatsApp number to request WhatsApp OTP.');
+      } else {
+        toast.error(`Please enter a valid ${type} before verifying.`);
+      }
       return;
     }
 
@@ -294,11 +298,16 @@ export default function VendorVerificationPage() {
       const res = await api.post('/v1/vendors/me/send-contact-otp', {
         type,
         value: targetValue,
+        channel: type === 'whatsapp' ? 'whatsapp' : (type === 'email' ? 'email' : 'sms'),
         reverify: isReverify
       });
       const data = res.data || res;
       setOtpModal({ open: true, type, value: targetValue, code: '', reverify: isReverify });
-      toast.success(data.message || `Verification code sent to ${targetValue}!`, { id: toastId });
+      if (data?.otp) {
+        toast.success(`Verification code sent via ${type.toUpperCase()}! (Dev Code: ${data.otp})`, { id: toastId });
+      } else {
+        toast.success(data.message || `Verification code sent to ${targetValue}!`, { id: toastId });
+      }
     } catch (err) {
       toast.error(err?.response?.data?.message || err.message || `Failed to send OTP to ${type}`, { id: toastId });
       setOtpModal({ open: true, type, value: targetValue, code: '', reverify: isReverify });
@@ -1061,7 +1070,15 @@ export default function VendorVerificationPage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => handleOpenOtpModal('whatsapp', whatsappInput || vendorProfile.whatsappNumber || vendorProfile.mobileNumber)}
+                      onClick={() => {
+                        const waVal = whatsappInput || vendorProfile.whatsappNumber || vendorProfile.whatsapp;
+                        if (!waVal) {
+                          setEditContactMode(prev => ({ ...prev, whatsapp: true }));
+                          toast.error('Please enter your WhatsApp number to request WhatsApp OTP.');
+                        } else {
+                          handleOpenOtpModal('whatsapp', waVal);
+                        }
+                      }}
                       className="px-3.5 py-1.5 bg-[#241b15] text-[#d99a3d] rounded-lg text-xs font-black hover:bg-[#3a2c22] cursor-pointer border-none shadow-2xs"
                     >
                       Verify WhatsApp OTP

@@ -23,7 +23,11 @@ export default function CreatorContactSection({
     }
     const toastId = toast.loading(bi(`Sending verification code to ${value}...`, `${value} पर सत्यापन कोड भेजा जा रहा है...`));
     try {
-      const res = await api.post('/v1/creator/me/send-contact-otp', { type, value });
+      const res = await api.post('/v1/creator/me/send-contact-otp', {
+        type,
+        value,
+        channel: type === 'whatsapp' ? 'whatsapp' : 'sms'
+      });
       toast.success(res.data?.message || bi(`Verification OTP sent to ${type}!`, `${type} पर सत्यापन ओटीपी भेज दिया गया है!`), { id: toastId });
       setOtpModal({ open: true, type, value, code: '' });
     } catch (err) {
@@ -138,7 +142,7 @@ export default function CreatorContactSection({
           <button
             type="button"
             disabled={Boolean(contactVerified.whatsapp)}
-            onClick={() => handleSendOtp('whatsapp', creatorProfile?.whatsappNumber || creatorProfile?.mobileNumber || currentUser?.phone)}
+            onClick={() => handleSendOtp('whatsapp', creatorProfile?.whatsappNumber || creatorProfile?.whatsapp)}
             className={`w-full py-2 rounded-md text-xs font-black uppercase tracking-wider transition cursor-pointer shadow-xs ${
               contactVerified.whatsapp
                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-not-allowed opacity-90'

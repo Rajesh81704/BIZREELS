@@ -61,10 +61,11 @@ const getVerificationStatus = catchAsync(async (req, res) => {
 const OTP = require('../models/OTP');
 const emailService = require('../services/email.service');
 const smsService = require('../services/sms.service');
+const whatsappService = require('../services/whatsapp.service');
 const { generateOtp, normalizeIndianPhone } = require('../utils/otp.utils');
 
 // ─────────────────────────────────────────────────────────────
-// 2. SEND CONTACT OTP (Resend API for Email / Twilio for Phone OTP)
+// 2. SEND CONTACT OTP (Resend API for Email / Twilio or WhatsApp for Phone OTP)
 // ─────────────────────────────────────────────────────────────
 const sendContactOtp = catchAsync(async (req, res) => {
   const { type, value, reverify } = req.body;
@@ -83,7 +84,7 @@ const sendContactOtp = catchAsync(async (req, res) => {
     });
   }
 
-  const targetValue = value || (type === 'email' ? (user.vendorProfile?.email || user.email) : (user.vendorProfile?.mobileNumber || user.phone));
+  const targetValue = value || (type === 'email' ? (user.vendorProfile?.email || user.email) : type === 'whatsapp' ? (user.vendorProfile?.whatsappNumber || user.vendorProfile?.whatsapp || user.phone) : (user.vendorProfile?.mobileNumber || user.phone));
   if (!targetValue) {
     throw ApiError.badRequest(`Please provide a valid ${type}`);
   }
@@ -94,8 +95,8 @@ const sendContactOtp = catchAsync(async (req, res) => {
   const expiresAt = new Date(now.getTime() + 10 * 60 * 1000); // 10 mins
 
   if (type === 'email') {
-    const cleanEmail = targetValue.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    const cleanEmail = String(targetValue).trim().toLowerCase();
+    if (!cleanEmail.includes('@')) {
       throw ApiError.badRequest('Please provide a valid email address');
     }
 
@@ -136,16 +137,23 @@ const sendContactOtp = catchAsync(async (req, res) => {
       isUsed: false
     });
 
-    // Dispatch SMS via Twilio / SMS Gateway
+    // Dispatch via WhatsApp or SMS Gateway
+    let dispatchResult;
+    const isWhatsApp = type === 'whatsapp' || req.body.channel === 'whatsapp';
     try {
-      await smsService.sendOtpSms(cleanPhone, otpCode);
+      if (isWhatsApp) {
+        dispatchResult = await whatsappService.sendOtpWhatsApp(cleanPhone, otpCode);
+      } else {
+        dispatchResult = await smsService.sendOtpSms(cleanPhone, otpCode);
+      }
     } catch (smsErr) {
-      console.error('Failed to dispatch contact OTP SMS:', smsErr.message);
+      console.error('Error dispatching OTP:', smsErr.message);
     }
 
     return res.json({
       success: true,
-      message: `Verification OTP sent to ${type}: +91${cleanPhone}`,
+      message: `Verification ${isWhatsApp ? 'WhatsApp' : 'Mobile'} OTP sent to +91${cleanPhone}`,
+      channel: isWhatsApp ? 'whatsapp' : 'sms',
       otp: process.env.NODE_ENV === 'development' ? otpCode : undefined
     });
   }
@@ -198,7 +206,13 @@ const verifyContact = catchAsync(async (req, res) => {
   // Validate OTP code for mobile / whatsapp if code provided
   if (type === 'mobile' || type === 'whatsapp') {
     if (code) {
-      const targetPhone = normalizeIndianPhone(value || user.vendorProfile?.mobileNumber || user.phone || '');
+      const targetPhone = normalizeIndianPhone(value || (type === 'whatsapp' ? (user.vendorProfile?.whatsappNumber || user.vendorProfile?.whatsapp || user.phone) : (user.vendorProfile?.mobileNumber || user.phone)) || '');
+      if (!targetPhone) {
+        throw ApiError.badRequest(`Target phone number for ${type} is required.`);
+      }
+
+      const submittedCode = String(code || '').trim();
+
       const otpRecord = await OTP.findOne({
         identifier: targetPhone,
         purpose: 'verify-phone',
@@ -206,8 +220,18 @@ const verifyContact = catchAsync(async (req, res) => {
         expiresAt: { $gt: new Date() }
       }).sort({ createdAt: -1 });
 
-      const submittedCode = String(code || '').trim();
-      const isMatch = otpRecord && (otpRecord.otp === submittedCode);
+      let isMatch = otpRecord && (otpRecord.otp === submittedCode);
+
+      if (!isMatch) {
+        // Fallback check against Redis OTP service
+        try {
+          const redisOtpService = require('../services/redis-otp.service');
+          const otpData = await redisOtpService.getOtpData(targetPhone, 'verify-phone').catch(() => null);
+          if (otpData && String(otpData.otp || otpData.code).trim() === submittedCode) {
+            isMatch = true;
+          }
+        } catch (rErr) {}
+      }
 
       if (!isMatch) {
         throw ApiError.badRequest(`Invalid or expired ${type} verification code`);
@@ -226,7 +250,15 @@ const verifyContact = catchAsync(async (req, res) => {
     user.phone = value;
     user.isPhoneVerified = true;
   }
-  if (type === 'whatsapp' && value) currentVp.whatsappNumber = value;
+  if (type === 'whatsapp') {
+    if (value) {
+      currentVp.whatsappNumber = value;
+      currentVp.whatsapp = value;
+    } else if (!currentVp.whatsappNumber) {
+      currentVp.whatsappNumber = user.phone;
+      currentVp.whatsapp = user.phone;
+    }
+  }
   if (type === 'email' && value) {
     currentVp.email = value;
     user.email = value;

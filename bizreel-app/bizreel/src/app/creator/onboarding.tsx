@@ -82,8 +82,8 @@ export default function CreatorOnboardingScreen() {
   const [fullName, setFullName] = useState(user?.name || '');
   const [displayName, setDisplayName] = useState((user as any)?.creatorProfile?.displayName || user?.name || '');
   const [gender, setGender] = useState((user as any)?.creatorProfile?.gender || 'Male');
-  const [mobileNumber, setMobileNumber] = useState(user?.phone || '');
-  const [whatsappNumber, setWhatsappNumber] = useState(user?.phone || '');
+  const [mobileNumber, setMobileNumber] = useState((user as any)?.phone || '');
+  const [whatsappNumber, setWhatsappNumber] = useState((user as any)?.phone || '');
   const [email, setEmail] = useState(user?.email || '');
   const [ageConfirmed, setAgeConfirmed] = useState(true);
 

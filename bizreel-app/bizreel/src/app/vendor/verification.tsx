@@ -54,7 +54,7 @@ export default function VendorVerificationCenterScreen() {
   const uData = (user as any) || {};
   const [phone, setPhone] = useState(uData.phone || '');
   const [whatsapp, setWhatsapp] = useState(
-    uData.vendorProfile?.socialLinks?.whatsapp || uData.phone || ''
+    uData.vendorProfile?.whatsappNumber || uData.vendorProfile?.whatsapp || uData.vendorProfile?.socialLinks?.whatsapp || ''
   );
   const [email, setEmail] = useState(uData.email || '');
   const [website, setWebsite] = useState(uData.vendorProfile?.socialLinks?.website || '');
@@ -68,7 +68,8 @@ export default function VendorVerificationCenterScreen() {
     if (uData) {
       if (uData.phone && !phone) setPhone(uData.phone);
       if (uData.email && !email) setEmail(uData.email);
-      if (uData.vendorProfile?.socialLinks?.whatsapp && !whatsapp) setWhatsapp(uData.vendorProfile.socialLinks.whatsapp);
+      const waFromData = uData.vendorProfile?.whatsappNumber || uData.vendorProfile?.whatsapp || uData.vendorProfile?.socialLinks?.whatsapp;
+      if (waFromData && !whatsapp) setWhatsapp(waFromData);
       if (uData.vendorProfile?.socialLinks?.website && !website) setWebsite(uData.vendorProfile.socialLinks.website);
     }
   }, [uData]);
@@ -168,10 +169,34 @@ export default function VendorVerificationCenterScreen() {
   const [bankHolder, setBankHolder] = useState('');
   const [bankAccount, setBankAccount] = useState('');
   const [bankIfsc, setBankIfsc] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [branchName, setBranchName] = useState('');
   const [statementFile, setStatementFile] = useState('');
+  const [ifscLoading, setIfscLoading] = useState(false);
 
   const [upiInput, setUpiInput] = useState('');
   const [qrCodeFile, setQrCodeFile] = useState('');
+
+  const handleIfscLookup = async () => {
+    const cleanIfsc = bankIfsc.trim().toUpperCase();
+    if (!cleanIfsc || cleanIfsc.length < 11) {
+      Alert.alert('Invalid IFSC', 'Please enter a valid 11-character IFSC code (e.g. SBIN0001234).');
+      return;
+    }
+    setIfscLoading(true);
+    try {
+      const res = await api.get(`/v1/vendors/ifsc-lookup/${cleanIfsc}`)
+        .catch(() => api.get(`/vendors/ifsc-lookup/${cleanIfsc}`));
+      const data = res.data || res;
+      if (data.bank) setBankName(data.bank);
+      if (data.branch) setBranchName(data.branch);
+      Alert.alert('IFSC Verified 🏦', `Bank: ${data.bank || 'Found'}\nBranch: ${data.branch || 'Found'}`);
+    } catch (err) {
+      Alert.alert('Notice', 'Could not auto-fetch IFSC details. You can enter Bank & Branch Name manually.');
+    } finally {
+      setIfscLoading(false);
+    }
+  };
 
   const verifyPanMutation = useVerifyPan();
   const verifyGstinMutation = useVerifyGstin();
@@ -185,28 +210,46 @@ export default function VendorVerificationCenterScreen() {
   const [pendingTargetVal, setPendingTargetVal] = useState('');
 
   const handleSendOtp = async (channel: 'mobile' | 'whatsapp' | 'email', customVal?: string) => {
-    const targetVal = customVal || (channel === 'email' ? email : channel === 'whatsapp' ? whatsapp : phone);
+    const targetVal = customVal || (channel === 'email' ? email : channel === 'whatsapp' ? (whatsapp || uData.vendorProfile?.whatsappNumber || uData.vendorProfile?.whatsapp) : phone);
     if (!targetVal || !targetVal.trim()) {
-      Alert.alert('Missing Value', `Please enter a valid ${channel}.`);
+      if (channel === 'whatsapp') {
+        setEditContactMode(prev => ({ ...prev, whatsapp: true }));
+        Alert.alert('WhatsApp Number Required', 'Please enter your WhatsApp number to request WhatsApp OTP.');
+      } else {
+        Alert.alert('Missing Value', `Please enter a valid ${channel}.`);
+      }
       return;
     }
     setPendingTargetVal(targetVal.trim());
     setOtpModalChannel(channel);
     setSendingOtp(true);
     try {
-      await api.post('/vendors/me/send-contact-otp', {
+      const res = await api.post('/v1/vendors/me/send-contact-otp', {
         type: channel,
         value: targetVal.trim(),
+        channel: channel === 'whatsapp' ? 'whatsapp' : (channel === 'email' ? 'email' : 'sms'),
       }).catch(() =>
+        api.post('/vendors/me/send-contact-otp', {
+          type: channel,
+          value: targetVal.trim(),
+          channel: channel === 'whatsapp' ? 'whatsapp' : (channel === 'email' ? 'email' : 'sms'),
+        })
+      ).catch(() =>
         api.post('/auth/send-otp', {
+          phone: targetVal.trim(),
           channel: channel === 'mobile' ? 'sms' : channel,
-          target: targetVal.trim(),
+          purpose: 'phone_verification',
         })
       );
-      Alert.alert('OTP Sent!', `6-digit verification code sent via ${channel.toUpperCase()} to ${targetVal.trim()}.`);
+      const data = res?.data || res;
+      if (data?.otp) {
+        Alert.alert('OTP Sent 📲', `6-digit verification code sent via ${channel.toUpperCase()} to ${targetVal.trim()}! (Dev Code: ${data.otp})`);
+      } else {
+        Alert.alert('OTP Sent 📲', `6-digit verification code sent via ${channel.toUpperCase()} to ${targetVal.trim()}.`);
+      }
     } catch (err: any) {
       console.warn('Failed to send OTP:', err);
-      Alert.alert('Error', `Failed to send verification code via ${channel.toUpperCase()}. Please try again.`);
+      Alert.alert('Error', err?.response?.data?.message || `Failed to send verification code via ${channel.toUpperCase()}. Please try again.`);
     } finally {
       setSendingOtp(false);
     }
@@ -484,7 +527,7 @@ export default function VendorVerificationCenterScreen() {
       icon: '🔵',
       desc: 'Elite Status! You have VIP listing placement, max lead generation, and priority customer chat.'
     }
-  }[status?.tier || 'unverified'] || {
+  }[((status as any)?.tier || 'unverified') as 'unverified' | 'partially_verified' | 'verified_vendor' | 'premium_verified'] || {
     label: 'Unverified Vendor',
     icon: '⚪',
     desc: 'Verify contact details and identity documents to unlock customer leads and verified badge.'
@@ -823,7 +866,13 @@ export default function VendorVerificationCenterScreen() {
                         setEditContactMode(prev => ({ ...prev, whatsapp: true }));
                         setCustomWhatsapp(whatsapp);
                       } else {
-                        handleSendOtp('whatsapp');
+                        const waVal = customWhatsapp || whatsapp || uData.vendorProfile?.whatsappNumber || uData.vendorProfile?.whatsapp;
+                        if (!waVal || !waVal.trim()) {
+                          setEditContactMode(prev => ({ ...prev, whatsapp: true }));
+                          Alert.alert('WhatsApp Number Required', 'Please enter your WhatsApp number to request WhatsApp OTP.');
+                        } else {
+                          handleSendOtp('whatsapp', waVal);
+                        }
                       }
                     }}>
                     <Text style={[styles.verifyOtpBtnText, whatsappVerified && { color: '#0F172A' }]}>
@@ -1447,13 +1496,38 @@ export default function VendorVerificationCenterScreen() {
               value={bankAccount}
               onChangeText={setBankAccount}
             />
+            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="IFSC Code (e.g. SBIN0001234)"
+                placeholderTextColor="#94A3B8"
+                value={bankIfsc}
+                onChangeText={setBankIfsc}
+                autoCapitalize="characters"
+              />
+              <TouchableOpacity
+                onPress={handleIfscLookup}
+                disabled={ifscLoading}
+                style={{ backgroundColor: '#241B15', paddingHorizontal: 12, paddingVertical: 12, borderRadius: 8, marginBottom: 12 }}
+              >
+                <Text style={{ color: '#D99A3D', fontWeight: 'bold', fontSize: 11 }}>
+                  {ifscLoading ? 'Pinging...' : '🔍 Verify IFSC'}
+                </Text>
+              </TouchableOpacity>
+            </View>
             <TextInput
               style={styles.input}
-              placeholder="IFSC Code (e.g. SBIN0001234)"
+              placeholder="Bank Name (Auto-fetched or Manual)"
               placeholderTextColor="#94A3B8"
-              value={bankIfsc}
-              onChangeText={setBankIfsc}
-              autoCapitalize="characters"
+              value={bankName}
+              onChangeText={setBankName}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Branch Name (Auto-fetched or Manual)"
+              placeholderTextColor="#94A3B8"
+              value={branchName}
+              onChangeText={setBranchName}
             />
             <TextInput
               style={styles.input}

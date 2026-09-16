@@ -102,6 +102,77 @@ export default function VendorOnboardingScreen() {
   const [email, setEmail] = useState('');
   const [website, setWebsite] = useState('');
 
+  // WhatsApp OTP Verification
+  const [isWhatsappVerified, setIsWhatsappVerified] = useState(false);
+  const [whatsappOtpModal, setWhatsappOtpModal] = useState(false);
+  const [whatsappOtpCode, setWhatsappOtpCode] = useState('');
+  const [sendingWhatsappOtp, setSendingWhatsappOtp] = useState(false);
+  const [verifyingWhatsappOtp, setVerifyingWhatsappOtp] = useState(false);
+
+  const handleSendWhatsappOtp = async () => {
+    const targetPhone = (whatsappNumber || mobileNumber || '').trim();
+    if (!targetPhone || targetPhone.length < 10) {
+      Alert.alert('Invalid Number', 'Please enter a valid 10-digit WhatsApp number.');
+      return;
+    }
+    setSendingWhatsappOtp(true);
+    try {
+      const res = await api.post('/vendors/me/send-contact-otp', {
+        type: 'whatsapp',
+        value: targetPhone,
+        channel: 'whatsapp',
+      }).catch(() =>
+        api.post('/auth/send-otp', {
+          phone: targetPhone,
+          channel: 'whatsapp',
+          purpose: 'phone_verification',
+        })
+      );
+      const data = res?.data || res;
+      setWhatsappOtpModal(true);
+      if (data?.otp) {
+        Alert.alert('WhatsApp OTP Sent 📱', `Verification code sent via WhatsApp! (Dev Code: ${data.otp})`);
+      } else {
+        Alert.alert('WhatsApp OTP Sent 📱', `A 6-digit verification code was sent to ${targetPhone} via WhatsApp.`);
+      }
+    } catch (err: any) {
+      Alert.alert('Dispatch Failed', err?.response?.data?.message || 'Failed to send WhatsApp OTP. Please try again.');
+    } finally {
+      setSendingWhatsappOtp(false);
+    }
+  };
+
+  const handleVerifyWhatsappOtp = async () => {
+    if (!whatsappOtpCode.trim() || whatsappOtpCode.trim().length < 4) {
+      Alert.alert('Invalid OTP', 'Please enter the verification code sent to your WhatsApp.');
+      return;
+    }
+    setVerifyingWhatsappOtp(true);
+    try {
+      const targetPhone = (whatsappNumber || mobileNumber || '').trim();
+      await api.post('/vendors/me/verify-contact', {
+        type: 'whatsapp',
+        value: targetPhone,
+        code: whatsappOtpCode.trim(),
+      }).catch(() =>
+        api.post('/auth/verify-otp', {
+          phone: targetPhone,
+          otp: whatsappOtpCode.trim(),
+          channel: 'whatsapp',
+          purpose: 'phone_verification',
+        })
+      );
+      setIsWhatsappVerified(true);
+      setWhatsappOtpModal(false);
+      setWhatsappOtpCode('');
+      Alert.alert('Verified! 🎉', 'WhatsApp Number verified successfully.');
+    } catch (err: any) {
+      Alert.alert('Verification Failed', err?.response?.data?.message || 'Invalid or expired OTP. Please try again.');
+    } finally {
+      setVerifyingWhatsappOtp(false);
+    }
+  };
+
   // 4. Business Address & Geolocation
   const [pincode, setPincode] = useState('');
   const [pincodeLoading, setPincodeLoading] = useState(false);
@@ -563,19 +634,38 @@ export default function VendorOnboardingScreen() {
         updatedAt: new Date().toISOString(),
       };
 
-      // 1. Update Profile via PUT /v1/vendors/me/profile
+      // 1. Save vendor profile data via PUT /v1/vendors/me/profile & PATCH /v1/users/me
       await api
         .put('/v1/vendors/me/profile', vendorProfileData)
-        .catch(() => api.patch('/v1/users/me', { vendorProfile: vendorProfileData }))
-        .catch(() => api.post('/auth/add-role', { role: 'vendor', profileData: vendorProfileData }));
+        .catch(() => api.patch('/v1/users/me', {
+          profile_pic: shopLogo || user?.profile_pic || undefined,
+          avatarUrl: shopLogo || user?.avatarUrl || undefined,
+          vendorProfile: vendorProfileData,
+          city: city || (user as any)?.city || 'Local',
+          location: {
+            type: 'Point',
+            coordinates: (user as any)?.location?.coordinates || [75.8577, 22.7196],
+            state: stateName,
+            district: district || city,
+            city,
+            pincode,
+            address: fullAddress.trim(),
+          },
+        }));
 
-      // 2. Refetch profile to synchronize local Auth State
+      // 2. Ensure vendor role is added & activated if not present
+      if (!user?.roles?.includes('vendor')) {
+        await api.post('/auth/add-role', { role: 'vendor', profileData: vendorProfileData }).catch(() => {});
+        await api.post('/auth/switch-role', { role: 'vendor' }).catch(() => {});
+      }
+
+      // 3. Refetch profile to synchronize local Auth State
       const { data: updatedProfile } = await refetchProfile();
       if (updatedProfile) setUser(updatedProfile);
 
       Alert.alert(
-        '🎉 Profile Updated!',
-        'Your vendor business profile details and images have been saved successfully!',
+        '🎉 Profile Saved & Activated!',
+        'Your vendor business profile details and settings have been saved successfully!',
         [
           {
             text: 'Go to Vendor Dashboard',
@@ -826,15 +916,63 @@ export default function VendorOnboardingScreen() {
               onChangeText={setMobileNumber}
             />
 
-            <Text style={styles.fieldLabel}>WHATSAPP BUSINESS NUMBER</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, marginBottom: 4 }}>
+              <Text style={styles.fieldLabel}>WHATSAPP BUSINESS NUMBER</Text>
+              {isWhatsappVerified ? (
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#16a34a' }}>✓ Verified</Text>
+              ) : (
+                <TouchableOpacity
+                  onPress={handleSendWhatsappOtp}
+                  disabled={sendingWhatsappOtp}
+                  style={{ backgroundColor: '#16a34a', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>
+                    {sendingWhatsappOtp ? 'Sending...' : '📱 Verify WhatsApp'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <TextInput
               style={styles.input}
               placeholder="WhatsApp number for leads & inquiries"
               placeholderTextColor={TEXT_PLACEHOLDER}
               keyboardType="phone-pad"
               value={whatsappNumber}
-              onChangeText={setWhatsappNumber}
+              onChangeText={(text) => {
+                setWhatsappNumber(text);
+                setIsWhatsappVerified(false);
+              }}
             />
+
+            {whatsappOtpModal && (
+              <View style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', borderWidth: 1, borderRadius: 10, padding: 10, marginVertical: 8 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#166534', marginBottom: 6 }}>
+                  Enter 6-digit WhatsApp OTP:
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <TextInput
+                    style={[styles.input, { flex: 1, textAlign: 'center', letterSpacing: 3, fontWeight: 'bold' }]}
+                    placeholder="123456"
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    value={whatsappOtpCode}
+                    onChangeText={setWhatsappOtpCode}
+                  />
+                  <TouchableOpacity
+                    onPress={handleVerifyWhatsappOtp}
+                    disabled={verifyingWhatsappOtp}
+                    style={{ backgroundColor: '#16a34a', paddingHorizontal: 14, paddingVertical: 12, borderRadius: 8 }}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
+                      {verifyingWhatsappOtp ? '...' : 'Verify'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setWhatsappOtpModal(false)}>
+                    <Text style={{ color: '#64748b', fontSize: 12, marginLeft: 4 }}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
 
             <Text style={styles.fieldLabel}>BUSINESS EMAIL ADDRESS</Text>
             <TextInput

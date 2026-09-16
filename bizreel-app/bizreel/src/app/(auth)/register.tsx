@@ -153,7 +153,7 @@ export default function RegisterScreen() {
     const valid = await trigger(['name', 'phone', 'email', 'password', 'confirmPassword']);
     if (valid) {
       sendOtp(
-        { phone: phoneValue, purpose: 'register' },
+        { phone: phoneValue || '', purpose: 'register' },
         {
           onSuccess: () => {
             setOtpModalVisible(true);
@@ -708,7 +708,7 @@ export default function RegisterScreen() {
       {/* OTP Verification Sheet Modal */}
       <OtpVerificationModal
         visible={otpModalVisible}
-        phone={phoneValue}
+        phone={phoneValue || ''}
         email={emailValue}
         name={nameValue}
         role={selectedRole}

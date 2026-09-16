@@ -102,6 +102,78 @@ export default function BecomeVendorPage({ isEditMode = false }) {
   const [email, setEmail] = useState(user?.email || '');
   const [website, setWebsite] = useState('');
 
+  // WhatsApp OTP Verification
+  const [isWhatsappVerified, setIsWhatsappVerified] = useState(false);
+  const [whatsappOtpModal, setWhatsappOtpModal] = useState(false);
+  const [whatsappOtpCode, setWhatsappOtpCode] = useState('');
+  const [sendingWhatsappOtp, setSendingWhatsappOtp] = useState(false);
+  const [verifyingWhatsappOtp, setVerifyingWhatsappOtp] = useState(false);
+
+  const handleSendWhatsappOtp = async () => {
+    const targetPhone = whatsappNumber || mobileNumber;
+    if (!targetPhone || targetPhone.trim().length < 10) {
+      toast.error('Please enter a valid 10-digit WhatsApp number.');
+      return;
+    }
+    setSendingWhatsappOtp(true);
+    const toastId = toast.loading('Sending OTP via WhatsApp...');
+    try {
+      const res = await api.post('/v1/vendors/me/send-contact-otp', {
+        type: 'whatsapp',
+        value: targetPhone.trim(),
+        channel: 'whatsapp'
+      }).catch(() =>
+        api.post('/v1/auth/otp/send', {
+          phone: targetPhone.trim(),
+          channel: 'whatsapp',
+          purpose: 'phone_verification'
+        })
+      );
+      const data = res.data || res;
+      setWhatsappOtpModal(true);
+      if (data?.otp) {
+        toast.success(`WhatsApp OTP sent! (Dev Code: ${data.otp})`, { id: toastId });
+      } else {
+        toast.success(`WhatsApp OTP sent to ${targetPhone.trim()}!`, { id: toastId });
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to send WhatsApp OTP. Please try again.', { id: toastId });
+    } finally {
+      setSendingWhatsappOtp(false);
+    }
+  };
+
+  const handleVerifyWhatsappOtp = async () => {
+    if (!whatsappOtpCode || whatsappOtpCode.trim().length < 4) {
+      toast.error('Please enter the verification code sent to your WhatsApp.');
+      return;
+    }
+    setVerifyingWhatsappOtp(true);
+    const toastId = toast.loading('Verifying WhatsApp OTP...');
+    try {
+      await api.post('/v1/vendors/me/verify-contact', {
+        type: 'whatsapp',
+        value: whatsappNumber || mobileNumber,
+        code: whatsappOtpCode.trim()
+      }).catch(() =>
+        api.post('/v1/auth/otp/verify', {
+          phone: whatsappNumber || mobileNumber,
+          otp: whatsappOtpCode.trim(),
+          channel: 'whatsapp',
+          purpose: 'phone_verification'
+        })
+      );
+      setIsWhatsappVerified(true);
+      setWhatsappOtpModal(false);
+      setWhatsappOtpCode('');
+      toast.success('🎉 WhatsApp Number verified successfully!', { id: toastId });
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Invalid or expired OTP. Please try again.', { id: toastId });
+    } finally {
+      setVerifyingWhatsappOtp(false);
+    }
+  };
+
   // 4. Business Address
   const [pincode, setPincode] = useState('');
   const [stateName, setStateName] = useState('Madhya Pradesh');
@@ -1134,24 +1206,76 @@ export default function BecomeVendorPage({ isEditMode = false }) {
                 <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-widest">
                   WhatsApp Number
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setWhatsappNumber(mobileNumber)}
-                  className="text-[10px] text-[#d99a3d] font-bold hover:underline cursor-pointer bg-transparent border-none p-0"
-                >
-                  Same as Mobile
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setWhatsappNumber(mobileNumber)}
+                    className="text-[10px] text-[#d99a3d] font-bold hover:underline cursor-pointer bg-transparent border-none p-0"
+                  >
+                    Same as Mobile
+                  </button>
+                  {isWhatsappVerified ? (
+                    <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                      ✓ Verified
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSendWhatsappOtp}
+                      disabled={sendingWhatsappOtp}
+                      className="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer"
+                    >
+                      {sendingWhatsappOtp ? 'Sending...' : '📱 Verify via WhatsApp'}
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="relative">
                 <FiMessageSquare className="absolute left-3.5 top-3 text-emerald-600 w-4 h-4" />
                 <input
                   type="tel"
                   value={whatsappNumber}
-                  onChange={(e) => setWhatsappNumber(e.target.value)}
+                  onChange={(e) => {
+                    setWhatsappNumber(e.target.value);
+                    setIsWhatsappVerified(false);
+                  }}
                   placeholder="e.g. +91 9876543210"
                   className="w-full pl-10 pr-3.5 py-2.5 bg-[#f8f4ec] border border-[#e3dccb] rounded-xl text-xs font-bold text-[#1a1a1a] focus:outline-none focus:border-[#d99a3d] transition-all"
                 />
               </div>
+
+              {whatsappOtpModal && (
+                <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <p className="text-xs text-emerald-800 font-bold mb-2">
+                    Enter 6-digit WhatsApp OTP sent to {whatsappNumber || mobileNumber}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={whatsappOtpCode}
+                      onChange={(e) => setWhatsappOtpCode(e.target.value)}
+                      placeholder="e.g. 123456"
+                      className="w-32 px-3 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs font-mono font-bold tracking-widest text-slate-800 text-center focus:outline-none focus:border-emerald-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyWhatsappOtp}
+                      disabled={verifyingWhatsappOtp}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition-all cursor-pointer"
+                    >
+                      {verifyingWhatsappOtp ? 'Verifying...' : 'Verify OTP'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWhatsappOtpModal(false)}
+                      className="text-xs text-slate-400 hover:text-slate-600 ml-auto cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>

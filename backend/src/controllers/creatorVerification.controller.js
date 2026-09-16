@@ -6,6 +6,7 @@ const sandboxService = require('../services/sandboxVerification.service');
 const OTP = require('../models/OTP');
 const emailService = require('../services/email.service');
 const smsService = require('../services/sms.service');
+const whatsappService = require('../services/whatsapp.service');
 const { generateOtp, normalizeIndianPhone } = require('../utils/otp.utils');
 
 /**
@@ -145,7 +146,7 @@ const sendContactOtp = catchAsync(async (req, res) => {
     });
   }
 
-  const targetValue = value || (type === 'email' ? (user.creatorProfile?.email || user.email) : (user.creatorProfile?.mobileNumber || user.phone));
+  const targetValue = value || (type === 'email' ? (user.creatorProfile?.email || user.email) : type === 'whatsapp' ? (user.creatorProfile?.whatsappNumber || user.creatorProfile?.whatsapp || user.phone) : (user.creatorProfile?.mobileNumber || user.phone));
   if (!targetValue) {
     throw ApiError.badRequest(`Please provide a valid ${type}`);
   }
@@ -195,16 +196,22 @@ const sendContactOtp = catchAsync(async (req, res) => {
       isUsed: false
     });
 
+    let dispatchResult;
     try {
-      await smsService.sendOtpSms(cleanPhone, otpCode);
+      if (type === 'whatsapp' || req.body.channel === 'whatsapp') {
+        dispatchResult = await whatsappService.sendOtpWhatsApp(cleanPhone, otpCode);
+      } else {
+        dispatchResult = await smsService.sendOtpSms(cleanPhone, otpCode);
+      }
     } catch (smsErr) {
-      console.error('Failed to dispatch contact OTP SMS:', smsErr.message);
+      console.error('Failed to dispatch contact OTP:', smsErr.message);
     }
 
     return res.json({
       success: true,
-      message: `Verification OTP sent to ${type}: +91${cleanPhone}`,
-      otp: process.env.NODE_ENV === 'development' ? otpCode : undefined
+      message: `Verification OTP sent via ${(type === 'whatsapp' || req.body.channel === 'whatsapp') ? 'WHATSAPP' : 'SMS'} to: +91${cleanPhone}`,
+      channel: (type === 'whatsapp' || req.body.channel === 'whatsapp') ? 'whatsapp' : 'sms',
+      otp: (process.env.NODE_ENV === 'development' || dispatchResult?.provider === 'mock' || dispatchResult?.provider === 'mock_fallback') ? otpCode : undefined
     });
   }
 });
