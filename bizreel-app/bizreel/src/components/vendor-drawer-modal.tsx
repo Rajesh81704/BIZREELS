@@ -330,8 +330,8 @@ const styles = StyleSheet.create({
   },
   backdropTouch: { flex: 1 },
   drawerContainer: {
-    width: '80%',
-    maxWidth: 290,
+    width: '40%',
+    maxWidth: 320,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     borderRightWidth: 1,

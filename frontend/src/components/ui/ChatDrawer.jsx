@@ -151,7 +151,7 @@ export default function ChatDrawer({
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 26, stiffness: 240 }}
-          className="relative z-10 w-full max-w-md h-full bg-[#f8f4ec] shadow-2xl border-l border-[#e3dccb] flex flex-col font-sans"
+          className="relative z-10 w-full sm:w-[40%] md:w-[40%] lg:w-[40%] sm:max-w-none h-full bg-[#f8f4ec] shadow-2xl border-l border-[#e3dccb] flex flex-col font-sans"
         >
           {/* ── HEADER ── */}
           <div className="px-4 sm:px-5 py-3.5 bg-[#241b15] text-white border-b border-[#3a2c22] flex items-center justify-between shrink-0 shadow-sm">
