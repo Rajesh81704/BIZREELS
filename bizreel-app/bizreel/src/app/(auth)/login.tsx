@@ -177,10 +177,11 @@ export default function LoginScreen() {
           setTimeout(() => {
             otpInputRefs.current[0]?.focus();
           }, 300);
-          if (data?.otp) {
+          const receivedOtp = data?.otp || data?.data?.otp;
+          if (receivedOtp) {
             Alert.alert(
               'OTP Dispatched 📲',
-              `${data.message || `A 6-digit verification code has been sent via ${finalChannel.toUpperCase()} to ${targetVal}.`} (Dev Code: ${data.otp})`
+              `${data.message || `A 6-digit verification code has been sent via ${finalChannel.toUpperCase()} to ${targetVal}.`} (Dev Code: ${receivedOtp})`
             );
           } else {
             Alert.alert(

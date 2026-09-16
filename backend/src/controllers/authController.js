@@ -55,13 +55,20 @@ class AuthController {
 
     const result = await authService.requestOtp(phone, identifierType, purpose, channel);
 
-    return ApiResponse.ok(res, result.message, {
+    return res.status(200).json({
+      success: true,
+      message: result.message || 'Verification code sent successfully.',
       channel: result.channel || channel,
       purpose: result.purpose || purpose,
-      expiresInMinutes: result.expiresInMinutes,
-      cooldownSeconds: result.cooldownSeconds,
       otp: result.otp,
-      messageSid: result.messageSid,
+      data: {
+        channel: result.channel || channel,
+        purpose: result.purpose || purpose,
+        expiresInMinutes: result.expiresInMinutes,
+        cooldownSeconds: result.cooldownSeconds,
+        otp: result.otp,
+        messageSid: result.messageSid,
+      }
     });
   });
 
@@ -74,13 +81,20 @@ class AuthController {
 
     const result = await authService.requestOtp(phone, identifierType, purpose, channel);
 
-    return ApiResponse.ok(res, result.message, {
+    return res.status(200).json({
+      success: true,
+      message: result.message || 'Verification code resent successfully.',
       channel: result.channel || channel,
       purpose: result.purpose || purpose,
-      expiresInMinutes: result.expiresInMinutes,
-      cooldownSeconds: result.cooldownSeconds,
       otp: result.otp,
-      messageSid: result.messageSid,
+      data: {
+        channel: result.channel || channel,
+        purpose: result.purpose || purpose,
+        expiresInMinutes: result.expiresInMinutes,
+        cooldownSeconds: result.cooldownSeconds,
+        otp: result.otp,
+        messageSid: result.messageSid,
+      }
     });
   });
 
