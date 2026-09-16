@@ -365,25 +365,25 @@ class OrderController {
           }
         }
 
-        // 2. Inventory Concurrency: Atomic conditional stock decrement for product listings
-        if (!isServiceBooking) {
+        // 2. Inventory Concurrency: Decrement stock if listing stock management is explicitly active (> 0)
+        const listingStock = listing.stock;
+        if (!isServiceBooking && typeof listingStock === 'number' && listingStock > 0) {
+          if (listingStock < effectiveQty) {
+            throw ApiError.badRequest(
+              `Only ${listingStock} units of "${listing.title}" are currently available in stock. Please update your quantity.`
+            );
+          }
           updatedListing = await Listing.findOneAndUpdate(
             { _id: listingId, stock: { $gte: effectiveQty } },
             { $inc: { stock: -effectiveQty } },
             { session, new: true }
           );
-
-          if (!updatedListing) {
-            throw ApiError.badRequest(
-              `Insufficient stock available for "${listing.title}". Please reduce your quantity or choose another item.`
-            );
-          }
-
-          if (updatedListing.stock <= 0) {
+          if (updatedListing && updatedListing.stock <= 0) {
             await Listing.updateOne({ _id: listingId }, { status: 'out_of_stock' }, { session });
             updatedListing.status = 'out_of_stock';
           }
         }
+
 
         // 3. If wallet payment is explicitly chosen, check and debit wallet
         if (paymentMethod === 'wallet') {

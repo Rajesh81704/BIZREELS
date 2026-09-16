@@ -200,9 +200,14 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
       setOrderPlaced(true);
       if (onSuccess) onSuccess();
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || 'Failed to place order.';
-      Alert.alert('Order Placement Restricted', errMsg);
+      const serverMsg = err?.response?.data?.message || err?.response?.data?.detail || err?.message;
+      const isStockError = serverMsg && (serverMsg.toLowerCase().includes('stock') || serverMsg.toLowerCase().includes('quantity') || serverMsg.toLowerCase().includes('available'));
+      const alertTitle = isStockError ? '⚠️ Stock & Availability Notice' : 'Order Notice';
+      const alertMsg = serverMsg || 'Failed to place order. Please try again.';
+
+      Alert.alert(alertTitle, alertMsg, [{ text: 'OK' }]);
     } finally {
+
       setSubmitting(false);
     }
   };

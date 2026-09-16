@@ -181,9 +181,14 @@ export default function CheckoutScreen() {
         ]
       );
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || 'Could not place order. Please check supplier details and try again.';
-      Alert.alert('Checkout Notice', errMsg);
+      const serverMsg = err?.response?.data?.message || err?.response?.data?.detail || err?.message;
+      const isStockError = serverMsg && (serverMsg.toLowerCase().includes('stock') || serverMsg.toLowerCase().includes('quantity') || serverMsg.toLowerCase().includes('available'));
+      const alertTitle = isStockError ? '⚠️ Stock & Availability Notice' : 'Checkout Notice';
+      const alertMsg = serverMsg || 'Could not place order. Please check supplier details and try again.';
+
+      Alert.alert(alertTitle, alertMsg, [{ text: 'OK' }]);
     } finally {
+
       setSubmitting(false);
     }
   };
