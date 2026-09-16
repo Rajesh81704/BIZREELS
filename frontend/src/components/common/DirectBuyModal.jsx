@@ -512,11 +512,8 @@ export default function DirectBuyModal({
                 {isService ? <FiTool size={17} /> : <FiPackage size={17} />}
               </div>
               <div>
-                <h3 className="text-sm sm:text-base font-black tracking-tight text-white flex items-center gap-2">
-                  <span>{isService ? 'Service Appointment Checkout' : 'Order Checkout & Payment'}</span>
-                  <span className="text-[10px] bg-[#d99a3d] text-[#1a1a1a] font-black px-2 py-0.5 rounded uppercase">
-                    Flipkart Flow
-                  </span>
+                <h3 className="text-sm sm:text-base font-black tracking-tight text-white">
+                  {isService ? 'Service Appointment Checkout' : 'Order Checkout & Payment'}
                 </h3>
                 <p className="text-[11px] text-[#d99a3d] font-semibold">
                   Direct Verified Transaction with <span className="underline">{vendorName}</span>

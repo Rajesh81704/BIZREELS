@@ -21,10 +21,13 @@ import { createOrder } from '@/features/orders/api';
 import { api } from '@/lib/api';
 import { getListingImage, resolveImageUrl } from '@/utils/image';
 
-const YELLOW = '#2563EB';
-const BLACK = '#0F172A';
-const DARK_CARD = '#FFFFFF';
-const BORDER = '#E2E8F0';
+const GOLD = '#D99A3D';
+const ESPRESSO = '#241B15';
+const WARM_BG = '#F8F4EC';
+const CARD_BG = '#FFFFFF';
+const BORDER_COLOR = '#E3DCCB';
+const MUTED_TEXT = '#7A6E65';
+const INPUT_BG = '#FDFBF7';
 
 export function extractModalPrice(item: any): number {
   if (!item) return 0;
@@ -210,24 +213,19 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
         <TouchableOpacity style={styles.backdropTouch} activeOpacity={1} onPress={onClose} />
 
         <View style={[styles.modalSheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          {/* Header Bar matching Web Flipkart Flow */}
+          {/* Header Bar matching Warm Editorial Flow */}
           <View style={styles.sheetHeader}>
             <View style={styles.headerLeft}>
               <View style={styles.headerIconBox}>
-                <Ionicons name="cube" size={18} color={YELLOW} />
+                <Ionicons name="cube" size={18} color={GOLD} />
               </View>
               <View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.sheetTitle}>Order Checkout & Payment</Text>
-                  <View style={styles.flipkartTag}>
-                    <Text style={styles.flipkartTagText}>FLIPKART FLOW</Text>
-                  </View>
-                </View>
+                <Text style={styles.sheetTitle}>Order Checkout & Payment</Text>
                 <Text style={styles.sheetSubtitle}>Direct Verified Transaction with {vendorName}</Text>
               </View>
             </View>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-              <Ionicons name="close" size={20} color="#0F172A" />
+              <Ionicons name="close" size={20} color={ESPRESSO} />
             </TouchableOpacity>
           </View>
 
@@ -235,11 +233,11 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
             /* Order Success View */
             <View style={styles.successBox}>
               <View style={styles.successBadge}>
-                <Ionicons name="checkmark-circle" size={56} color="#22C55E" />
+                <Ionicons name="checkmark-circle" size={56} color="#16A34A" />
               </View>
               <Text style={styles.successTitle}>Order Placed Successfully!</Text>
               <Text style={styles.successSub}>
-                Your order for <Text style={{ color: YELLOW }}>"{itemTitle}"</Text> has been placed with {vendorName}.
+                Your order for <Text style={{ color: GOLD, fontWeight: '900' }}>"{itemTitle}"</Text> has been placed with {vendorName}.
               </Text>
               <TouchableOpacity
                 style={styles.viewOrdersBtn}
@@ -259,7 +257,7 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
                   <Image source={{ uri: itemImage }} style={styles.productThumb} contentFit="cover" />
                 ) : (
                   <View style={styles.thumbFallback}>
-                    <Ionicons name="cube-outline" size={24} color="#94A3B8" />
+                    <Ionicons name="cube-outline" size={24} color={MUTED_TEXT} />
                   </View>
                 )}
 
@@ -304,7 +302,7 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
               {/* Standard E-Commerce Delivery Address */}
               <View style={styles.cardSection}>
                 <View style={styles.labelHeader}>
-                  <Ionicons name="location-outline" size={16} color={YELLOW} />
+                  <Ionicons name="location-outline" size={16} color={GOLD} />
                   <Text style={styles.sectionLabel}>1. DELIVERY ADDRESS DETAILS</Text>
                 </View>
 
@@ -314,14 +312,14 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
                     <TextInput
                       style={[styles.smallInput, { flex: 1 }]}
                       placeholder="Full Name *"
-                      placeholderTextColor="#94A3B8"
+                      placeholderTextColor="#9A8E85"
                       value={customerName}
                       onChangeText={setCustomerName}
                     />
                     <TextInput
                       style={[styles.smallInput, { flex: 1 }]}
                       placeholder="Mobile Number *"
-                      placeholderTextColor="#94A3B8"
+                      placeholderTextColor="#9A8E85"
                       keyboardType="phone-pad"
                       value={customerPhone}
                       onChangeText={setCustomerPhone}
@@ -332,7 +330,7 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
                   <TextInput
                     style={styles.addressInput}
                     placeholder="House No., Building, Street, Area *"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor="#9A8E85"
                     multiline
                     numberOfLines={2}
                     value={streetAddress}
@@ -344,21 +342,21 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
                     <TextInput
                       style={[styles.smallInput, { flex: 1 }]}
                       placeholder="Town / City *"
-                      placeholderTextColor="#94A3B8"
+                      placeholderTextColor="#9A8E85"
                       value={city}
                       onChangeText={setCity}
                     />
                     <TextInput
                       style={[styles.smallInput, { flex: 1 }]}
                       placeholder="State *"
-                      placeholderTextColor="#94A3B8"
+                      placeholderTextColor="#9A8E85"
                       value={stateVal}
                       onChangeText={setStateVal}
                     />
                     <TextInput
                       style={[styles.smallInput, { width: 85 }]}
                       placeholder="Pincode *"
-                      placeholderTextColor="#94A3B8"
+                      placeholderTextColor="#9A8E85"
                       keyboardType="number-pad"
                       maxLength={6}
                       value={pincode}
@@ -375,17 +373,17 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
                 <TouchableOpacity
                   style={[styles.paymentCard, paymentMethod === 'cod' && styles.paymentCardActive]}
                   onPress={() => setPaymentMethod('cod')}>
-                  <Ionicons name="cash-outline" size={20} color={paymentMethod === 'cod' ? YELLOW : '#0F172A'} />
-                  <Text style={styles.paymentTitle}>Cash on Delivery / Direct Supplier Pay</Text>
-                  {paymentMethod === 'cod' && <Ionicons name="checkmark-circle" size={18} color={YELLOW} />}
+                  <Ionicons name="cash-outline" size={20} color={paymentMethod === 'cod' ? GOLD : ESPRESSO} />
+                  <Text style={[styles.paymentTitle, paymentMethod === 'cod' && styles.paymentTitleActive]}>Cash on Delivery / Direct Supplier Pay</Text>
+                  {paymentMethod === 'cod' && <Ionicons name="checkmark-circle" size={18} color={GOLD} />}
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[styles.paymentCard, paymentMethod === 'wallet' && styles.paymentCardActive]}
                   onPress={() => setPaymentMethod('wallet')}>
-                  <Ionicons name="wallet-outline" size={20} color={paymentMethod === 'wallet' ? YELLOW : '#0F172A'} />
-                  <Text style={styles.paymentTitle}>BizReels Wallet Balance</Text>
-                  {paymentMethod === 'wallet' && <Ionicons name="checkmark-circle" size={18} color={YELLOW} />}
+                  <Ionicons name="wallet-outline" size={20} color={paymentMethod === 'wallet' ? GOLD : ESPRESSO} />
+                  <Text style={[styles.paymentTitle, paymentMethod === 'wallet' && styles.paymentTitleActive]}>BizReels Wallet Balance</Text>
+                  {paymentMethod === 'wallet' && <Ionicons name="checkmark-circle" size={18} color={GOLD} />}
                 </TouchableOpacity>
               </View>
 
@@ -401,12 +399,12 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Delivery Charges</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={{ fontSize: 11, color: '#94A3B8', textDecorationLine: 'line-through' }}>₹40</Text>
-                    <Text style={{ fontSize: 12, fontWeight: '900', color: '#22C55E' }}>FREE</Text>
+                    <Text style={{ fontSize: 11, color: MUTED_TEXT, textDecorationLine: 'line-through' }}>₹40</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '900', color: '#16A34A' }}>FREE</Text>
                   </View>
                 </View>
 
-                <View style={[styles.summaryRow, { borderTopWidth: 1, borderTopColor: BORDER, paddingTop: 8, marginTop: 4 }]}>
+                <View style={[styles.summaryRow, { borderTopWidth: 1, borderTopColor: BORDER_COLOR, paddingTop: 8, marginTop: 4 }]}>
                   <Text style={styles.totalLabel}>TOTAL AMOUNT</Text>
                   <Text style={styles.totalVal}>₹{totalPrice.toLocaleString('en-IN')}</Text>
                 </View>
@@ -427,7 +425,7 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
                   <>
-                    <Ionicons name="flash" size={16} color="#FFFFFF" />
+                    <Ionicons name="flash" size={16} color={GOLD} />
                     <Text style={styles.confirmBtnText}>Place Order (₹{totalPrice.toLocaleString('en-IN')})</Text>
                   </>
                 )}
@@ -443,19 +441,19 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15,23,42,0.5)',
+    backgroundColor: 'rgba(36,27,21,0.6)',
     justifyContent: 'flex-end',
   },
   backdropTouch: {
     flex: 1,
   },
   modalSheet: {
-    backgroundColor: DARK_CARD,
+    backgroundColor: WARM_BG,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderWidth: 1,
-    borderColor: BORDER,
-    maxHeight: '85%',
+    borderColor: BORDER_COLOR,
+    maxHeight: '88%',
   },
   sheetHeader: {
     flexDirection: 'row',
@@ -463,8 +461,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    backgroundColor: ESPRESSO,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -472,39 +471,44 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   headerIconBox: {
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
     borderRadius: 10,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: 'rgba(217, 154, 61, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: 'rgba(217, 154, 61, 0.3)',
   },
   sheetTitle: {
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontSize: FontSize.sm,
     fontWeight: '900',
   },
   flipkartTag: {
-    backgroundColor: YELLOW,
+    backgroundColor: GOLD,
     paddingHorizontal: 6,
     paddingVertical: 1.5,
     borderRadius: 6,
   },
   flipkartTagText: {
-    color: '#FFFFFF',
+    color: ESPRESSO,
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
   sheetSubtitle: {
-    color: '#64748B',
+    color: '#D4C9BF',
     fontSize: 10,
     marginTop: 1,
   },
   closeBtn: {
-    padding: 4,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollBody: {
     paddingHorizontal: Spacing.four,
@@ -517,23 +521,23 @@ const styles = StyleSheet.create({
   productCard: {
     flexDirection: 'row',
     gap: Spacing.three,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: CARD_BG,
     padding: Spacing.three,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: BORDER_COLOR,
     borderRadius: 16,
   },
   productThumb: {
     width: 72,
     height: 72,
     borderRadius: 12,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: WARM_BG,
   },
   thumbFallback: {
     width: 72,
     height: 72,
     borderRadius: 12,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: WARM_BG,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -543,12 +547,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   vendorTag: {
-    color: YELLOW,
+    color: GOLD,
     fontSize: 10,
     fontWeight: '900',
   },
   productTitle: {
-    color: '#0F172A',
+    color: ESPRESSO,
     fontSize: FontSize.xs,
     fontWeight: '900',
     lineHeight: 18,
@@ -560,23 +564,23 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   activePrice: {
-    color: YELLOW,
+    color: ESPRESSO,
     fontSize: FontSize.base,
     fontWeight: '900',
   },
   originalPrice: {
-    color: '#94A3B8',
+    color: MUTED_TEXT,
     fontSize: FontSize.xs,
     textDecorationLine: 'line-through',
   },
   discountBadge: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: 'rgba(217, 154, 61, 0.15)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
   },
   discountText: {
-    color: YELLOW,
+    color: GOLD,
     fontSize: 10,
     fontWeight: '900',
   },
@@ -590,9 +594,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   sectionLabel: {
-    color: '#0F172A',
+    color: ESPRESSO,
     fontSize: FontSize.xs,
     fontWeight: '900',
+    letterSpacing: 0.5,
   },
 
   stepperRow: {
@@ -604,17 +609,17 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: YELLOW,
+    backgroundColor: ESPRESSO,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepperBtnText: {
-    color: '#FFFFFF',
+    color: GOLD,
     fontSize: FontSize.lg,
     fontWeight: '900',
   },
   quantityText: {
-    color: '#0F172A',
+    color: ESPRESSO,
     fontSize: FontSize.base,
     fontWeight: '900',
     minWidth: 32,
@@ -622,11 +627,11 @@ const styles = StyleSheet.create({
   },
 
   smallInput: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: INPUT_BG,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: BORDER_COLOR,
     borderRadius: 12,
-    color: '#0F172A',
+    color: ESPRESSO,
     fontSize: FontSize.xs,
     fontWeight: '600',
     paddingHorizontal: Spacing.three,
@@ -634,11 +639,11 @@ const styles = StyleSheet.create({
     height: 42,
   },
   addressInput: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: INPUT_BG,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: BORDER_COLOR,
     borderRadius: 12,
-    color: '#0F172A',
+    color: ESPRESSO,
     fontSize: FontSize.xs,
     fontWeight: '600',
     padding: Spacing.three,
@@ -650,38 +655,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: CARD_BG,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: BORDER_COLOR,
     borderRadius: 14,
     padding: Spacing.three,
   },
   paymentCardActive: {
-    borderColor: YELLOW,
-    backgroundColor: '#EFF6FF',
+    borderColor: ESPRESSO,
+    backgroundColor: '#FAF7F0',
+    borderWidth: 1.5,
   },
   paymentTitle: {
     flex: 1,
-    color: '#0F172A',
+    color: MUTED_TEXT,
     fontSize: FontSize.xs,
     fontWeight: '700',
   },
+  paymentTitleActive: {
+    color: ESPRESSO,
+    fontWeight: '900',
+  },
 
   summaryCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: CARD_BG,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: BORDER_COLOR,
     borderRadius: 16,
     padding: Spacing.three,
     gap: 8,
   },
   priceDetailsHeading: {
-    color: '#0F172A',
+    color: ESPRESSO,
     fontSize: FontSize.xs,
     fontWeight: '900',
     letterSpacing: 0.5,
     borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    borderBottomColor: BORDER_COLOR,
     paddingBottom: 6,
     marginBottom: 2,
   },
@@ -691,21 +701,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   summaryLabel: {
-    color: '#64748B',
+    color: MUTED_TEXT,
     fontSize: FontSize.xs,
   },
   summaryVal: {
-    color: '#0F172A',
+    color: ESPRESSO,
     fontSize: FontSize.xs,
     fontWeight: '700',
   },
   totalLabel: {
-    color: '#0F172A',
+    color: ESPRESSO,
     fontSize: FontSize.sm,
     fontWeight: '900',
   },
   totalVal: {
-    color: YELLOW,
+    color: GOLD,
     fontSize: FontSize.base,
     fontWeight: '900',
   },
@@ -727,7 +737,7 @@ const styles = StyleSheet.create({
 
   confirmBtn: {
     flexDirection: 'row',
-    backgroundColor: YELLOW,
+    backgroundColor: ESPRESSO,
     borderRadius: 16,
     height: 48,
     alignItems: 'center',
@@ -754,26 +764,26 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.two,
   },
   successTitle: {
-    color: '#0F172A',
+    color: ESPRESSO,
     fontSize: FontSize.lg,
     fontWeight: '900',
     textAlign: 'center',
   },
   successSub: {
-    color: '#64748B',
+    color: MUTED_TEXT,
     fontSize: FontSize.sm,
     textAlign: 'center',
     lineHeight: 20,
   },
   viewOrdersBtn: {
-    backgroundColor: YELLOW,
+    backgroundColor: ESPRESSO,
     borderRadius: 14,
     paddingHorizontal: Spacing.five,
     paddingVertical: Spacing.three,
     marginTop: Spacing.three,
   },
   viewOrdersText: {
-    color: '#FFFFFF',
+    color: GOLD,
     fontSize: FontSize.sm,
     fontWeight: '900',
   },

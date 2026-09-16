@@ -14,13 +14,22 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BrandColors, FontSize, FontWeight, Spacing } from '@/constants/theme';
+import { FontSize, Spacing } from '@/constants/theme';
 import { useCart } from '@/features/cart/queries';
 import { checkoutCart } from '@/features/cart/api';
 import { createOrder } from '@/features/orders/api';
 import type { PaymentMethod } from '@/features/orders/types';
 import { getListingImage, resolveImageUrl } from '@/utils/image';
 import { useAuth } from '@/features/auth/context';
+
+const GOLD = '#D99A3D';
+const ESPRESSO = '#241B15';
+const BG_MATTE = '#F8F4EC';
+const CARD_BG = '#FFFFFF';
+const INPUT_BG = '#F8FAFC';
+const BORDER_COLOR = '#E3DCCB';
+const TEXT_MAIN = '#0F172A';
+const TEXT_MUTED = '#64748B';
 
 function extractItemPrice(item: any): number {
   if (!item) return 0;
@@ -65,7 +74,7 @@ export default function CheckoutScreen() {
 
   const { data: cart, isLoading, refetch: refetchCart } = useCart();
 
-  const [address, setAddress] = useState('');
+  const [address, setAddress] = useState(user?.city ? `City: ${user.city}` : '');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod');
   const [submitting, setSubmitting] = useState(false);
 
@@ -77,7 +86,7 @@ export default function CheckoutScreen() {
     ? [
         {
           vendor_id: 'direct_vendor',
-          vendor: { name: params.vendorName || 'Seller' },
+          vendor: { name: params.vendorName || 'Verified Seller' },
           items: [
             {
               listing_id: params.listingId || 'direct_item',
@@ -113,7 +122,7 @@ export default function CheckoutScreen() {
     ? [
         {
           vendor_id: 'direct_vendor',
-          vendor: { name: params.vendorName || 'Seller' },
+          vendor: { name: params.vendorName || 'Verified Seller' },
           items: [
             {
               listing_id: params.listingId || 'direct_item',
@@ -194,8 +203,8 @@ export default function CheckoutScreen() {
   if (isLoading && !hasDirectItem) {
     return (
       <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={BrandColors.primary} />
-        <Text style={styles.loadingText}>Loading checkout details...</Text>
+        <ActivityIndicator size="large" color={GOLD} />
+        <Text style={styles.loadingText}>Preparing checkout...</Text>
       </View>
     );
   }
@@ -203,11 +212,13 @@ export default function CheckoutScreen() {
   if (authStatus === 'unauthed' || !user) {
     return (
       <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
-        <Ionicons name="lock-closed-outline" size={64} color={BrandColors.primary} />
+        <View style={styles.emptyIconBox}>
+          <Ionicons name="lock-closed" size={32} color={ESPRESSO} />
+        </View>
         <Text style={styles.emptyTitle}>Sign In to Complete Checkout</Text>
-        <Text style={styles.emptySub}>Please sign in to your BizReels account to place your order and set delivery details.</Text>
+        <Text style={styles.emptySub}>Please sign in to your account to place your order and set delivery details.</Text>
         <TouchableOpacity style={styles.browseBtn} onPress={() => router.push('/(auth)/login')}>
-          <Text style={styles.browseBtnText}>Log In / Register</Text>
+          <Text style={styles.browseBtnText}>LOG IN / REGISTER</Text>
         </TouchableOpacity>
       </View>
     );
@@ -216,11 +227,13 @@ export default function CheckoutScreen() {
   if (displayGroups.length === 0 && !hasDirectItem) {
     return (
       <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
-        <Ionicons name="basket-outline" size={64} color="rgba(255,255,255,0.4)" />
+        <View style={styles.emptyIconBox}>
+          <Ionicons name="basket" size={32} color={ESPRESSO} />
+        </View>
         <Text style={styles.emptyTitle}>Your Cart is Empty</Text>
-        <Text style={styles.emptySub}>Add products or services to your cart to proceed with checkout.</Text>
+        <Text style={styles.emptySub}>Add products or services to your cart to proceed with instant checkout.</Text>
         <TouchableOpacity style={styles.browseBtn} onPress={() => router.replace('/(tabs)/home')}>
-          <Text style={styles.browseBtnText}>Explore Products</Text>
+          <Text style={styles.browseBtnText}>EXPLORE PRODUCTS</Text>
         </TouchableOpacity>
       </View>
     );
@@ -231,23 +244,43 @@ export default function CheckoutScreen() {
       {/* Header Bar */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#1E1B18" />
+          <Ionicons name="arrow-back" size={20} color={GOLD} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Checkout</Text>
-        <View style={{ width: 36 }} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerBadge}>FAST &amp; SECURE CHECKOUT</Text>
+          <Text style={styles.headerTitle}>ORDER SUMMARY</Text>
+        </View>
+        <View style={styles.headerStepPill}>
+          <Text style={styles.headerStepText}>{totalItemsCount} Items</Text>
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Recipient Quick Info Banner */}
+        <View style={styles.bannerCard}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.bannerBadge}>PURCHASER DETAILS</Text>
+            <Text style={styles.bannerName}>{user?.name || 'Customer'}</Text>
+            <Text style={styles.bannerSub}>{user?.email || user?.phone || 'Contact Verified'}</Text>
+          </View>
+          <View style={styles.bannerIconBox}>
+            <Ionicons name="person-circle" size={26} color={ESPRESSO} />
+          </View>
+        </View>
+
         {/* Delivery Address Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Ionicons name="location" size={20} color={BrandColors.primary} />
-            <Text style={styles.cardTitle}>Delivery Address</Text>
+            <View style={styles.numBadge}>
+              <Text style={styles.numBadgeText}>1</Text>
+            </View>
+            <Text style={styles.cardTitle}>Delivery &amp; Shipping Address</Text>
           </View>
+          <Text style={styles.label}>Street Address &amp; Pincode *</Text>
           <TextInput
             style={styles.addressInput}
-            placeholder="Enter house no., street, city, landmark & pincode"
-            placeholderTextColor="rgba(255,255,255,0.4)"
+            placeholder="House / Flat No., Building, Street Name, City & Pincode"
+            placeholderTextColor="#94A3B8"
             multiline
             numberOfLines={3}
             value={address}
@@ -258,13 +291,19 @@ export default function CheckoutScreen() {
         {/* Order Summary Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Ionicons name="bag-handle" size={20} color={BrandColors.primary} />
-            <Text style={styles.cardTitle}>Order Items ({totalItemsCount})</Text>
+            <View style={styles.numBadge}>
+              <Text style={styles.numBadgeText}>2</Text>
+            </View>
+            <Text style={styles.cardTitle}>Ordered Items ({totalItemsCount})</Text>
           </View>
 
           {displayGroups.map((group) => (
             <View key={group.vendor_id} style={styles.vendorBlock}>
-              <Text style={styles.vendorName}>{group.vendor?.name || 'Vendor Partner'}</Text>
+              <View style={styles.vendorHeaderRow}>
+                <Ionicons name="storefront-outline" size={14} color={GOLD} />
+                <Text style={styles.vendorName}>{group.vendor?.name || 'Verified Seller'}</Text>
+              </View>
+
               {group.items.map((item: any) => {
                 const itemImg = resolveImageUrl(item.image) || getListingImage(item);
                 const itemPrice = extractItemPrice(item);
@@ -274,7 +313,7 @@ export default function CheckoutScreen() {
                       <Image source={{ uri: itemImg }} style={styles.itemThumb} contentFit="cover" />
                     ) : (
                       <View style={styles.itemThumbFallback}>
-                        <Ionicons name="cube-outline" size={18} color="rgba(255,255,255,0.4)" />
+                        <Ionicons name="cube-outline" size={20} color={TEXT_MUTED} />
                       </View>
                     )}
 
@@ -282,12 +321,14 @@ export default function CheckoutScreen() {
                       <Text style={styles.summaryItemTitle} numberOfLines={2}>
                         {item.title}
                       </Text>
-                      <Text style={styles.itemQtyPrice}>
-                        ₹{itemPrice} × {item.quantity || 1}
-                      </Text>
+                      <View style={styles.itemMetaRow}>
+                        <Text style={styles.itemQtyPrice}>
+                          ₹{itemPrice.toLocaleString('en-IN')} × {item.quantity || 1}
+                        </Text>
+                      </View>
                     </View>
 
-                    <Text style={styles.summaryItemPrice}>₹{item.line_total || itemPrice}</Text>
+                    <Text style={styles.summaryItemPrice}>₹{(item.line_total || itemPrice).toLocaleString('en-IN')}</Text>
                   </View>
                 );
               })}
@@ -298,57 +339,100 @@ export default function CheckoutScreen() {
         {/* Payment Method Selector */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Ionicons name="card" size={20} color={BrandColors.primary} />
+            <View style={styles.numBadge}>
+              <Text style={styles.numBadgeText}>3</Text>
+            </View>
             <Text style={styles.cardTitle}>Payment Method</Text>
           </View>
 
           <TouchableOpacity
             style={[styles.paymentOption, paymentMethod === 'cod' && styles.paymentOptionSelected]}
-            onPress={() => setPaymentMethod('cod')}>
-            <Text style={styles.paymentText}>Cash on Delivery / Direct Vendor Payment</Text>
+            onPress={() => setPaymentMethod('cod')}
+            activeOpacity={0.85}>
+            <View style={styles.paymentOptionLeft}>
+              <View style={[styles.paymentIconBox, paymentMethod === 'cod' && styles.paymentIconBoxSelected]}>
+                <Ionicons name="cash-outline" size={18} color={paymentMethod === 'cod' ? GOLD : ESPRESSO} />
+              </View>
+              <View>
+                <Text style={styles.paymentText}>Cash on Delivery / Vendor Direct</Text>
+                <Text style={styles.paymentSubText}>Pay directly to vendor upon order delivery</Text>
+              </View>
+            </View>
             {paymentMethod === 'cod' && (
-              <Ionicons name="checkmark-circle" size={20} color={BrandColors.primary} />
+              <Ionicons name="checkmark-circle" size={22} color={GOLD} />
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.paymentOption, paymentMethod === 'wallet' && styles.paymentOptionSelected]}
-            onPress={() => setPaymentMethod('wallet')}>
-            <Text style={styles.paymentText}>BizReels Wallet Balance</Text>
+            onPress={() => setPaymentMethod('wallet')}
+            activeOpacity={0.85}>
+            <View style={styles.paymentOptionLeft}>
+              <View style={[styles.paymentIconBox, paymentMethod === 'wallet' && styles.paymentIconBoxSelected]}>
+                <Ionicons name="wallet-outline" size={18} color={paymentMethod === 'wallet' ? GOLD : ESPRESSO} />
+              </View>
+              <View>
+                <Text style={styles.paymentText}>BizReels Wallet Balance</Text>
+                <Text style={styles.paymentSubText}>Use available wallet credits for instant checkout</Text>
+              </View>
+            </View>
             {paymentMethod === 'wallet' && (
-              <Ionicons name="checkmark-circle" size={20} color={BrandColors.primary} />
+              <Ionicons name="checkmark-circle" size={22} color={GOLD} />
             )}
           </TouchableOpacity>
         </View>
 
-        {/* Price Breakdown */}
+        {/* Bill Summary Breakdown */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Bill Summary</Text>
+          <Text style={styles.cardTitle}>Bill Summary &amp; Taxes</Text>
           <View style={styles.billRow}>
             <Text style={styles.billLabel}>Item Subtotal</Text>
-            <Text style={styles.billValue}>₹{displayTotal}</Text>
+            <Text style={styles.billValue}>₹{displayTotal.toLocaleString('en-IN')}</Text>
           </View>
           <View style={styles.billRow}>
-            <Text style={styles.billLabel}>Delivery Fee</Text>
-            <Text style={[styles.billValue, { color: BrandColors.success }]}>FREE</Text>
+            <Text style={styles.billLabel}>Shipping &amp; Delivery</Text>
+            <View style={styles.freeTag}>
+              <Text style={styles.freeTagText}>FREE</Text>
+            </View>
           </View>
-          <View style={[styles.billRow, styles.totalBillRow]}>
-            <Text style={styles.totalBillLabel}>To Pay</Text>
-            <Text style={styles.totalBillValue}>₹{displayTotal}</Text>
+          <View style={styles.billRow}>
+            <Text style={styles.billLabel}>Platform Guarantee Fee</Text>
+            <Text style={[styles.billValue, { color: '#059669' }]}>₹0 (Waived)</Text>
           </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.totalBillRow}>
+            <Text style={styles.totalBillLabel}>Grand Total</Text>
+            <Text style={styles.totalBillValue}>₹{displayTotal.toLocaleString('en-IN')}</Text>
+          </View>
+        </View>
+
+        {/* Guarantee Banner */}
+        <View style={styles.guaranteeBox}>
+          <Ionicons name="shield-checkmark" size={18} color="#059669" />
+          <Text style={styles.guaranteeText}>
+            100% Direct Verified Vendor Purchase • Protected by BizReels Guarantee
+          </Text>
         </View>
       </ScrollView>
 
-      {/* Place Order Footer */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+      {/* Place Order Sticky Footer */}
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 14) }]}>
         <TouchableOpacity
           style={styles.placeOrderBtn}
           onPress={handlePlaceOrder}
-          disabled={submitting}>
+          disabled={submitting}
+          activeOpacity={0.85}>
           {submitting ? (
-            <ActivityIndicator color="#D99A3D" />
+            <ActivityIndicator color={GOLD} />
           ) : (
-            <Text style={styles.placeOrderBtnText}>Confirm & Place Order (₹{displayTotal})</Text>
+            <View style={styles.placeOrderRow}>
+              <Ionicons name="lock-closed" size={16} color={GOLD} />
+              <Text style={styles.placeOrderBtnText}>
+                CONFIRM &amp; PLACE ORDER • ₹{displayTotal.toLocaleString('en-IN')}
+              </Text>
+            </View>
           )}
         </TouchableOpacity>
       </View>
@@ -356,18 +440,10 @@ export default function CheckoutScreen() {
   );
 }
 
-const YELLOW = '#D99A3D';
-const BLACK = '#F6F4EE';
-const DARK_CARD = '#FBF9F5';
-const INSET_BG = '#F0EDE4';
-const BORDER = '#E5E0D4';
-const TEXT_MAIN = '#1E1B18';
-const TEXT_MUTED = '#6E675F';
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BLACK,
+    backgroundColor: BG_MATTE,
   },
   center: {
     alignItems: 'center',
@@ -377,32 +453,45 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     color: TEXT_MUTED,
-    fontSize: FontSize.base,
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+  },
+  emptyIconBox: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyTitle: {
-    color: TEXT_MAIN,
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.bold,
+    color: ESPRESSO,
+    fontSize: FontSize.base,
+    fontWeight: '900',
   },
   emptySub: {
     color: TEXT_MUTED,
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     textAlign: 'center',
     maxWidth: 280,
+    lineHeight: 18,
   },
   browseBtn: {
-    backgroundColor: '#241B15',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: 12,
-    borderRadius: 9999,
+    backgroundColor: ESPRESSO,
+    paddingHorizontal: Spacing.five,
+    paddingVertical: 14,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: YELLOW,
+    borderColor: ESPRESSO,
     marginTop: Spacing.two,
   },
   browseBtnText: {
-    color: YELLOW,
-    fontSize: FontSize.base,
+    color: GOLD,
+    fontSize: FontSize.xs,
     fontWeight: '900',
+    letterSpacing: 1,
   },
   header: {
     flexDirection: 'row',
@@ -410,95 +499,139 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-    backgroundColor: DARK_CARD,
+    backgroundColor: ESPRESSO,
+    borderBottomWidth: 2,
+    borderBottomColor: GOLD,
+    gap: Spacing.three,
   },
   iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: BLACK,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#1A1410',
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: '#3A2C22',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: {
-    color: TEXT_MAIN,
-    fontSize: FontSize.base,
-    fontWeight: '900',
-  },
+  headerBadge: { color: GOLD, fontSize: 9.5, fontWeight: '900', letterSpacing: 1.5 },
+  headerTitle: { color: '#FFFFFF', fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 0.5 },
+  headerStepPill: { backgroundColor: '#1A1410', borderWidth: 1, borderColor: '#3A2C22', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  headerStepText: { color: GOLD, fontSize: 10, fontWeight: '900' },
+
   scrollContent: {
     padding: Spacing.four,
     paddingBottom: 120,
+    gap: Spacing.four,
+  },
+
+  bannerCard: {
+    backgroundColor: ESPRESSO,
+    borderRadius: 14,
+    padding: Spacing.four,
+    borderWidth: 1,
+    borderColor: '#3A2C22',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: Spacing.three,
   },
+  bannerBadge: { color: GOLD, fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
+  bannerName: { color: '#FFFFFF', fontSize: FontSize.sm, fontWeight: '900', marginTop: 2 },
+  bannerSub: { color: '#CBD5E1', fontSize: FontSize.xs, marginTop: 1 },
+  bannerIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: GOLD,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   card: {
-    backgroundColor: DARK_CARD,
-    borderRadius: 16,
-    padding: Spacing.three,
+    backgroundColor: CARD_BG,
+    borderRadius: 14,
+    padding: Spacing.four,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: BORDER_COLOR,
     gap: Spacing.two,
-    shadowColor: '#1E1B18',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
-    shadowRadius: 4,
+    shadowRadius: 6,
     elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
-    marginBottom: Spacing.one,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER_COLOR,
+    paddingBottom: 10,
+    marginBottom: 4,
   },
+  numBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: ESPRESSO,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  numBadgeText: { color: GOLD, fontSize: 11, fontWeight: '900' },
   cardTitle: {
-    color: TEXT_MAIN,
-    fontSize: FontSize.base,
+    color: ESPRESSO,
+    fontSize: FontSize.xs,
     fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
+  label: { color: '#334155', fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 4 },
   addressInput: {
-    backgroundColor: INSET_BG,
+    backgroundColor: INPUT_BG,
     color: TEXT_MAIN,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: BORDER_COLOR,
     padding: Spacing.three,
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
+    fontWeight: '600',
     textAlignVertical: 'top',
     minHeight: 80,
   },
+
   vendorBlock: {
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-    paddingTop: Spacing.two,
-    gap: Spacing.one,
+    gap: 8,
+    marginTop: 4,
   },
+  vendorHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: BG_MATTE, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: BORDER_COLOR },
   vendorName: {
-    color: YELLOW,
-    fontSize: FontSize.sm,
+    color: ESPRESSO,
+    fontSize: 10.5,
     fontWeight: '900',
+    letterSpacing: 0.5,
   },
   summaryItemRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.three,
-    marginVertical: 4,
+    paddingVertical: 4,
   },
   itemThumb: {
-    width: 48,
-    height: 48,
+    width: 50,
+    height: 50,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
   },
   itemThumbFallback: {
-    width: 48,
-    height: 48,
+    width: 50,
+    height: 50,
     borderRadius: 10,
-    backgroundColor: BLACK,
+    backgroundColor: BG_MATTE,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: BORDER_COLOR,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -508,90 +641,144 @@ const styles = StyleSheet.create({
   },
   summaryItemTitle: {
     color: TEXT_MAIN,
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     fontWeight: '900',
   },
+  itemMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   itemQtyPrice: {
     color: TEXT_MUTED,
-    fontSize: FontSize.xs,
+    fontSize: 11,
+    fontWeight: '600',
   },
   summaryItemPrice: {
-    color: YELLOW,
-    fontSize: FontSize.sm,
+    color: ESPRESSO,
+    fontSize: FontSize.xs,
     fontWeight: '900',
   },
+
   paymentOption: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: INSET_BG,
+    backgroundColor: INPUT_BG,
     padding: Spacing.three,
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: BORDER_COLOR,
   },
   paymentOptionSelected: {
-    borderColor: YELLOW,
-    backgroundColor: 'rgba(217, 154, 61, 0.12)',
+    borderColor: GOLD,
+    backgroundColor: '#FFFDF9',
+    borderWidth: 2,
+  },
+  paymentOptionLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, flex: 1 },
+  paymentIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 8,
+    backgroundColor: BG_MATTE,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paymentIconBoxSelected: {
+    backgroundColor: ESPRESSO,
+    borderColor: ESPRESSO,
   },
   paymentText: {
     color: TEXT_MAIN,
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     fontWeight: '900',
   },
+  paymentSubText: {
+    color: TEXT_MUTED,
+    fontSize: 10,
+    marginTop: 1,
+  },
+
   billRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 2,
+    alignItems: 'center',
+    paddingVertical: 3,
   },
   billLabel: {
     color: TEXT_MUTED,
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
+    fontWeight: '600',
   },
   billValue: {
     color: TEXT_MAIN,
-    fontSize: FontSize.sm,
-    fontWeight: '600',
+    fontSize: FontSize.xs,
+    fontWeight: '800',
   },
+  freeTag: { backgroundColor: '#ECFDF5', borderWidth: 1, borderColor: '#059669', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  freeTagText: { color: '#059669', fontSize: 9.5, fontWeight: '900' },
+
+  divider: { height: 1, backgroundColor: BORDER_COLOR, marginVertical: 6 },
+
   totalBillRow: {
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-    paddingTop: Spacing.two,
-    marginTop: Spacing.one,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 2,
   },
   totalBillLabel: {
-    color: TEXT_MAIN,
-    fontSize: FontSize.base,
+    color: ESPRESSO,
+    fontSize: FontSize.sm,
     fontWeight: '900',
+    textTransform: 'uppercase',
   },
   totalBillValue: {
-    color: YELLOW,
+    color: GOLD,
     fontSize: FontSize.lg,
     fontWeight: '900',
   },
+
+  guaranteeBox: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: 10,
+    padding: Spacing.three,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  guaranteeText: { color: '#065F46', fontSize: 10.5, fontWeight: '800', flex: 1, lineHeight: 15 },
+
   footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: DARK_CARD,
+    backgroundColor: CARD_BG,
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.three,
     borderTopWidth: 1,
-    borderTopColor: BORDER,
+    borderTopColor: BORDER_COLOR,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 8,
   },
   placeOrderBtn: {
-    backgroundColor: '#241B15',
-    height: 48,
-    borderRadius: 9999,
-    borderWidth: 1.5,
-    borderColor: YELLOW,
+    backgroundColor: ESPRESSO,
+    height: 50,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: ESPRESSO,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  placeOrderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   placeOrderBtnText: {
-    color: YELLOW,
-    fontSize: FontSize.base,
+    color: GOLD,
+    fontSize: FontSize.xs,
     fontWeight: '900',
+    letterSpacing: 0.5,
   },
 });
+
