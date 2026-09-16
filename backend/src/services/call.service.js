@@ -96,7 +96,8 @@ class CallService {
     if (exotelSid && exotelApiKey && exotelApiToken && exotelPhone) {
       try {
         const callbackUrl = `${process.env.APP_URL || 'http://localhost:5000'}/api/v1/webhooks/exotel/call`;
-        const exotelUrl = `https://api.exotel.com/v1/Accounts/${exotelSid}/Calls/connect.json`;
+        const exotelBase = (process.env.EXOTEL_API_BASE_URL || 'https://api.exotel.com').replace(/\/+$/, '');
+        const exotelUrl = `${exotelBase}/v1/Accounts/${exotelSid}/Calls/connect.json`;
 
         const authHeader = 'Basic ' + Buffer.from(`${exotelApiKey}:${exotelApiToken}`).toString('base64');
         const res = await axios.post(
@@ -104,7 +105,7 @@ class CallService {
           new URLSearchParams({
             From: customerPhone,
             To: vendorPhone,
-            CallerId: exotelPhone,
+            CallerId: exotelPhone.trim(),
             StatusCallback: callbackUrl,
             'StatusCallbackEvents[0]': 'terminal',
           }),

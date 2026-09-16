@@ -14,6 +14,11 @@ function initNotificationWorker() {
       return null;
     }
 
+    if (process.env.ENABLE_BULLMQ_WORKER === 'false' || process.env.REDIS_ENABLED === 'false') {
+      logger.info('[BullMQ:Worker] Worker disabled via environment setting.', { service: 'queues' });
+      return null;
+    }
+
     notificationWorker = new Worker(
       'notifications',
       async (job) => {
@@ -39,7 +44,14 @@ function initNotificationWorker() {
       logger.warn(`[BullMQ:Worker] Job ${job?.id} failed: ${err.message}`, { service: 'queues' });
     });
 
-    notificationWorker.on('error', (err) => {
+    notificationWorker.on('error', async (err) => {
+      if (err.message && err.message.includes('max requests limit exceeded')) {
+        logger.warn('[BullMQ:Worker] Redis request quota exceeded. Pausing worker to avoid spamming Redis. Notifications will fallback to direct database writes.', { service: 'queues' });
+        try {
+          await notificationWorker.pause(true);
+        } catch {}
+        return;
+      }
       logger.warn(`[BullMQ:Worker] Worker error: ${err.message}`, { service: 'queues' });
     });
 
