@@ -21,7 +21,7 @@ export default function BottomNav() {
     }
   }, [user?.id]);
 
-  const role = user?.current_role || (user?.roles || [])[0] || "customer";
+  const role = user?.activeRole || user?.current_role || (user?.roles || [])[0] || "customer";
   const items = navForRole(role).map((it) => ({
     ...it,
     to: (!user && (it.testId === "nav-chat" || it.testId === "nav-profile")) ? "/login" : it.to,

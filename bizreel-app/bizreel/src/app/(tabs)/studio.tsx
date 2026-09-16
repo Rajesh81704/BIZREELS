@@ -20,7 +20,7 @@ export default function StudioTabScreen() {
   const isCreator = activeRole === 'creator';
 
   if (isCreator) {
-    return <CreatorDashboardScreen />;
+    return <CreatorDashboardScreen embedded={true} />;
   }
 
   if (!isVendor) {

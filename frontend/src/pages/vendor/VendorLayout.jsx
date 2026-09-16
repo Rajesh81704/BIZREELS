@@ -17,6 +17,7 @@ import NotificationBellDropdown from '../../components/notifications/Notificatio
 import { useLanguage } from '../../context/LanguageContext';
 import SEO from '../../components/common/SEO';
 import { isOnboardingComplete, getRoleDashboard, getRoleOnboarding } from '../../lib/roleNav';
+import BottomNav from '../../components/app/BottomNav';
 
 function VendorSidebarContent({
   onItemClick,
@@ -539,9 +540,14 @@ export default function VendorLayout() {
         )}
 
         {/* Page Content */}
-        <main className="flex-1 min-w-0 w-full">
+        <main className="flex-1 min-w-0 w-full pb-20 lg:pb-0">
           <Outlet />
         </main>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50">
+        <BottomNav />
       </div>
     </div>
   );

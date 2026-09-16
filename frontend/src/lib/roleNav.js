@@ -17,17 +17,17 @@ const CUSTOMER_NAV = [
 const VENDOR_NAV = [
   { to: "/vendor/dashboard", label: "Home",     icon: LayoutDashboard, testId: "nav-vendor-home" },
   { to: "/vendor/analytics", label: "Analytics", icon: BarChart3,      testId: "nav-analytics" },
-  { to: "/vendor/listing/new", label: "Sell",   icon: Plus,           testId: "nav-add", isCta: true },
-  { to: "/chat",             label: "Chat",     icon: MessageCircle,  testId: "nav-chat", showUnread: true },
-  { to: "/profile",          label: "Me",       icon: UserIcon,       testId: "nav-profile" },
+  { to: "/vendor/listings",  label: "Listings",  icon: Plus,           testId: "nav-add", isCta: true },
+  { to: "/vendor/chat",       label: "Chat",     icon: MessageCircle,  testId: "nav-chat", showUnread: true },
+  { to: "/vendor/profile",    label: "Me",       icon: UserIcon,       testId: "nav-profile" },
 ];
 
 const CREATOR_NAV = [
   { to: "/creator/dashboard", label: "Home",    icon: Palette,        testId: "nav-creator-home" },
-  { to: "/requirements",      label: "Jobs",    icon: Briefcase,      testId: "nav-jobs" },
-  { to: "/vendor/listing/new", label: "Work",   icon: Plus,           testId: "nav-add-work", isCta: true },
-  { to: "/chat",              label: "Chat",    icon: MessageCircle,  testId: "nav-chat", showUnread: true },
-  { to: "/profile",           label: "Me",      icon: UserIcon,       testId: "nav-profile" },
+  { to: "/creator/orders",    label: "Orders",  icon: Briefcase,      testId: "nav-jobs" },
+  { to: "/creator/portfolio", label: "Work",    icon: Plus,           testId: "nav-add-work", isCta: true },
+  { to: "/creator/chat",      label: "Chat",    icon: MessageCircle,  testId: "nav-chat", showUnread: true },
+  { to: "/creator/profile",   label: "Me",      icon: UserIcon,       testId: "nav-profile" },
 ];
 
 const ADMIN_NAV = [
