@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import React from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,15 +13,18 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BrandColors, FontSize, FontWeight, Spacing } from '@/constants/theme';
+import { FontSize, Spacing } from '@/constants/theme';
+import { useAuth } from '@/features/auth/context';
 import { useCart, useRemoveFromCart, useUpdateCartQuantity } from '@/features/cart/queries';
 import { getListingImage, resolveImageUrl } from '@/utils/image';
-import { useAuth } from '@/features/auth/context';
 
-const YELLOW = '#F59E0B';
-const BLACK = '#0F0F12';
-const DARK_CARD = '#18181C';
-const BORDER = '#2D2D36';
+const GOLD = '#D99A3D';
+const ESPRESSO = '#241B15';
+const BG_MATTE = '#F8F4EC';
+const CARD_BG = '#FFFFFF';
+const BORDER_COLOR = '#E3DCCB';
+const TEXT_MUTED = '#7A6E65';
+const DELIVERY_FEE = 40;
 
 export default function CartScreen() {
   const router = useRouter();
@@ -32,8 +36,9 @@ export default function CartScreen() {
   const removeItemMutation = useRemoveFromCart();
 
   const groups = cart?.groups || [];
-  const totalAmount = cart?.total_amount || 0;
+  const rawSubtotal = cart?.total_amount || 0;
   const totalItems = cart?.total_items || 0;
+  const grandTotal = rawSubtotal > 0 ? rawSubtotal + DELIVERY_FEE : 0;
 
   const handleUpdateQuantity = (listingId: string, currentQty: number, delta: number) => {
     const newQty = currentQty + delta;
@@ -64,14 +69,16 @@ export default function CartScreen() {
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={20} color="#fff" />
+            <Ionicons name="arrow-back" size={18} color={ESPRESSO} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Shopping Cart</Text>
-          <View style={{ width: 36 }} />
+          <Text style={styles.headerTitle}>SHOPPING CART</Text>
+          <View style={{ width: 34 }} />
         </View>
 
         <View style={styles.emptyContainer}>
-          <Ionicons name="cart-outline" size={64} color={YELLOW} />
+          <View style={styles.emptyIconBox}>
+            <Ionicons name="cart" size={32} color={GOLD} />
+          </View>
           <Text style={styles.emptyTitle}>Sign In to Access Your Cart</Text>
           <Text style={styles.emptySub}>
             Please sign in to your BizReels account to view your cart items, save listings, and place orders.
@@ -87,29 +94,37 @@ export default function CartScreen() {
   if (isLoading) {
     return (
       <View style={[styles.center, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={YELLOW} />
+        <ActivityIndicator size="large" color={ESPRESSO} />
+        <Text style={styles.loadingText}>Fetching your cart items...</Text>
       </View>
     );
   }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header Bar */}
+      {/* Espresso Header Bar */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
+          <Ionicons name="arrow-back" size={18} color={ESPRESSO} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Shopping Cart ({totalItems})</Text>
-        <View style={{ width: 36 }} />
+        <View style={{ alignItems: 'center' }}>
+          <Text style={styles.headerBadge}>ORDER BAG</Text>
+          <Text style={styles.headerTitle}>SHOPPING CART ({totalItems})</Text>
+        </View>
+        <View style={styles.headerStepPill}>
+          <Text style={styles.headerStepText}>{groups.length} Vendors</Text>
+        </View>
       </View>
 
       {groups.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="cart-outline" size={64} color="rgba(255,255,255,0.3)" />
+          <View style={styles.emptyIconBox}>
+            <Ionicons name="bag-handle-outline" size={36} color={GOLD} />
+          </View>
           <Text style={styles.emptyTitle}>Your Cart is Empty</Text>
-          <Text style={styles.emptySub}>Explore products and services on BizReels to start adding!</Text>
+          <Text style={styles.emptySub}>Explore products and services on BizReels to start adding items from local verified suppliers!</Text>
           <TouchableOpacity style={styles.exploreBtn} onPress={() => router.push('/(tabs)/search')}>
-            <Text style={styles.exploreBtnText}>Explore Products</Text>
+            <Text style={styles.exploreBtnText}>Explore Listings</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -118,29 +133,44 @@ export default function CartScreen() {
             data={groups}
             keyExtractor={(item) => item.vendor_id}
             contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
             renderItem={({ item: group }) => (
               <View style={styles.vendorGroupCard}>
-                {/* Vendor Header */}
+                {/* Vendor Header Pill */}
                 <View style={styles.vendorHeader}>
-                  <Ionicons name="storefront-outline" size={16} color={YELLOW} />
-                  <Text style={styles.vendorName}>{group.vendor?.name || 'Vendor Partner'}</Text>
+                  <View style={styles.vendorIconBox}>
+                    <Ionicons name="storefront" size={14} color={GOLD} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.vendorName} numberOfLines={1}>
+                      {group.vendor?.name || (group.vendor as any)?.shopName || 'Verified Supplier'}
+                    </Text>
+
+                    <Text style={styles.vendorItemCount}>{group.items?.length || 1} item(s) in group</Text>
+                  </View>
+                  <View style={styles.vendorSubtotalBadge}>
+                    <Text style={styles.vendorSubtotalText}>₹{group.subtotal.toLocaleString('en-IN')}</Text>
+                  </View>
                 </View>
 
                 {/* Items List */}
-                {group.items.map((item: any) => {
+                {group.items.map((item: any, idx: number) => {
                   const itemImg = resolveImageUrl(item.image) || getListingImage(item);
                   const priceVal = Number(item.price || item.line_total || 0);
                   const itemTotal = priceVal * (item.quantity || 1);
+                  const isLast = idx === group.items.length - 1;
 
                   return (
-                    <View key={item.listing_id} style={styles.itemRow}>
+                    <View
+                      key={item.listing_id}
+                      style={[styles.itemRow, !isLast && { borderBottomWidth: 1, borderBottomColor: BORDER_COLOR }]}>
                       {/* Product Thumbnail (Clickable) */}
                       <TouchableOpacity onPress={() => router.push(`/listing/${item.listing_id}`)}>
                         {itemImg ? (
                           <Image source={{ uri: itemImg }} style={styles.itemImage} contentFit="cover" />
                         ) : (
                           <View style={styles.itemImageFallback}>
-                            <Ionicons name="bag-outline" size={20} color="rgba(255,255,255,0.4)" />
+                            <Ionicons name="cube-outline" size={22} color={TEXT_MUTED} />
                           </View>
                         )}
                       </TouchableOpacity>
@@ -150,7 +180,10 @@ export default function CartScreen() {
                         style={styles.itemDetails}
                         onPress={() => router.push(`/listing/${item.listing_id}`)}>
                         <Text style={styles.itemTitle} numberOfLines={2}>{item.title}</Text>
-                        <Text style={styles.itemPrice}>₹{priceVal.toLocaleString('en-IN')}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={styles.itemPrice}>₹{priceVal.toLocaleString('en-IN')}</Text>
+                          <Text style={styles.eachText}>per unit</Text>
+                        </View>
                         <Text style={styles.lineTotalText}>Subtotal: ₹{itemTotal.toLocaleString('en-IN')}</Text>
                       </TouchableOpacity>
 
@@ -161,7 +194,7 @@ export default function CartScreen() {
                           style={styles.trashBtn}
                           onPress={() => handleRemoveItem(item.listing_id)}
                           disabled={removeItemMutation.isPending}>
-                          <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                          <Ionicons name="trash-outline" size={16} color="#DC2626" />
                         </TouchableOpacity>
 
                         {/* Quantity Stepper */}
@@ -186,28 +219,35 @@ export default function CartScreen() {
                     </View>
                   );
                 })}
-
-                <View style={styles.vendorSubtotalRow}>
-                  <Text style={styles.subtotalLabel}>Vendor Subtotal:</Text>
-                  <Text style={styles.subtotalValue}>₹{group.subtotal.toLocaleString('en-IN')}</Text>
-                </View>
               </View>
             )}
+            ListFooterComponent={
+              <View style={styles.deliveryNoticeCard}>
+                <Ionicons name="car-outline" size={18} color={GOLD} />
+                <Text style={styles.deliveryNoticeText}>
+                  Standard ₹{DELIVERY_FEE} Express Delivery applied per order.
+                </Text>
+              </View>
+
+            }
           />
 
           {/* Bottom Checkout Footer */}
           <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total Amount:</Text>
-              <Text style={styles.totalPrice}>₹{totalAmount.toLocaleString('en-IN')}</Text>
-            </View>
+              <View>
+                <Text style={styles.totalSubLabel}>Total Amount (Inc. Delivery)</Text>
+                <Text style={styles.totalPrice}>₹{grandTotal.toLocaleString('en-IN')}</Text>
+              </View>
 
-            <TouchableOpacity
-              style={styles.checkoutBtn}
-              onPress={() => router.push('/checkout')}>
-              <Ionicons name="flash-outline" size={18} color={BLACK} />
-              <Text style={styles.checkoutBtnText}>Proceed to Checkout</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.checkoutBtn}
+                onPress={() => router.push('/checkout')}
+                activeOpacity={0.85}>
+                <Ionicons name="flash" size={16} color={ESPRESSO} />
+                <Text style={styles.checkoutBtnText}>PROCEED TO CHECKOUT</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </>
       )}
@@ -216,103 +256,215 @@ export default function CartScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BLACK },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: BLACK },
+  container: {
+    flex: 1,
+    backgroundColor: BG_MATTE,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: BG_MATTE,
+    gap: Spacing.three,
+  },
+  loadingText: {
+    color: TEXT_MUTED,
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
-    backgroundColor: DARK_CARD,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    backgroundColor: ESPRESSO,
   },
   iconBtn: {
-    width: 36,
-    height: 36,
-    backgroundColor: BLACK,
-    borderWidth: 1,
-    borderColor: BORDER,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { color: '#fff', fontSize: FontSize.md, fontWeight: '900' },
-  listContent: { padding: Spacing.four, paddingBottom: 120, gap: Spacing.three },
+  headerBadge: {
+    color: GOLD,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontSize: FontSize.xs,
+    fontWeight: '900',
+  },
+  headerStepPill: {
+    backgroundColor: 'rgba(217, 154, 61, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(217, 154, 61, 0.3)',
+  },
+  headerStepText: {
+    color: GOLD,
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  listContent: {
+    padding: Spacing.four,
+    paddingBottom: 130,
+    gap: Spacing.three,
+  },
 
   vendorGroupCard: {
-    backgroundColor: DARK_CARD,
+    backgroundColor: CARD_BG,
     padding: Spacing.three,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: BORDER_COLOR,
     gap: Spacing.two,
   },
   vendorHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-    paddingBottom: Spacing.two,
+    gap: 8,
+    backgroundColor: ESPRESSO,
+    padding: Spacing.two,
+    borderRadius: 12,
   },
-  vendorName: { color: YELLOW, fontSize: FontSize.sm, fontWeight: '900' },
+  vendorIconBox: {
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+    backgroundColor: 'rgba(217, 154, 61, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vendorName: {
+    color: '#FFFFFF',
+    fontSize: FontSize.xs,
+    fontWeight: '900',
+  },
+  vendorItemCount: {
+    color: '#D4C9BF',
+    fontSize: 9,
+  },
+  vendorSubtotalBadge: {
+    backgroundColor: GOLD,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  vendorSubtotalText: {
+    color: ESPRESSO,
+    fontSize: FontSize.xs,
+    fontWeight: '900',
+  },
 
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
     paddingVertical: Spacing.two,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
   },
-  itemImage: { width: 64, height: 64, backgroundColor: BLACK },
+  itemImage: {
+    width: 68,
+    height: 68,
+    borderRadius: 12,
+    backgroundColor: BG_MATTE,
+  },
   itemImageFallback: {
-    width: 64,
-    height: 64,
-    backgroundColor: BLACK,
+    width: 68,
+    height: 68,
+    borderRadius: 12,
+    backgroundColor: BG_MATTE,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: BORDER_COLOR,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  itemDetails: { flex: 1, gap: 2 },
-  itemTitle: { color: '#fff', fontSize: FontSize.xs, fontWeight: '900', lineHeight: 18 },
-  itemPrice: { color: YELLOW, fontSize: FontSize.xs, fontWeight: '900' },
-  lineTotalText: { color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 2 },
+  itemDetails: {
+    flex: 1,
+    gap: 2,
+  },
+  itemTitle: {
+    color: ESPRESSO,
+    fontSize: FontSize.xs,
+    fontWeight: '900',
+    lineHeight: 18,
+  },
+  itemPrice: {
+    color: ESPRESSO,
+    fontSize: FontSize.xs,
+    fontWeight: '900',
+  },
+  eachText: {
+    color: TEXT_MUTED,
+    fontSize: 10,
+  },
+  lineTotalText: {
+    color: GOLD,
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 1,
+  },
 
-  actionsColumn: { alignItems: 'flex-end', gap: 6 },
-  trashBtn: { padding: 4 },
+  actionsColumn: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  trashBtn: {
+    padding: 4,
+  },
 
   quantityControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: BLACK,
+    backgroundColor: '#FAF7F0',
     borderWidth: 1,
-    borderColor: BORDER,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    gap: 6,
+    borderColor: BORDER_COLOR,
+    borderRadius: 8,
+    padding: 2,
+    gap: 4,
   },
   qtyBtn: {
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 26,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: YELLOW,
+    backgroundColor: ESPRESSO,
   },
-  qtyBtnText: { color: BLACK, fontSize: FontSize.sm, fontWeight: '900' },
-  qtyText: { color: '#fff', fontSize: FontSize.xs, fontWeight: '900', minWidth: 16, textAlign: 'center' },
+  qtyBtnText: {
+    color: GOLD,
+    fontSize: FontSize.sm,
+    fontWeight: '900',
+  },
+  qtyText: {
+    color: ESPRESSO,
+    fontSize: FontSize.xs,
+    fontWeight: '900',
+    minWidth: 20,
+    textAlign: 'center',
+  },
 
-  vendorSubtotalRow: {
+  deliveryNoticeCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-    paddingTop: Spacing.two,
-    marginTop: Spacing.one,
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 14,
+    padding: Spacing.three,
   },
-  subtotalLabel: { color: 'rgba(255,255,255,0.6)', fontSize: FontSize.xs },
-  subtotalValue: { color: YELLOW, fontSize: FontSize.sm, fontWeight: '900' },
+  deliveryNoticeText: {
+    color: ESPRESSO,
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+  },
 
   emptyContainer: {
     flex: 1,
@@ -321,33 +473,80 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     gap: Spacing.three,
   },
-  emptyTitle: { color: '#fff', fontSize: FontSize.lg, fontWeight: '900' },
-  emptySub: { color: 'rgba(255,255,255,0.6)', fontSize: FontSize.sm, textAlign: 'center' },
-  exploreBtn: { backgroundColor: YELLOW, paddingHorizontal: Spacing.four, paddingVertical: Spacing.three, marginTop: Spacing.two },
-  exploreBtnText: { color: BLACK, fontWeight: '900', fontSize: FontSize.base },
+  emptyIconBox: {
+    width: 68,
+    height: 68,
+    borderRadius: 20,
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTitle: {
+    color: ESPRESSO,
+    fontSize: FontSize.lg,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  emptySub: {
+    color: TEXT_MUTED,
+    fontSize: FontSize.sm,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  exploreBtn: {
+    backgroundColor: ESPRESSO,
+    borderRadius: 14,
+    paddingHorizontal: Spacing.five,
+    paddingVertical: Spacing.three,
+    marginTop: Spacing.two,
+  },
+  exploreBtnText: {
+    color: GOLD,
+    fontWeight: '900',
+    fontSize: FontSize.xs,
+  },
 
   footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: DARK_CARD,
+    backgroundColor: ESPRESSO,
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.three,
-    borderTopWidth: 2,
-    borderTopColor: YELLOW,
-    gap: Spacing.three,
   },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  totalLabel: { color: '#fff', fontSize: FontSize.base, fontWeight: '900' },
-  totalPrice: { color: YELLOW, fontSize: FontSize.xl, fontWeight: '900' },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  totalSubLabel: {
+    color: '#D4C9BF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  totalPrice: {
+    color: GOLD,
+    fontSize: FontSize.lg,
+    fontWeight: '900',
+  },
   checkoutBtn: {
     flexDirection: 'row',
-    backgroundColor: YELLOW,
-    height: 48,
+    backgroundColor: GOLD,
+    borderRadius: 14,
+    height: 44,
+    paddingHorizontal: Spacing.four,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
   },
-  checkoutBtnText: { color: BLACK, fontSize: FontSize.base, fontWeight: '900' },
+  checkoutBtnText: {
+    color: ESPRESSO,
+    fontSize: FontSize.xs,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
 });
+
