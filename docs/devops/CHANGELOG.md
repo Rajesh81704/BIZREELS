@@ -2,6 +2,23 @@
 
 All notable changes to the BizReels local social commerce platform will be documented in this file.
 
+## [1.6.0] - 2026-09-16
+
+### Added & Changed
+* **Production-Grade Role-Targeted Offer Isolation**:
+  * **Context-Aware Scoping (`GET /api/v1/offers/active`)**: Enhanced endpoint in `backend/src/routes/offer.routes.js` and `backend/src/services/offer/client.offer.service.js` to accept `?role=vendor|creator|customer`. Strictly queries MongoDB for target roles and isolates Redis cache keys per role segment (`offers:active:v${version}:role:${role}`).
+  * **DTO Completeness**: Updated `clientOfferService.getActiveOffers` to return `targetRoles` and `isVendorOffer` in the mapped DTO.
+  * **Client Defense-in-Depth (`ActiveOffersPanel.jsx`)**: Updated frontend panel to pass `{ params: { role } }` in API requests and eliminated `!o.targetRoles` wildcard escape hatch. Added strict role verification on real-time WebSocket events (`offer:activated`, `offer:updated`).
+  * **Dynamic Audience Badging**: Added dynamic badges to offer cards (`Vendor Exclusive` with amber accents, `Creator Special` with purple accents, `Special Deal` with emerald accents).
+  * **Checkout Coupon Role Security (`POST /api/v1/offers/validate-coupon`)**: Added strict role eligibility verification ensuring customers cannot redeem seller-exclusive or creator-exclusive discounts.
+  * **Dynamic Notification Redirection**: In `backend/src/jobs/offerScheduler.js`, updated newly scheduled offer notifications to route dynamically to `/vendor/dashboard`, `/creator/dashboard`, or `/customer/home`.
+* **Documentation & API Keys Synchronization**:
+  * Fully synchronized `docs/devops/ENVIRONMENT_VARIABLES.md` with active `.env` configuration, documenting `OPENROUTER_API_KEY`, `RESEND_API_KEY`, `SANDBOX_API_KEY`, `TWILIO_ACCOUNT_SID`, `REDIS_URL`, `EXOTEL_API_KEY`, and `VITE_GOOGLE_MAPS_API_KEY`.
+  * Updated Section 23 of `docs/api/ENDPOINTS.md` and `docs/api/CONTRACT_SUMMARY.md` with exact query parameters, payload contracts, and response schemas for `/offers/active`, `/offers/validate-coupon`, and `/offers/applicable`.
+  * Updated `docs/domain-reports/VENDOR_OFFERS.md` to detail role-targeted dashboard isolation and checkout security.
+
+---
+
 ## [1.5.0] - 2026-09-14
 
 ### Added & Changed

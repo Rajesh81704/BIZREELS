@@ -168,13 +168,25 @@ Each card in the vendor panel provides:
 - **Files**: `ListingDetailPage.jsx` & `ListingDetailModal.jsx`
 - **Component**: `<OfferCountdown validTill={...} />` shows real-time `days`, `hours`, `minutes`, and `seconds` remaining until expiry.
 
-### 4.3 Interactive Customer Home Carousel
+### 4.3 Interactive Dashboard Offers Panel (`ActiveOffersPanel.jsx`)
 - **File**: `frontend/src/components/offers/ActiveOffersPanel.jsx`
-- **Features**: Real-time websocket updates (`offer:activated`, `offer:expired`), copyable coupon code with visual feedback (`FiCheck`), and automatic expiration handling.
+- **Dashboards**: Integrated in `CustomerHomePage.jsx` (`role="customer"`), `VendorDashboardPage.jsx` (`role="vendor"`), and `CreatorDashboardPage.jsx` (`role="creator"`).
+- **Features**: Real-time websocket updates (`offer:activated`, `offer:expired`, `offer:updated`), copyable coupon code with visual feedback (`FiCheck`), and automatic countdown expiration handling.
 
 ### 4.4 Video Reels Promotion Integration
 - **File**: `frontend/src/pages/vendor/reels/VendorReelsPage.jsx` & `CreateReelWizardModal.jsx`
 - **Features**: When posting reels with purpose "Offer / Discount", vendors attach the dynamic offer directly, rendering a promo banner on the video stream.
+
+### 4.5 Production-Grade Role-Targeted Dashboard Isolation
+- **Context-Aware Scoping**: The client requests active offers with its specific role context (`GET /api/v1/offers/active?role=vendor`), preventing cross-role offer leaks.
+- **DTO Completeness**: Backend returns `targetRoles` in the mapped DTO.
+- **Strict Gating**: Client-side filtering ensures only eligible offers render (`o.targetRoles.includes(role)`).
+- **Visual Audience Badging**:
+  - `Vendor Exclusive` (amber badge) for seller-exclusive deals.
+  - `Creator Special` (purple badge) for creator tooling/credit incentives.
+  - `Special Deal` (emerald badge) for consumer discounts.
+- **Checkout Role Enforcement**: `validateCoupon()` strictly verifies the redeeming user's account role against `offer.targetRoles`.
+- **Dynamic Notification Routing**: In `offerScheduler.js`, notifications route dynamically to `/vendor/dashboard`, `/creator/dashboard`, or `/customer/home`.
 
 ---
 

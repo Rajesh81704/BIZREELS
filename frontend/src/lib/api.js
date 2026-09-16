@@ -181,7 +181,7 @@ export const cartApi = {
 };
 
 export const offersApi = {
-  active: () => api.get("/v1/offers/active"),
+  active: (params = {}) => api.get("/v1/offers/active", { params }),
   validateCoupon: (payload) => api.post("/v1/offers/validate-coupon", payload),
   getApplicable: (params = {}) => api.get("/v1/offers/applicable", { params }),
   calculateShipping: (payload) => api.post("/v1/offers/calculate-shipping", payload),

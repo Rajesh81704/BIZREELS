@@ -8738,22 +8738,42 @@
 - **Canonical URL:** `/api/v1/offers/active`
 - **Source File:** [`offer.routes.js:35`](file:///d:/BizReels%20Website/backend/src/routes/offer.routes.js#L35)
 - **Authentication:** Required (JWT Bearer)
-- **Required Roles:** Any authenticated user
+- **Required Roles:** Any authenticated user (`customer`, `vendor`, `creator`, `admin`)
 - **Headers:**
   - `Content-Type: application/json`
   - `Authorization: Bearer <access_token>`
-- **Query Parameters:** Supports `page` (default: 1), `limit` (default: 20), `search`, `status`, `sort`.
-- **Success Response (200/201):**
+- **Query Parameters:**
+  | Parameter | Type | Required | Description |
+  |---|---|---|---|
+  | `role` | String | No | Target dashboard role context (`customer`, `vendor`, or `creator`). When specified, strictly filters offers targeted to this role. |
+- **Success Response (200 OK):**
   ```json
   {
     "success": true,
-    "message": "Operation completed successfully.",
-    "data": {}
+    "items": [
+      {
+        "id": "6aa5537c564952f956e9c0bb",
+        "title": "Vendor Pro 30% Off",
+        "description": "Exclusive seller platform discount.",
+        "code": "VENDOR30",
+        "targetRoles": ["vendor"],
+        "isVendorOffer": false,
+        "discountType": "percentage",
+        "discountValue": 30,
+        "minOrderAmount": 0,
+        "maxDiscountLimit": 500,
+        "endTime": "2026-10-31T23:59:59.000Z",
+        "image": "https://res.cloudinary.com/...",
+        "terms": "Valid for vendor subscriptions only.",
+        "applicableCategories": [],
+        "applicableProducts": [],
+        "applicableServices": []
+      }
+    ]
   }
   ```
 - **Error Responses:**
   - `401 Unauthorized`: Missing or expired access token.
-  - `400 Bad Request`: Invalid request payload or validation failure.
   - `500 Internal Server Error`: Server execution error.
 
 ### 23.2 `POST` /api/v1/offers/:id/click
@@ -8769,20 +8789,17 @@
 - **URL Path Parameters:**
   | Parameter | Type | Required | Description |
   |---|---|---|---|
-  | `id` | String (ObjectId) | Yes | Identifier of target resource. |
-- **Request Body:** Accepts JSON formatted request body adhering to domain schema.
-- **Success Response (200/201):**
+  | `id` | String (ObjectId) | Yes | Identifier of target offer resource. |
+- **Request Body:** None.
+- **Success Response (200 OK):**
   ```json
   {
-    "success": true,
-    "message": "Operation completed successfully.",
-    "data": {}
+    "success": true
   }
   ```
 - **Error Responses:**
   - `401 Unauthorized`: Missing or expired access token.
-  - `400 Bad Request`: Invalid request payload or validation failure.
-  - `404 Not Found`: Resource ID not found.
+  - `404 Not Found`: Offer not found.
   - `500 Internal Server Error`: Server execution error.
 
 ### 23.3 `POST` /api/v1/offers/validate-coupon
@@ -8791,22 +8808,59 @@
 - **Canonical URL:** `/api/v1/offers/validate-coupon`
 - **Source File:** [`offer.routes.js:62`](file:///d:/BizReels%20Website/backend/src/routes/offer.routes.js#L62)
 - **Authentication:** Required (JWT Bearer)
-- **Required Roles:** Any authenticated user
+- **Required Roles:** Any authenticated user (user's role is checked against `offer.targetRoles`)
 - **Headers:**
   - `Content-Type: application/json`
   - `Authorization: Bearer <access_token>`
-- **Request Body:** Accepts JSON formatted request body adhering to domain schema.
-- **Success Response (200/201):**
+- **Request Body:**
+  ```json
+  {
+    "couponCode": "DIWALI20",
+    "orderAmount": 1500,
+    "vendorId": "65b...",
+    "listingId": "65c..."
+  }
+  ```
+- **Success Response (200 OK):**
   ```json
   {
     "success": true,
-    "message": "Operation completed successfully.",
-    "data": {}
+    "valid": true,
+    "message": "Coupon \"DIWALI20\" applied successfully! You save ₹300.",
+    "offerId": "6aa5537c564952f956e9c0bb",
+    "couponCode": "DIWALI20",
+    "discountType": "percentage",
+    "discountValue": 20,
+    "discountAmount": 300,
+    "savings": 300,
+    "finalAmount": 1200,
+    "currency": "INR",
+    "data": {
+      "offerId": "6aa5537c564952f956e9c0bb",
+      "couponCode": "DIWALI20",
+      "title": "Diwali Festival 20% OFF",
+      "discountType": "percentage",
+      "discountValue": 20,
+      "discountAmount": 300,
+      "savings": 300,
+      "minOrderAmount": 500,
+      "maxDiscountLimit": 500,
+      "finalAmount": 1200,
+      "currency": "INR"
+    }
+  }
+  ```
+- **Validation Failure Response (200 OK with valid: false):**
+  ```json
+  {
+    "success": false,
+    "valid": false,
+    "message": "Coupon \"VENDOR30\" is exclusive to Vendor accounts."
   }
   ```
 - **Error Responses:**
   - `401 Unauthorized`: Missing or expired access token.
-  - `400 Bad Request`: Invalid request payload or validation failure.
+  - `400 Bad Request`: Invalid payload parameters.
   - `500 Internal Server Error`: Server execution error.
 
 ### 23.4 `GET` /api/v1/offers/applicable
@@ -8819,18 +8873,34 @@
 - **Headers:**
   - `Content-Type: application/json`
   - `Authorization: Bearer <access_token>`
-- **Query Parameters:** Supports `page` (default: 1), `limit` (default: 20), `search`, `status`, `sort`.
-- **Success Response (200/201):**
+- **Query Parameters:**
+  | Parameter | Type | Required | Description |
+  |---|---|---|---|
+  | `vendorId` | String (ObjectId) | No | Scope coupons to specific vendor catalog. |
+  | `orderAmount` | Number | No | Current cart/order amount to evaluate `isEligible`. |
+  | `role` | String | No | Target role context (`customer`, `vendor`, `creator`). Defaults to user's active role. |
+- **Success Response (200 OK):**
   ```json
   {
     "success": true,
-    "message": "Operation completed successfully.",
-    "data": {}
+    "data": [
+      {
+        "id": "6aa5537c564952f956e9c0bb",
+        "code": "WELCOME10",
+        "title": "Welcome Offer",
+        "description": "Get 10% instant discount on your order up to ₹200.",
+        "discountType": "percentage",
+        "discountValue": 10,
+        "minOrderAmount": 0,
+        "maxDiscountLimit": 200,
+        "endTime": "2026-10-31T23:59:59.000Z",
+        "isEligible": true
+      }
+    ]
   }
   ```
 - **Error Responses:**
   - `401 Unauthorized`: Missing or expired access token.
-  - `400 Bad Request`: Invalid request payload or validation failure.
   - `500 Internal Server Error`: Server execution error.
 
 ### 23.5 `POST` /api/v1/offers/calculate-shipping

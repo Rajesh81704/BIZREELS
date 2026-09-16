@@ -48,10 +48,13 @@ export default function ActiveOffersPanel({ role = 'customer' }) {
   const fetchOffers = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/v1/offers/active');
+      const res = await api.get('/v1/offers/active', { params: { role } });
       const items = res.data?.items || [];
-      // Filter target audience on client just to be robust
-      const filtered = items.filter(o => o.applicableToAll || o.targetRoles?.includes(role) || !o.targetRoles);
+      // Strict role-targeted filtering
+      const filtered = items.filter(o => 
+        o.applicableToAll || 
+        (Array.isArray(o.targetRoles) && o.targetRoles.includes(role))
+      );
       setOffers(filtered);
     } catch (err) {
       console.warn('Failed to load active offers:', err);
@@ -67,9 +70,11 @@ export default function ActiveOffersPanel({ role = 'customer' }) {
     if (!socket) return;
 
     const handleOfferActivated = (newOffer) => {
-      if (newOffer.targetRoles?.includes(role)) {
+      const isTargeted = newOffer.applicableToAll || 
+        (Array.isArray(newOffer.targetRoles) && newOffer.targetRoles.includes(role));
+      if (isTargeted) {
         setOffers(prev => {
-          if (prev.some(o => o.id === newOffer.id || o._id === newOffer._id)) return prev;
+          if (prev.some(o => (o.id || o._id) === (newOffer.id || newOffer._id))) return prev;
           toast.success(`🎁 New Special Offer: ${newOffer.title}`);
           return [newOffer, ...prev];
         });
@@ -77,7 +82,7 @@ export default function ActiveOffersPanel({ role = 'customer' }) {
     };
 
     const handleOfferExpired = ({ id }) => {
-      setOffers(prev => prev.filter(o => o.id !== id && o._id !== id));
+      setOffers(prev => prev.filter(o => (o.id || o._id) !== id));
       setCurrentIndex(0);
     };
 
@@ -85,12 +90,13 @@ export default function ActiveOffersPanel({ role = 'customer' }) {
     socket.on('offer:expired', handleOfferExpired);
     socket.on('offer:deleted', handleOfferExpired);
     socket.on('offer:updated', (updatedOffer) => {
-      // Re-fetch or replace inline
-      if (updatedOffer.targetRoles?.includes(role)) {
-        setOffers(prev => prev.map(o => (o.id === updatedOffer.id || o._id === updatedOffer._id) ? updatedOffer : o));
+      const isTargeted = updatedOffer.applicableToAll || 
+        (Array.isArray(updatedOffer.targetRoles) && updatedOffer.targetRoles.includes(role));
+      if (isTargeted) {
+        setOffers(prev => prev.map(o => ((o.id || o._id) === (updatedOffer.id || updatedOffer._id)) ? updatedOffer : o));
       } else {
         // If roles no longer include current, remove it
-        setOffers(prev => prev.filter(o => o.id !== updatedOffer.id && o._id !== updatedOffer._id));
+        setOffers(prev => prev.filter(o => (o.id || o._id) !== (updatedOffer.id || updatedOffer._id)));
       }
     });
 
@@ -129,6 +135,28 @@ export default function ActiveOffersPanel({ role = 'customer' }) {
 
   const currentOffer = offers[currentIndex];
 
+  const getRoleBadge = (offer) => {
+    const roles = Array.isArray(offer.targetRoles) ? offer.targetRoles : [];
+    if (roles.includes('vendor') && !roles.includes('customer')) {
+      return {
+        label: 'Vendor Exclusive',
+        className: 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+      };
+    }
+    if (roles.includes('creator') && !roles.includes('customer')) {
+      return {
+        label: 'Creator Special',
+        className: 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+      };
+    }
+    return {
+      label: 'Special Deal',
+      className: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+    };
+  };
+
+  const roleBadge = getRoleBadge(currentOffer);
+
   return (
     <div className="glass rounded-3xl border border-brand-purple/20 p-5 shadow-card bg-gradient-to-r from-brand-purple/10 via-surface to-brand-pink/5 relative overflow-hidden animate-fade-in">
       {/* Decorative Gradient Ring */}
@@ -145,8 +173,8 @@ export default function ActiveOffersPanel({ role = 'customer' }) {
           {/* Offer Text Details */}
           <div className="min-w-0 flex-1 cursor-pointer" onClick={() => handleOfferClick(currentOffer.id || currentOffer._id)}>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                Special Deal
+              <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase border ${roleBadge.className}`}>
+                {roleBadge.label}
               </span>
               <OfferCountdown 
                 endTime={currentOffer.endTime} 

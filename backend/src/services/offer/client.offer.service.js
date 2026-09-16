@@ -10,20 +10,37 @@ class ClientOfferService {
   /**
    * Retrieves currently active offers matching user roles with 30-minute caching.
    */
-  async getActiveOffers(userRoles = ['customer']) {
+  /**
+   * Retrieves currently active offers matching user roles with 30-minute caching.
+   * Supports scoping strictly to requestedRole (e.g. 'vendor', 'creator', 'customer').
+   */
+  async getActiveOffers(userRoles = ['customer'], requestedRole = null) {
     const cache = require('../../utils/cache');
     const version = (await cache.getCache('offers:version')) || 1;
-    const rolesKey = [...userRoles].sort().join(',');
-    const cacheKey = `offers:active:v${version}:${rolesKey}`;
 
+    const validRoles = ['customer', 'vendor', 'creator'];
+    const activeRole = requestedRole && validRoles.includes(requestedRole) ? requestedRole : null;
+
+    const query = {
+      status: 'Active',
+      isDeleted: { $ne: true }
+    };
+
+    let cacheSegment = '';
+    if (activeRole) {
+      // Strictly match offers targeted to this role
+      query.targetRoles = activeRole;
+      cacheSegment = `role:${activeRole}`;
+    } else {
+      query.targetRoles = { $in: userRoles };
+      cacheSegment = [...userRoles].sort().join(',');
+    }
+
+    const cacheKey = `offers:active:v${version}:${cacheSegment}`;
     let mappedOffers = await cache.getCache(cacheKey);
 
     if (!mappedOffers) {
-      const offers = await Offer.find({
-        targetRoles: { $in: userRoles },
-        status: 'Active',
-        isDeleted: { $ne: true }
-      })
+      const offers = await Offer.find(query)
         .sort({ priority: -1, created_at: -1 })
         .lean();
 
@@ -32,6 +49,8 @@ class ClientOfferService {
         title: o.title,
         description: o.description,
         code: o.code || '',
+        targetRoles: o.targetRoles || ['customer'],
+        isVendorOffer: !!o.isVendorOffer,
         discountType: o.discountType,
         discountValue: o.discountValue,
         minOrderAmount: o.minOrderAmount,
@@ -129,6 +148,22 @@ class ClientOfferService {
     const totalLimit = config.totalUsageLimit || matchedOffer.usageLimit;
     const perUser = config.usagePerCustomer || matchedOffer.perUserLimit || 1;
 
+    // 0. Role targeting check
+    if (matchedOffer.targetRoles && Array.isArray(matchedOffer.targetRoles) && matchedOffer.targetRoles.length > 0) {
+      const userRoles = (user && user.roles && Array.isArray(user.roles)) 
+        ? user.roles 
+        : [user?.activeRole || 'customer'];
+      const hasTargetRole = matchedOffer.targetRoles.some(r => userRoles.includes(r));
+      if (!hasTargetRole) {
+        const rolesLabel = matchedOffer.targetRoles.map(r => r.charAt(0).toUpperCase() + r.slice(1)).join(' / ');
+        return {
+          success: false,
+          valid: false,
+          message: `Coupon "${cleanCode}" is exclusive to ${rolesLabel} accounts.`
+        };
+      }
+    }
+
     // 1. Min order amount check
     if (parsedAmount > 0 && minAmount > 0 && parsedAmount < minAmount) {
       return {
@@ -176,34 +211,39 @@ class ClientOfferService {
     calculatedDiscount = Math.max(0, calculatedDiscount);
     const finalAmount = Math.max(0, parsedAmount - calculatedDiscount);
 
+    const discountSummary = {
+      offerId: matchedOffer._id.toString(),
+      couponCode: cleanCode,
+      title: matchedOffer.title,
+      discountType,
+      discountValue: discountVal,
+      discountAmount: calculatedDiscount,
+      savings: calculatedDiscount,
+      minOrderAmount: minAmount,
+      maxDiscountLimit: maxLimit,
+      finalAmount,
+      currency: 'INR'
+    };
+
     return {
       success: true,
       valid: true,
       message: `Coupon "${cleanCode}" applied successfully! You save ₹${calculatedDiscount}.`,
-      data: {
-        offerId: matchedOffer._id.toString(),
-        couponCode: cleanCode,
-        title: matchedOffer.title,
-        discountType,
-        discountValue: discountVal,
-        discountAmount: calculatedDiscount,
-        minOrderAmount: minAmount,
-        maxDiscountLimit: maxLimit,
-        finalAmount,
-        savings: calculatedDiscount
-      }
+      data: discountSummary,
+      ...discountSummary,
+      summary: discountSummary
     };
   }
 
   /**
    * Retrieves list of available and active coupons for user selection.
    */
-  async getApplicableCoupons({ vendorId, orderAmount = 0 }) {
+  async getApplicableCoupons({ vendorId, orderAmount = 0, role = 'customer' }) {
     const now = new Date();
     const parsedAmount = Math.max(0, parseFloat(orderAmount) || 0);
 
     const query = {
-      $or: [{ targetRoles: { $in: ['customer', 'all'] } }, { targetRoles: [] }],
+      $or: [{ targetRoles: { $in: [role, 'customer', 'all'] } }, { targetRoles: [] }],
       status: 'Active',
       isDeleted: { $ne: true },
       startTime: { $lte: now },

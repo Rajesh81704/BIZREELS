@@ -1,56 +1,110 @@
-# Environment Variables
+# Environment Variables & API Keys Reference
 
-The application requires specific configurations configured in `.env` files.
+The application requires specific runtime configurations configured in `.env` files located in the root directories of `backend` and `frontend`.
 
 ---
 
 ## 1. Backend Configuration (`backend/.env`)
 
-| Variable Name | Required | Default / Value | Description |
+### Server & Networking
+| Variable Name | Required | Example / Default | Description |
 | :--- | :--- | :--- | :--- |
-| **`PORT`** | Yes | `8001` | The network port the Express application server listens on. |
-| **`NODE_ENV`** | Yes | `development` | The runtime environment (`development`, `production`). |
-| **`MONGO_URL`** | Yes | `mongodb://localhost:27017/bizreels` | Connection URL pointing to the MongoDB cluster. |
-| **`DB_NAME`** | Yes | `bizreels` | Target database name inside MongoDB. |
-| **`JWT_SECRET`** | Yes | `dev-secret-change-in-production` | Secret token used to sign authentication access and refresh keys. |
-| **`ACCESS_TOKEN_MINUTES`**| Yes | `15` | Expiry duration for signed access tokens (in minutes). |
-| **`REFRESH_TOKEN_DAYS`** | Yes | `30` | Expiry duration for signed refresh tokens (in days). |
-| **`CORS_ORIGINS`** | Yes | `http://localhost:5173,http://localhost:3000` | Comma-separated list of allowed origin URLs for CORS security. |
-| **`MSG91_AUTH_KEY`** | No | `your-msg91-auth-key` | Auth credential for the MSG91 SMS OTP system. |
-| **`MSG91_TEMPLATE_ID`** | No | `your-template-id` | Template ID configured for OTP delivery in MSG91. |
-| **`MSG91_SENDER_ID`** | No | `your-sender-id` | Registered Sender ID for MSG91 outbound SMS. |
-| **`MSG91_DEV_MODE`** | Yes | `true` | When set to `true`, bypasses MSG91 API requests and logs OTP codes to the console. |
-| **`CLOUDINARY_CLOUD_NAME`**| No | `your-cloud-name` | Cloud name identifier for Cloudinary media bucket. |
-| **`CLOUDINARY_API_KEY`** | No | `your-api-key` | API access key credentials for Cloudinary uploads. |
-| **`CLOUDINARY_API_SECRET`**| No | `your-api-secret` | API signature secret credentials for Cloudinary uploads. |
-| **`CLOUDINARY_DEV_MODE`** | Yes | `true` | When `true`, saves media assets under a testing sandbox folder. |
-| **`RAZORPAY_KEY_ID`** | No | `your-key-id` | API Key ID registered in Razorpay checkout settings. |
-| **`RAZORPAY_KEY_SECRET`** | No | `your-key-secret` | API Secret Key registered in Razorpay checkout settings. |
-| **`RAZORPAY_WEBHOOK_SECRET`**| No | `your-webhook-secret` | Signature verification key for Razorpay webhooks. |
-| **`RAZORPAY_DEV_MODE`** | Yes | `true` | When `true`, allows bypass simulations on payment confirmations. |
-| **`GOOGLE_CLIENT_ID`** | No | `your-google-client-id` | Client ID credential for Google OAuth integrations. |
-| **`GOOGLE_CLIENT_SECRET`**| No | `your-google-client-secret` | Client Secret credential for Google OAuth integrations. |
-| **`GOOGLE_AI_API_KEY`** | No | `your-gemini-ai-key` | API authorization key for Google Gemini model APIs. |
-| **`SHIPROCKET_EMAIL`** | No | `your-shiprocket-email` | Shiprocket account email for JWT authentication. |
-| **`SHIPROCKET_PASSWORD`** | No | `your-shiprocket-password` | Shiprocket account password for JWT authentication. |
-| **`SHIPROCKET_API_TOKEN`** | No | `your-shiprocket-token` | Optional direct pre-generated Shiprocket bearer token. |
-| **`SHIPROCKET_PICKUP_PINCODE`** | No | `110001` | Default origin pickup pincode for courier rate lookups. |
-| **`ADMIN_PHONE`** | Yes | `9999999999` | Mobile phone number linked to the system's default admin profile. |
-| **`ADMIN_NAME`** | Yes | `Admin` | Default name label for the platform administrator. |
-| **`ALLOW_DEV_ADMIN_LOGIN`**| Yes | `true` | Toggles the dev admin bypass login endpoint. |
-| **`DEV_ADMIN_OVERRIDE_TOKEN`**| No | `your-dev-token` | Secret string required to authenticate via the dev admin login route. |
-| **`META_APP_ID`** | No | `your_meta_app_id` | Meta Developer App ID for WhatsApp Business Cloud API & Embedded Signup. |
-| **`META_APP_SECRET`** | No | `your_meta_app_secret` | Meta App Secret for validating incoming webhook signatures (HMAC-SHA256). |
-| **`META_WA_VERIFY_TOKEN`** | No | `bizreels_whatsapp_verify_2026` | Token used by Meta to verify the incoming webhook callback URL. |
-| **`META_WA_ACCESS_TOKEN`** | No | `your_system_user_token` | Permanent Meta System User Access Token for Graph API message operations. |
-| **`META_WA_PHONE_NUMBER_ID`** | No | `your_phone_number_id` | Default BizReels fallback phone number ID in WhatsApp Business Platform. |
-| **`META_WA_WABA_ID`** | No | `your_waba_id` | BizReels WhatsApp Business Account (WABA) ID. |
-| **`WHATSAPP_PROVIDER`** | No | `meta` | Outbound and CRM WhatsApp provider selector (`meta` or `twilio`). |
-| **`EXOTEL_SID`** | No | `your_exotel_sid` | Exotel Account SID for initiating click-to-call telephony. |
-| **`EXOTEL_API_KEY`** | No | `your_exotel_api_key` | Exotel API Key credential for telephony REST requests. |
-| **`EXOTEL_API_TOKEN`** | No | `your_exotel_api_token` | Exotel API Token credential for telephony REST requests. |
-| **`EXOTEL_PHONE`** | No | `0XXXXXXXXXX` | Virtual Landline / Caller ID allocated by Exotel for proxy calls. |
-| **`APP_URL`** | No | `https://api.yourdomain.com` | Base public server URL passed to Exotel for receiving call webhook callbacks. |
+| **`PORT`** | Yes | `5000` | The network port the Express application server listens on (default: `5000`). |
+| **`NODE_ENV`** | Yes | `development` | The runtime environment (`development`, `production`, `test`). |
+| **`CLIENT_URL`** | Yes | `http://localhost:5173` | Allowed frontend client URL for CORS headers and cookie domains. |
+| **`APP_URL`** | No | `http://localhost:5000` | Base public server URL (used for webhooks and callback resolution). |
+
+### Database & Cache
+| Variable Name | Required | Example / Default | Description |
+| :--- | :--- | :--- | :--- |
+| **`MONGODB_URI`** | Yes | `mongodb+srv://...` | MongoDB connection URI (Atlas connection string or local `mongodb://localhost:27017/bizreels`). |
+| **`DB_NAME`** | No | `bizreels` | Target database name inside MongoDB cluster. |
+| **`REDIS_ENABLED`** | Yes | `true` | Toggles distributed Redis caching for telemetry, rate limits, and offers. |
+| **`REDIS_URL`** | Conditional | `rediss://...` | Full Redis connection URI (e.g. Upstash Redis `rediss://...`). |
+| **`REDIS_HOST`** | Conditional | `suitable-parakeet-...upstash.io` | Redis host domain. |
+| **`REDIS_PORT`** | Conditional | `6379` | Redis port number. |
+| **`REDIS_PASSWORD`** | Conditional | `<secret-token>` | Redis authentication token / password. |
+| **`REDIS_TLS`** | Conditional | `true` | Enables TLS for secure remote Redis connection. |
+
+### Authentication & JWT
+| Variable Name | Required | Example / Default | Description |
+| :--- | :--- | :--- | :--- |
+| **`JWT_ACCESS_SECRET`** | Yes | `<secret-key>` | Secret key used to sign short-lived access tokens. |
+| **`JWT_REFRESH_SECRET`** | Yes | `<secret-key>` | Secret key used to sign long-lived refresh tokens. |
+| **`JWT_ACCESS_EXPIRY`** | Yes | `30m` | Access token lifespan string (e.g., `30m`, `1h`). |
+| **`JWT_REFRESH_EXPIRY`** | Yes | `7d` | Refresh token lifespan string (e.g., `7d`, `30d`). |
+
+### AI & LLM Engine (OpenRouter)
+| Variable Name | Required | Example / Default | Description |
+| :--- | :--- | :--- | :--- |
+| **`OPENROUTER_API_KEY`** | Yes | `sk-or-v1-...` | API Key for OpenRouter API (used for specification generation and AI assist). |
+| **`OPENROUTER_MODEL`** | No | `openrouter/free` | Primary model identifier (e.g., `google/gemini-2.5-flash`, `openrouter/free`). |
+
+### Media Storage (Cloudinary CDN)
+| Variable Name | Required | Example / Default | Description |
+| :--- | :--- | :--- | :--- |
+| **`CLOUDINARY_CLOUD_NAME`** | Yes | `<cloud-name>` | Cloudinary account identifier for direct CDN streaming. |
+| **`CLOUDINARY_API_KEY`** | Yes | `<api-key>` | Cloudinary REST API key for signature generation (`/api/v1/media/sign`). |
+| **`CLOUDINARY_API_SECRET`** | Yes | `<api-secret>` | Cloudinary secret used to sign edge upload payloads. |
+| **`STORAGE_PROVIDER`** | No | `cloudinary` | Storage backend driver (`cloudinary` or `local`). |
+| **`MAX_UPLOAD_SIZE`** | No | `10485760` | Maximum single media upload size in bytes (10MB default). |
+| **`CLOUDINARY_DEV_MODE`** | No | `false` | When `true`, saves media assets in temporary testing folder. |
+
+### Payments & Subscriptions (Razorpay)
+| Variable Name | Required | Example / Default | Description |
+| :--- | :--- | :--- | :--- |
+| **`RAZORPAY_KEY_ID`** | Yes | `rzp_test_...` | Razorpay public Key ID for client checkout initialization. |
+| **`RAZORPAY_KEY_SECRET`** | Yes | `<secret-key>` | Razorpay Secret Key for HMAC signature verification and order generation. |
+| **`RAZORPAY_DEV_MODE`** | No | `false` | When `true`, bypasses payment gateway for rapid sandbox testing. |
+
+### SMS, OTP & WhatsApp (Twilio DLT)
+| Variable Name | Required | Example / Default | Description |
+| :--- | :--- | :--- | :--- |
+| **`SMS_PROVIDER`** | Yes | `twilio` | Provider selector for SMS/OTP (`twilio` or `msg91`). |
+| **`TWILIO_ACCOUNT_SID`** | Yes | `AC...` | Twilio Account SID for transactional SMS and WhatsApp. |
+| **`TWILIO_AUTH_TOKEN`** | Yes | `<auth-token>` | Twilio Auth Token credential. |
+| **`TWILIO_MESSAGING_SERVICE_SID`** | No | `MG...` | Twilio Messaging Service SID. |
+| **`TWILIO_WHATSAPP_FROM`** | No | `whatsapp:+1555...` | Twilio WhatsApp sender number. |
+| **`TWILIO_WHATSAPP_CONTENT_SID`** | No | `HX...` | Approved WhatsApp template Content SID for OTP delivery. |
+| **`OTP_EXPIRY_MINUTES`** | No | `5` | Lifespan of numeric verification codes in minutes. |
+| **`OTP_MAX_ATTEMPTS`** | No | `5` | Maximum failed verification attempts before cooldown. |
+| **`OTP_DEV_MODE`** | No | `false` | When `true`, bypasses SMS delivery and logs OTP to server console. |
+
+### Transactional Email (Resend API)
+| Variable Name | Required | Example / Default | Description |
+| :--- | :--- | :--- | :--- |
+| **`RESEND_API_KEY`** | Yes | `re_...` | API Key for Resend email delivery engine. |
+| **`RESEND_FROM_EMAIL`** | Yes | `BizReels <admin@bidzord.com>` | Verified sender address for transactional notifications. |
+
+### KYC Identity Verification (Sandbox.co.in)
+| Variable Name | Required | Example / Default | Description |
+| :--- | :--- | :--- | :--- |
+| **`SANDBOX_API_KEY`** | Yes | `key_live_...` | Sandbox.co.in API Key for PAN, Aadhaar, GSTIN, and Bank verification. |
+| **`SANDBOX_API_SECRET`** | Yes | `secret_live_...` | Sandbox.co.in API Secret signature key. |
+| **`SANDBOX_BASE_URL`** | No | `https://api.sandbox.co.in` | Base URL for Sandbox government verification endpoints. |
+
+### Telephony (Exotel Click-to-Call)
+| Variable Name | Required | Example / Default | Description |
+| :--- | :--- | :--- | :--- |
+| **`EXOTEL_SID`** | Yes | `<sid>` | Exotel Account SID for initiating vendor-customer call bridging. |
+| **`EXOTEL_API_KEY`** | Yes | `<api-key>` | Exotel API Key for REST authentication. |
+| **`EXOTEL_API_TOKEN`** | Yes | `<api-token>` | Exotel API Token for REST authentication. |
+| **`EXOTEL_PHONE`** | Yes | `0XXXXXXXXXX` | Virtual Landline / Caller ID allocated for call proxying. |
+| **`EXOTEL_API_BASE_URL`** | No | `https://api.exotel.com` | Exotel REST base URL. |
+
+### Google OAuth & Integration
+| Variable Name | Required | Example / Default | Description |
+| :--- | :--- | :--- | :--- |
+| **`GOOGLE_CLIENT_ID`** | No | `...apps.googleusercontent.com` | Google OAuth Client ID for Social Login. |
+| **`GOOGLE_CLIENT_SECRET`** | No | `<secret>` | Google OAuth Client Secret. |
+| **`GOOGLE_CALLBACK_URL`** | No | `http://localhost:5000/api/v1/auth/google/callback` | OAuth redirect URI registered in Google Cloud Console. |
+
+### Admin Seeding & Overrides
+| Variable Name | Required | Example / Default | Description |
+| :--- | :--- | :--- | :--- |
+| **`SEED_ADMIN_ON_STARTUP`** | No | `true` | Automatically seeds the primary admin account if not found on launch. |
+| **`ADMIN_SEED_PHONE`** | No | `9634372352` | Admin phone number initialized during bootstrap. |
+| **`DEV_ADMIN_OVERRIDE_TOKEN`** | No | `<secret-token>` | Secret token for developer backdoor authentication in local testing. |
 
 ---
 
@@ -58,8 +112,10 @@ The application requires specific configurations configured in `.env` files.
 
 | Variable Name | Required | Default / Value | Description |
 | :--- | :--- | :--- | :--- |
-| **`VITE_BACKEND_URL`** | Yes | `http://localhost:5000` | The target backend Express API server base URL. |
-| **`VITE_API_URL`** | No | `http://localhost:5000/api/v1` | Explicit REST API prefix override. |
-| **`VITE_GOOGLE_MAPS_API_KEY`** | No | `your_api_key` | Google Maps Platform JavaScript API Key. |
-| **`VITE_META_APP_ID`** | No | `your_meta_app_id` | Meta Developer App ID for Facebook JS SDK (Embedded Signup popup). |
-| **`VITE_META_CONFIG_ID`** | No | `your_config_id` | Meta Embedded Signup Configuration ID for onboarding WhatsApp numbers. |
+| **`VITE_BACKEND_URL`** | Yes | `http://localhost:5000` | Target backend Express API server base URL. |
+| **`VITE_API_URL`** | No | `http://localhost:5000/api/v1` | Explicit REST API prefix override (defaults to `/api/v1` via Vite proxy). |
+| **`VITE_SOCKET_URL`** | No | `http://localhost:5000` | Realtime Socket.io server connection URL. |
+| **`VITE_GOOGLE_MAPS_API_KEY`** | Yes | `AIzaSy...` | Google Maps Platform JavaScript API Key for location picker and autocomplete. |
+| **`VITE_GOOGLE_CLIENT_ID`** | No | `<client-id>` | Google OAuth Client ID for Google Social Sign-In on client. |
+| **`VITE_CLOUDINARY_CLOUD_NAME`** | No | `<cloud-name>` | Cloudinary bucket identifier for client-side direct upload presets. |
+

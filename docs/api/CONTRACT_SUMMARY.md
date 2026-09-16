@@ -336,10 +336,10 @@
 | `PATCH` | `/api/v1/notifications/:id/read` | Required | Any Auth | `{ ...updates }` | `{ success, data }` | `200 OK` |
 | `POST` | `/api/v1/notifications/:id/read` | Required | Any Auth | `{ ...payload }` | `{ success, data }` | `201 Created` |
 | `DELETE` | `/api/v1/notifications/:id` | Required | Any Auth | `None` | `{ success, message }` | `200 OK` |
-| `GET` | `/api/v1/offers/active` | Required | Any Auth | `None (Query params)` | `{ success, data: [ ...items ], pagination }` | `200 OK` |
-| `POST` | `/api/v1/offers/:id/click` | Required | Any Auth | `{ ...payload }` | `{ success, data }` | `201 Created` |
-| `POST` | `/api/v1/offers/validate-coupon` | Required | Any Auth | `{ ...payload }` | `{ success, data }` | `201 Created` |
-| `GET` | `/api/v1/offers/applicable` | Required | Any Auth | `None (Query params)` | `{ success, data: [ ...items ], pagination }` | `200 OK` |
+| `GET` | `/api/v1/offers/active` | Required | Any Auth | `?role=customer\|vendor\|creator` | `{ success, items: [ ...offers ] }` | `200 OK` |
+| `POST` | `/api/v1/offers/:id/click` | Required | Any Auth | `None` | `{ success: true }` | `200 OK` |
+| `POST` | `/api/v1/offers/validate-coupon` | Required | Any Auth | `{ couponCode, orderAmount, vendorId?, listingId? }` | `{ success, valid, message, discountAmount, finalAmount, data }` | `200 OK` |
+| `GET` | `/api/v1/offers/applicable` | Required | Any Auth | `?vendorId=&orderAmount=&role=` | `{ success, data: [ ...coupons ] }` | `200 OK` |
 | `POST` | `/api/v1/offers/calculate-shipping` | Required | admin | `{ ...payload }` | `{ success, data }` | `201 Created` |
 | `GET` | `/api/v1/offers/admin/stats` | Required | admin | `None (Query params)` | `{ success, data: [ ...items ], pagination }` | `200 OK` |
 | `GET` | `/api/v1/offers/admin` | Required | admin | `None (Query params)` | `{ success, data: [ ...items ], pagination }` | `200 OK` |

@@ -30,14 +30,15 @@ const requireAdmin = (req, res, next) => {
 
 /**
  * GET /offers/active
- * Returns active offers applicable to logged-in user's roles.
+ * Returns active offers applicable to logged-in user's roles, scoped by ?role= query when specified.
  */
 router.get(
   '/active',
   requireAuth,
   catchAsync(async (req, res) => {
     const userRoles = req.user.roles || [req.user.activeRole || 'customer'];
-    const items = await clientOfferService.getActiveOffers(userRoles);
+    const requestedRole = req.query.role ? String(req.query.role).toLowerCase().trim() : null;
+    const items = await clientOfferService.getActiveOffers(userRoles, requestedRole);
     res.json({ success: true, items });
   })
 );
@@ -83,8 +84,9 @@ router.get(
   '/applicable',
   requireAuth,
   catchAsync(async (req, res) => {
-    const { vendorId, orderAmount } = req.query;
-    const data = await clientOfferService.getApplicableCoupons({ vendorId, orderAmount });
+    const { vendorId, orderAmount, role } = req.query;
+    const activeRole = role ? String(role).toLowerCase().trim() : (req.user.activeRole || 'customer');
+    const data = await clientOfferService.getApplicableCoupons({ vendorId, orderAmount, role: activeRole });
     res.json({ success: true, data });
   })
 );

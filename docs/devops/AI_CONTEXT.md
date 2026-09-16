@@ -15,26 +15,26 @@ This document is the primary entry point for AI agents. It summarizes the reposi
 
 ---
 
-## 2. Codebase Directory Map
+### 2. Codebase Directory Map
 
 ```
 ecommerce-app/
-├── backend/            # Express REST & Socket.IO server (Port 8001)
+├── backend/            # Express REST & Socket.IO server (Port 5000)
 │   ├── src/
-│   │   ├── config/     # db connection, index.js config loader
+│   │   ├── config/     # db connection, index.js config loader, redis client
 │   │   ├── middleware/ # auth.middleware (JWT), role.middleware (role checking)
-│   │   ├── models/     # 22 Mongoose Schemas (Category, User, Listing, Deal...)
+│   │   ├── models/     # Mongoose Schemas (User, Listing, Deal, Offer, Reel...)
 │   │   ├── routes/     # Versioned endpoints (v1 prefixes mapped in routes/index.js)
-│   │   ├── services/   # Business logic layers (ai, payments, contact reveal...)
-│   │   └── utils/      # rateLimit, ApiError wrappers, logger config
+│   │   ├── services/   # Business logic layers (ai, offer, payment, wallet, reel...)
+│   │   └── utils/      # rateLimit, ApiError wrappers, cache, logger config
 │   └── server.js       # Node entry script launching HTTP & WebSockets
 │
-└── frontend/           # React 19 Client Web Application (Port 3000)
+└── frontend/           # React 19 Client Web Application (Port 5173 via Vite)
     ├── src/
-    │   ├── components/ # App widgets (PhoneScreen, BottomNav, ReelItem...)
+    │   ├── components/ # App widgets (ActiveOffersPanel, BottomNav, ReelItem...)
     │   ├── context/    # AuthContext (user session & Socket event routing)
     │   ├── lib/        # api.js client, socket.js connection, i18n locales
-    │   ├── pages/      # Route pages (Dashboard, Onboarding, ListingForm...)
+    │   ├── pages/      # Route pages (Dashboard, Admin, Vendor, Creator, Customer...)
     │   └── App.js      # App navigation and routes index mapper
 ```
 
@@ -48,6 +48,7 @@ All models map to lowercase, snake_case collection names inside MongoDB:
 | :--- | :--- | :--- | :--- |
 | **`users`** | `User` | `phone`, `name`, `roles`, `kyc_status`, `is_active`, `trust_score` | `{ is_deleted: 1 }` |
 | **`listings`** | `Listing` | `vendor_id`, `type`, `title`, `price`, `images`, `reel`, `location` | `{ 'location.geo': '2dsphere' }`, Text index on title/desc |
+| **`offers`** | `Offer` | `title`, `code`, `targetRoles`, `discountType`, `discountValue`, `status` | `{ status: 1 }`, `{ targetRoles: 1 }` |
 | **`categories`** | `Category` | `name`, `slug`, `parent_id`, `sort_order`, `is_active` | `{ slug: 1 }` (unique) |
 | **`chat_threads`**| `ChatThread` | `participants`, `thread_type`, `context_id`, `unread_count` | `{ participants: 1, context_id: 1, thread_type: 1 }` |
 | **`messages`** | `ChatMessage` | `thread_id`, `sender_id`, `receiver_id`, `type`, `text`, `media` | `{ thread_id: 1, _id: -1 }` |
@@ -86,12 +87,16 @@ All models map to lowercase, snake_case collection names inside MongoDB:
 
 ---
 
-## 5. Third-Party Integrations
+## 5. Third-Party Integrations & External APIs
 
-* **Google Gemini API**: Implements structured JSON prompts for category guessing, text improvements, matching demands to nearby vendors, and chat negotiator assistance. Calls are daily-capped per user.
-* **Razorpay Gateway**: Backend signs order IDs at `/payments/order`. Frontend mounts SDK widget. Verification at `/payments/verify` uses SHA256 HMAC hashes. Webhook endpoint parses raw buffer buffers into `req.rawBody` for webhook validations.
-* **MSG91 (SMS API)**: Routes phone verification OTPs. Sandbox stub active in development mode (`MSG91_DEV_MODE=true`).
-* **Cloudinary**: Direct CDN Stream architecture (`mediaApi.uploadMediaStream`). Frontend requests signed upload tokens from `POST /media/sign` and streams raw video/image binaries (up to 50MB) directly to Cloudinary edge nodes. Node.js processes 0 MB of media payloads. The resulting permanent CDN URL is sent in `<1KB` JSON payloads when publishing reels or listings; Base64 data strings in JSON payloads are forbidden.
+* **AI & LLM Services (OpenRouter & Gemini)**: Powered by `OPENROUTER_API_KEY` for specification generation, demand matching, and interactive assistance.
+* **Razorpay Gateway**: Backend signs order IDs at `/payments/order` and `/subscription/purchase-razorpay`. Verification uses SHA256 HMAC hashes.
+* **Twilio (SMS & WhatsApp)**: Routes transactional OTPs and WhatsApp notifications using approved DLT template IDs (`SMS_PROVIDER=twilio`).
+* **Resend Email API**: Transactional system notifications and account emails (`RESEND_API_KEY`).
+* **Sandbox.co.in API**: Automated verification of PAN, Aadhaar, GSTIN, and Bank accounts.
+* **Exotel Telephony**: Server-to-server call bridging for private vendor-to-customer phone proxying.
+* **Cloudinary**: Direct CDN Stream architecture (`mediaApi.uploadMediaStream`) via signed edge tokens (`POST /media/sign`).
+* **Redis (Upstash)**: Distributed caching for telemetry, rate limits, and offer queries (`REDIS_ENABLED=true`).
 * **FCM (Firebase Cloud Messaging)**: Delivers backend push alerts to active device registration tokens.
 
 ---

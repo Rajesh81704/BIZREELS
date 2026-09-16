@@ -18,6 +18,15 @@ const activateOfferAndNotify = async (offer) => {
 
     logger.info(`Activating offer "${offer.title}" (${offer._id}). Notifying ${targetUsers.length} target users.`, { service: 'scheduler' });
 
+    // Determine role-specific redirect path
+    let redirectPath = '/customer/home';
+    const roles = Array.isArray(offer.targetRoles) ? offer.targetRoles : [];
+    if (roles.includes('vendor') && !roles.includes('customer')) {
+      redirectPath = '/vendor/dashboard';
+    } else if (roles.includes('creator') && !roles.includes('customer')) {
+      redirectPath = '/creator/dashboard';
+    }
+
     // 2. Chunked batch creation of notifications to prevent event-loop starvation
     const BATCH_SIZE = 50;
     for (let i = 0; i < targetUsers.length; i += BATCH_SIZE) {
@@ -36,7 +45,7 @@ const activateOfferAndNotify = async (offer) => {
               discountValue: offer.discountValue,
               endTime: offer.endTime ? offer.endTime.toISOString() : ''
             },
-            '/customer/home'
+            redirectPath
           )
         )
       );
