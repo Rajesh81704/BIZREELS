@@ -133,16 +133,16 @@ export default function NotificationsScreen() {
     ]);
   };
 
-  const renderIcon = (type: string) => {
+  const renderIcon = (type: string, size: number = 18) => {
     const t = (type || '').toLowerCase();
-    if (['like'].includes(t)) return <Ionicons name="heart" size={18} color="#EF4444" />;
-    if (['follow'].includes(t)) return <Ionicons name="person-add" size={18} color="#3B82F6" />;
-    if (['comment', 'reply'].includes(t)) return <Ionicons name="chatbubble-ellipses" size={18} color="#10B981" />;
-    if (['quote', 'bid', 'requirement', 'proposal'].includes(t)) return <Ionicons name="pricetag" size={18} color="#D97706" />;
-    if (['order', 'order_status', 'lead'].includes(t)) return <Ionicons name="cart" size={18} color="#8B5CF6" />;
-    if (['wallet', 'payment'].includes(t)) return <Ionicons name="wallet" size={18} color="#10B981" />;
-    if (['kyc', 'verification', 'system', 'support'].includes(t)) return <Ionicons name="shield-checkmark" size={18} color="#3B82F6" />;
-    return <Ionicons name="notifications" size={18} color="#D97706" />;
+    if (['like'].includes(t)) return <Ionicons name="heart" size={size} color="#EF4444" />;
+    if (['follow'].includes(t)) return <Ionicons name="person-add" size={size} color="#3B82F6" />;
+    if (['comment', 'reply'].includes(t)) return <Ionicons name="chatbubble-ellipses" size={size} color="#10B981" />;
+    if (['quote', 'bid', 'requirement', 'proposal'].includes(t)) return <Ionicons name="pricetag" size={size} color="#D97706" />;
+    if (['order', 'order_status', 'lead', 'inquiry'].includes(t)) return <Ionicons name="cart" size={size} color="#8B5CF6" />;
+    if (['wallet', 'payment'].includes(t)) return <Ionicons name="wallet" size={size} color="#10B981" />;
+    if (['kyc', 'verification', 'system', 'support', 'hire', 'campaign'].includes(t)) return <Ionicons name="shield-checkmark" size={size} color="#3B82F6" />;
+    return <Ionicons name="notifications" size={size} color="#D97706" />;
   };
 
   return (
@@ -249,14 +249,19 @@ export default function NotificationsScreen() {
                 {/* Icon or Sender Avatar */}
                 <View style={styles.iconWrapper}>
                   {senderAvatar ? (
-                    <Image
-                      source={{ uri: resolveImageUrl(senderAvatar) || '' }}
-                      style={styles.avatarImg}
-                      contentFit="cover"
-                    />
+                    <View style={{ position: 'relative' }}>
+                      <Image
+                        source={{ uri: resolveImageUrl(senderAvatar) || '' }}
+                        style={styles.avatarImg}
+                        contentFit="cover"
+                      />
+                      <View style={styles.typeBadgeCircle}>
+                        {renderIcon(item.type, 11)}
+                      </View>
+                    </View>
                   ) : (
                     <View style={[styles.iconCircle, !item.isRead && styles.iconCircleUnread]}>
-                      {renderIcon(item.type)}
+                      {renderIcon(item.type, 18)}
                     </View>
                   )}
                   {!item.isRead && <View style={styles.unreadDot} />}
@@ -421,6 +426,20 @@ const styles = StyleSheet.create({
     borderColor: '#FDE68A',
   },
   avatarImg: { width: 42, height: 42, borderRadius: 12, borderWidth: 1, borderColor: GOLD_ACCENT },
+  typeBadgeCircle: {
+    position: 'absolute',
+    bottom: -3,
+    right: -3,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+  },
   unreadDot: {
     position: 'absolute',
     top: -2,

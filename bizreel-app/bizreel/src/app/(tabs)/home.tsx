@@ -22,6 +22,7 @@ import { VendorDrawerModal } from '@/components/vendor-drawer-modal';
 import { BrandColors, FontSize, FontWeight, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/context';
 import { useAddToCart, useCart } from '@/features/cart/queries';
+import { useUnreadNotificationCount } from '@/features/notifications/queries';
 import { useReelsFeed } from '@/features/reels/queries';
 import { useVendorListings } from '@/features/vendor-listings/queries';
 import { api } from '@/lib/api';
@@ -80,6 +81,7 @@ export default function HomeScreen() {
   const activeRole = user?.activeRole || user?.current_role || 'customer';
   const isVendor = activeRole === 'vendor';
   const isCreator = activeRole === 'creator';
+  const { data: unreadNotifCount = 0 } = useUnreadNotificationCount(activeRole);
   const custp = (user as any)?.customerProfile || {};
   const isCustomerUnonboarded =
     activeRole === 'customer' &&
@@ -192,6 +194,18 @@ export default function HomeScreen() {
             ) : (
               <>
                 <RoleSwitcher />
+
+                <TouchableOpacity
+                  style={styles.notifIconBtn}
+                  onPress={() => router.push('/notifications' as any)}
+                  accessibilityLabel="Notifications">
+                  <Ionicons name="notifications-outline" size={20} color={YELLOW} />
+                  {unreadNotifCount > 0 && (
+                    <View style={styles.notifBadge}>
+                      <Text style={styles.notifBadgeText}>{unreadNotifCount > 99 ? '99+' : unreadNotifCount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
 
                 {!isCreator && (
                   <TouchableOpacity
@@ -1764,5 +1778,35 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   customerOnboardingBtnText: { color: '#241B15', fontSize: 11, fontWeight: '900' },
+  notifIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#241B15',
+    borderWidth: 1,
+    borderColor: '#D99A3D',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  notifBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  notifBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '900',
+  },
 });
 
