@@ -307,8 +307,9 @@ class OrderController {
       }
     }
 
-    const validShipping = Math.max(0, parseFloat(shippingCharges) || 0);
-    const finalPayable = Math.max(0, itemTotal - validatedCouponDiscount + (isService ? 0 : validShipping));
+    const validShipping = isService ? 0 : (req.body?.shippingCharges !== undefined ? Math.max(0, parseFloat(req.body.shippingCharges)) : 40);
+    const finalPayable = Math.max(0, itemTotal - validatedCouponDiscount + validShipping);
+
     // Compute scheduled visit time if bookingDate/time provided
     const effectiveBookingDate = bookingDate || req.body.bookingDate || req.body.paymentDetails?.bookingDate || '';
     const effectiveBookingTime = bookingTime || req.body.bookingTimeSlot || req.body.paymentDetails?.bookingTime || req.body.paymentDetails?.bookingTimeSlot || '';

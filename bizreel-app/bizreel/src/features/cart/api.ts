@@ -44,12 +44,14 @@ export async function removeFromCart(listingId: string): Promise<CartResponse> {
   }
 }
 
-export async function checkoutCart(): Promise<{ ok: boolean; deals: any[] }> {
+export async function checkoutCart(payload: { shippingCharges?: number; address?: string; pincode?: string; paymentMethod?: string } = {}): Promise<{ ok: boolean; deals: any[] }> {
+  const body = { shippingCharges: 40, ...payload };
   try {
-    const { data } = await api.post<{ ok: boolean; deals: any[] }>('/cart/me/checkout');
+    const { data } = await api.post<{ ok: boolean; deals: any[] }>('/cart/me/checkout', body);
     return data;
   } catch (err) {
-    const { data } = await api.post<{ ok: boolean; deals: any[] }>('/cart/checkout');
+    const { data } = await api.post<{ ok: boolean; deals: any[] }>('/cart/checkout', body);
     return data;
   }
 }
+

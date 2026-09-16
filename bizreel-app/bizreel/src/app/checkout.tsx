@@ -165,9 +165,14 @@ export default function CheckoutScreen() {
           paymentMethod,
         });
       } else {
-        // Full shopping cart checkout
-        await checkoutCart();
+        // Full shopping cart checkout with delivery fee
+        await checkoutCart({
+          address: address.trim(),
+          paymentMethod,
+          shippingCharges: 40,
+        });
         await refetchCart();
+
       }
 
       Alert.alert(

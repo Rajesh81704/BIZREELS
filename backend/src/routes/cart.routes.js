@@ -252,7 +252,9 @@ const Order = require('../models/Order');
 const Notification = require('../models/Notification');
 
 router.post(['/checkout', '/me/checkout'], requireAuth, catchAsync(async (req, res) => {
-  const { couponCode, couponDiscount = 0, shippingCharges = 0, address, pincode, paymentMethod = 'cod' } = req.body || {};
+  const { couponCode, couponDiscount = 0, address, pincode, paymentMethod = 'cod' } = req.body || {};
+  const shippingFee = req.body?.shippingCharges !== undefined ? Number(req.body.shippingCharges) : 40;
+  const shippingCharges = shippingFee >= 0 ? shippingFee : 40;
   const cart = await getCart(req.user._id.toString());
   const hydrated = await hydrateCart(cart);
   if (!hydrated || !hydrated.groups || hydrated.groups.length === 0) {
@@ -270,8 +272,9 @@ router.post(['/checkout', '/me/checkout'], requireAuth, catchAsync(async (req, r
     const subtotal = group.subtotal || 0;
     const groupRatio = totalSubtotal > 0 ? subtotal / totalSubtotal : 1 / numGroups;
     const allocatedDiscount = Math.round((Number(couponDiscount) || 0) * groupRatio);
-    const allocatedShipping = Math.round((Number(shippingCharges) || 0) * groupRatio);
+    const allocatedShipping = Math.round(shippingCharges * groupRatio);
     const groupFinalAmount = Math.max(0, subtotal - allocatedDiscount + allocatedShipping);
+
 
     const itemsSnapshot = group.items.map(i => ({
       listing_id: i.listing_id,
