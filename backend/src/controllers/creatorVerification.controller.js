@@ -207,11 +207,13 @@ const sendContactOtp = catchAsync(async (req, res) => {
       console.error('Failed to dispatch contact OTP:', smsErr.message);
     }
 
+    const isMock = !dispatchResult?.sid || dispatchResult?.provider === 'mock' || dispatchResult?.provider === 'mock_fallback' || process.env.NODE_ENV === 'development';
+
     return res.json({
       success: true,
       message: `Verification OTP sent via ${(type === 'whatsapp' || req.body.channel === 'whatsapp') ? 'WHATSAPP' : 'SMS'} to: +91${cleanPhone}`,
       channel: (type === 'whatsapp' || req.body.channel === 'whatsapp') ? 'whatsapp' : 'sms',
-      otp: (process.env.NODE_ENV === 'development' || dispatchResult?.provider === 'mock' || dispatchResult?.provider === 'mock_fallback') ? otpCode : undefined
+      otp: isMock ? otpCode : undefined
     });
   }
 });

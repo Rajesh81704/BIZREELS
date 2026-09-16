@@ -330,8 +330,8 @@ const styles = StyleSheet.create({
   },
   backdropTouch: { flex: 1 },
   drawerContainer: {
-    width: '40%',
-    maxWidth: 320,
+    width: '50%',
+    maxWidth: 360,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     borderRightWidth: 1,
@@ -417,6 +417,8 @@ const styles = StyleSheet.create({
   },
   menuItemTitle: {
     flex: 1,
+    flexShrink: 1,
+    flexWrap: 'wrap',
     color: '#334155',
     fontSize: FontSize.xs,
     fontWeight: '700',

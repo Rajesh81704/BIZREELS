@@ -105,10 +105,10 @@ export default function ListingDetailDrawer({
   return (
     <div className="fixed inset-0 z-50 flex justify-end font-sans">
       <div className="fixed inset-0 bg-black/50 backdrop-blur-xs" onClick={onClose} />
-      <div className="relative w-full sm:w-[40%] md:w-[40%] lg:w-[40%] sm:max-w-none h-full bg-white shadow-2xl border-l border-[#e3dccb] animate-slide-in-right overflow-y-auto">
+      <div className="relative w-full sm:w-[50%] md:w-[50%] lg:w-[50%] sm:max-w-none h-full bg-white shadow-2xl border-l border-[#e3dccb] animate-slide-in-right overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b border-[#241b15] bg-[#241b15] text-white">
-          <h3 style={{ fontFamily: "'Archivo Black', sans-serif" }} className="text-sm font-black text-[#d99a3d] uppercase tracking-wider truncate pr-2">
+          <h3 style={{ fontFamily: "'Archivo Black', sans-serif" }} className="text-sm font-black text-[#d99a3d] uppercase tracking-wider break-words whitespace-normal pr-2">
             Listing Details
           </h3>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 text-slate-300 hover:text-white transition cursor-pointer border-none">

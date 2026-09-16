@@ -151,7 +151,7 @@ export default function ChatDrawer({
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 26, stiffness: 240 }}
-          className="relative z-10 w-full sm:w-[40%] md:w-[40%] lg:w-[40%] sm:max-w-none h-full bg-[#f8f4ec] shadow-2xl border-l border-[#e3dccb] flex flex-col font-sans"
+          className="relative z-10 w-full sm:w-[50%] md:w-[50%] lg:w-[50%] sm:max-w-none h-full bg-[#f8f4ec] shadow-2xl border-l border-[#e3dccb] flex flex-col font-sans"
         >
           {/* ── HEADER ── */}
           <div className="px-4 sm:px-5 py-3.5 bg-[#241b15] text-white border-b border-[#3a2c22] flex items-center justify-between shrink-0 shadow-sm">
@@ -171,7 +171,7 @@ export default function ChatDrawer({
                 <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#241b15] rounded-full" />
               </div>
               <div className="min-w-0">
-                <h4 style={{ fontFamily: "'Archivo Black', sans-serif" }} className="text-sm font-black text-white uppercase tracking-tight truncate">
+                <h4 style={{ fontFamily: "'Archivo Black', sans-serif" }} className="text-sm font-black text-white uppercase tracking-tight break-words whitespace-normal">
                   {recipientName}
                 </h4>
                 <div className="flex items-center gap-1.5 mt-0.5">
