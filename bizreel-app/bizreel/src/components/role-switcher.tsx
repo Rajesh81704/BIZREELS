@@ -82,10 +82,21 @@ export function RoleSwitcher() {
         (!Array.isArray(custp.interests) || custp.interests.length < 5) &&
         (!Array.isArray(finalUser?.interests) || finalUser?.interests.length < 5);
 
-      if (res.redirectTo) {
-        router.replace(res.redirectTo as any);
-      } else if (res.isOnboardingRequired && res.targetOnboardingPath) {
-        router.replace(res.targetOnboardingPath as any);
+      const resolveTargetRoute = (path?: string) => {
+        if (!path) return null;
+        if (path === '/customer/home' || path === '/customer' || path === '/customer/') {
+          return '/(tabs)/home';
+        }
+        return path;
+      };
+
+      const normalizedRedirect = resolveTargetRoute(res.redirectTo);
+      const normalizedOnboarding = resolveTargetRoute(res.targetOnboardingPath);
+
+      if (normalizedRedirect) {
+        router.replace(normalizedRedirect as any);
+      } else if (res.isOnboardingRequired && normalizedOnboarding) {
+        router.replace(normalizedOnboarding as any);
       } else if (isVendorUnonboarded) {
         router.replace('/vendor/onboarding');
       } else if (isCreatorUnonboarded) {
