@@ -122,7 +122,11 @@ class CallService {
           exotelCallSid = res.data.Call.Sid;
         }
       } catch (err) {
-        logger.error('Exotel API call connection error:', err.message);
+        const exotelMsg = err.response?.data?.RestException?.Message || err.message;
+        logger.error(`Exotel API call connection error: ${exotelMsg}`, {
+          status: err.response?.status,
+          details: err.response?.data,
+        });
       }
     } else {
       logger.info(`[Exotel Sandbox] Call initiated between ${customerPhone} and ${vendorPhone} (SID: ${exotelCallSid})`);
