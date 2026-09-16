@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FiBell, FiShield, FiMessageSquare, FiTrendingDown, FiTag, FiClock,
-  FiShoppingBag, FiDollarSign, FiCheck, FiTrash2, FiExternalLink, FiCheckCircle
+  FiShoppingBag, FiDollarSign, FiCheck, FiTrash2, FiExternalLink, FiCheckCircle, FiCopy
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
@@ -38,7 +38,7 @@ function OfferCountdown({ validTill }) {
       parts.push(`${minutes}m`);
       parts.push(`${seconds}s`);
 
-      setTimeLeft(parts.join(' ') + ' left');
+      setTimeLeft(parts.join(' '));
     };
 
     calculateTimeLeft();
@@ -62,7 +62,17 @@ export default function CustomerNotificationsPage() {
   const [activeTab, setActiveTab] = useState('all');
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [copiedCodeId, setCopiedCodeId] = useState(null);
   const location = useLocation();
+
+  const handleCopyCoupon = (code, nid, e) => {
+    if (e) e.stopPropagation();
+    if (!code) return;
+    navigator.clipboard.writeText(code);
+    setCopiedCodeId(nid);
+    toast.success(`Coupon code "${code}" copied to clipboard!`);
+    setTimeout(() => setCopiedCodeId(null), 2500);
+  };
 
   const pathname = location.pathname;
   const isVendorPortal = pathname.includes('/vendor');
@@ -306,6 +316,16 @@ export default function CustomerNotificationsPage() {
             const nid = n._id || n.id;
             const actionUrl = n.actionUrl || n.action_url;
 
+            const couponCode = n.data?.code || n.data?.couponCode || 
+              (n.body && n.body.match(/code\s*[:"']?\s*([A-Z0-9_-]{3,})/i)?.[1]) || 
+              (n.message && n.message.match(/code\s*[:"']?\s*([A-Z0-9_-]{3,})/i)?.[1]) || null;
+            const discountValue = n.data?.discountValue;
+            const discountType = n.data?.discountType;
+            const discountLabel = discountValue
+              ? (discountType === 'percentage' ? `${discountValue}% OFF` : `₹${discountValue} OFF`)
+              : (n.data?.discountPercent ? `${n.data.discountPercent}% OFF` : null);
+            const expiryTime = n.data?.endTime || n.data?.validTill || n.validTill;
+
             return (
               <div
                 key={nid}
@@ -334,8 +354,8 @@ export default function CustomerNotificationsPage() {
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      {(n.type === 'offers' || n.type === 'offer') && (n.data?.validTill || n.validTill) && (
-                        <OfferCountdown validTill={n.data?.validTill || n.validTill} />
+                      {(n.type === 'offers' || n.type === 'offer' || couponCode) && expiryTime && (
+                        <OfferCountdown validTill={expiryTime} />
                       )}
                       <span className="text-[10px] text-slate-400 font-semibold">
                         {n.createdAt || n.created_at
@@ -348,6 +368,52 @@ export default function CustomerNotificationsPage() {
                   <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
                     {n.body || n.message || 'Click to view details.'}
                   </p>
+
+                  {/* Coupon Code Pill / Box */}
+                  {couponCode && (
+                    <div 
+                      onClick={(e) => e.stopPropagation()} 
+                      className="mt-2.5 p-2.5 sm:p-3 bg-gradient-to-r from-[#fdfbf7] to-[#f8f5ee] border border-[#e3dccb] rounded-xl flex flex-wrap items-center justify-between gap-2.5 shadow-2xs"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-[#d99a3d]/15 text-[#b07823] border border-[#d99a3d]/30 flex items-center justify-center shrink-0">
+                          <FiTag size={15} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-extrabold text-[#786e60] uppercase tracking-wider">Coupon Code</span>
+                            {discountLabel && (
+                              <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[10px] font-black tracking-wide">
+                                {discountLabel}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs sm:text-sm font-mono font-black text-[#1a1a1a] tracking-wider block mt-0.5 select-all">
+                            {couponCode}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handleCopyCoupon(couponCode, nid, e)}
+                        className="px-3 py-1.5 rounded-lg bg-[#1a1a1a] hover:bg-[#2e261f] active:scale-95 text-white text-[11px] font-bold flex items-center gap-1.5 transition shadow-xs cursor-pointer border-none"
+                        title="Copy coupon code"
+                      >
+                        {copiedCodeId === nid ? (
+                          <>
+                            <FiCheck size={12} className="text-emerald-400" />
+                            <span className="text-emerald-300">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <FiCopy size={12} className="text-slate-300" />
+                            <span>Copy Code</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
 
                   {/* Actions Bar */}
                   <div className="flex items-center justify-between pt-1">

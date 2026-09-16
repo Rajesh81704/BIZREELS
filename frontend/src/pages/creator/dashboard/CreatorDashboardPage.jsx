@@ -257,6 +257,10 @@ export default function CreatorDashboardPage() {
         title={bi('Creator Studio & Collaborations Hub', 'क्रिएटर स्टूडियो और सहयोग केंद्र (Collaborations Hub)')}
         subtitle={bi('Manage brand invitation offers, upload reels submissions, and track earnings metrics', 'ब्रांड निमंत्रण ऑफ़र प्रबंधित करें, रील सबमिशन अपलोड करें और कमाई मेट्रिक्स ट्रैक करें')}
       />
+
+      {/* Active Special Offers & Promotions for Creators */}
+      <ActiveOffersPanel role="creator" />
+
         {/* ── Premium Creator Studio Hero Header ── */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-surface via-surface-secondary to-brand-purple/5 border border-border/70 p-6 sm:p-8 shadow-card">
           {/* Ambient subtle glow decoration */}
