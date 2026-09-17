@@ -642,7 +642,7 @@ export default function SearchListingsPage() {
     try {
       const params = new URLSearchParams();
       params.append('page', pageNum);
-      params.append('limit', '50');
+      params.append('limit', '100');
       if (type !== 'all') params.append('type', type);
       if (category !== 'all') params.append('category', category);
       if (subcategory !== 'all') params.append('subcategory', subcategory);
@@ -666,7 +666,7 @@ export default function SearchListingsPage() {
       const list = data.data?.listings || data.listings || data.data || (Array.isArray(data) ? data : []);
       const meta = data.meta || data.data?.meta || {};
       const total = meta.total !== undefined ? meta.total : (Array.isArray(list) ? list.length : 0);
-      const totalPages = meta.totalPages || (total > 0 ? Math.ceil(total / 50) : 1);
+      const totalPages = meta.totalPages || (total > 0 ? Math.ceil(total / 100) : 1);
 
       setTotalCount(total);
       setHasMore(pageNum < totalPages);
