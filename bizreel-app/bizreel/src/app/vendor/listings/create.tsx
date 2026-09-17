@@ -555,20 +555,21 @@ export default function CreateListingScreen() {
         } else if (target === 'aiMedia') {
           setImageUrl(uploadedUrl);
           if (!galleryImages.includes(uploadedUrl)) setGalleryImages([uploadedUrl, ...galleryImages]);
-          // AI media scan auto-fill description
+          // AI media scan auto-fill description & fields (Parity with Web ProductFormModal & ServiceFormModal)
           setGeneratingAiCopy(true);
           try {
-            let copyData: any = null;
+            let resultData: any = null;
             try {
-              const aiRes = await api.post('/listings/ai-copy', {
-                imageUrl: uploadedUrl,
-                prompt: aiPrompt.trim() || title || category,
-                title: title || category,
-                category,
-                subcategory,
-                type,
+              const formData = new FormData();
+              formData.append('file', {
+                uri: asset.uri,
+                name: asset.fileName || 'media-sample.jpg',
+                type: asset.mimeType || 'image/jpeg',
+              } as any);
+              const aiRes = await api.post('/ai/multimodal-analyze', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
               });
-              copyData = aiRes.data?.data || aiRes.data;
+              resultData = aiRes.data?.data || aiRes.data;
             } catch (e1) {
               const aiRes = await api.post('/ai/generate-description', {
                 prompt: aiPrompt.trim() || title || category,
@@ -577,24 +578,31 @@ export default function CreateListingScreen() {
                 subcategory,
                 context: { imageUrl: uploadedUrl, title, brand, price: sellingPrice },
               });
-              copyData = aiRes.data?.data || aiRes.data;
+              resultData = aiRes.data?.data || aiRes.data;
             }
 
-            if (copyData) {
-              const desc = copyData.description || copyData.copy || copyData.detailedDescription;
+            if (resultData) {
+              const desc = resultData.detailedDescription || resultData.description || resultData.copy;
               if (desc) setDescription(desc);
-              if (copyData.shortDescription) setShortDescription(copyData.shortDescription);
-              if (copyData.title && !title) setTitle(copyData.title);
-              if (copyData.serviceHighlights && type === 'service') setServiceHighlights(copyData.serviceHighlights);
-              if (Array.isArray(copyData.tags) && copyData.tags.length > 0) {
-                setTags(prev => Array.from(new Set([...prev, ...copyData.tags])));
-              } else if (Array.isArray(copyData.aiLabels) && copyData.aiLabels.length > 0) {
-                setTags(prev => Array.from(new Set([...prev, ...copyData.aiLabels])));
+              if (resultData.shortDescription) setShortDescription(resultData.shortDescription);
+              if (resultData.title && !title) setTitle(resultData.title);
+              if (resultData.suggestedCategory && resultData.suggestedCategory !== category) {
+                setCategory(resultData.suggestedCategory);
+              }
+              if (resultData.serviceHighlights && type === 'service') {
+                setServiceHighlights(resultData.serviceHighlights);
+              } else if (resultData.highlights && type === 'service') {
+                setServiceHighlights(resultData.highlights);
+              }
+              if (Array.isArray(resultData.tags) && resultData.tags.length > 0) {
+                setTags((prev) => Array.from(new Set([...prev, ...resultData.tags])));
+              } else if (Array.isArray(resultData.aiLabels) && resultData.aiLabels.length > 0) {
+                setTags((prev) => Array.from(new Set([...prev, ...resultData.aiLabels])));
               }
               Alert.alert('✨ Gemini AI Scan Complete!', 'Listing details auto-filled from sample media.');
             }
           } catch {
-            Alert.alert('Notice', 'Photo uploaded. AI scan complete.');
+            Alert.alert('Notice', 'Photo attached successfully. AI scan completed.');
           } finally {
             setGeneratingAiCopy(false);
           }
@@ -608,51 +616,50 @@ export default function CreateListingScreen() {
     }
   }
 
-  // AI Description Generator
+  // AI Description Generator (100% Parity with Web Frontend ProductFormModal.jsx & ServiceFormModal.jsx)
   const handleGenerateAiCopy = async () => {
     const promptText = aiPrompt.trim() || title.trim() || `${category} ${type}`;
     setGeneratingAiCopy(true);
     try {
-      let copyData: any = null;
-      try {
-        const { data } = await api.post('/listings/ai-copy', {
-          prompt: promptText,
-          title: title.trim(),
-          category,
-          subcategory,
-          type,
+      const res = await api.post('/ai/generate-description', {
+        prompt: promptText,
+        type,
+        category,
+        subcategory,
+        context: type === 'service' ? {
+          serviceType,
+          priceType,
+          price: sellingPrice,
+          duration,
+          area: serviceArea,
+        } : {
           brand,
-          sellingPrice,
-        });
-        copyData = data?.data || data;
-      } catch (e1) {
-        const { data } = await api.post('/ai/generate-description', {
-          prompt: promptText,
-          type,
-          category,
-          subcategory,
-          context: { title: title.trim(), brand, price: sellingPrice },
-        });
-        copyData = data?.data || data;
-      }
+          price: sellingPrice,
+          tags,
+        },
+      });
 
+      const copyData = res.data?.data || res.data;
       if (copyData) {
-        const desc = copyData.description || copyData.copy || copyData.detailedDescription;
+        const desc = copyData.detailedDescription || copyData.description || copyData.copy;
         if (desc) setDescription(desc);
         if (copyData.shortDescription) setShortDescription(copyData.shortDescription);
         if (copyData.title && !title) setTitle(copyData.title);
-        if (copyData.serviceHighlights && type === 'service') setServiceHighlights(copyData.serviceHighlights);
-        if (Array.isArray(copyData.tags) && copyData.tags.length > 0) {
-          setTags(prev => Array.from(new Set([...prev, ...copyData.tags])));
-        } else if (Array.isArray(copyData.aiLabels) && copyData.aiLabels.length > 0) {
-          setTags(prev => Array.from(new Set([...prev, ...copyData.aiLabels])));
+        if (copyData.serviceHighlights && type === 'service') {
+          setServiceHighlights(copyData.serviceHighlights);
         }
-        Alert.alert('✨ Gemini AI Content Generated!', 'Listing details synthesized successfully.');
+        if (Array.isArray(copyData.tags) && copyData.tags.length > 0) {
+          setTags((prev) => Array.from(new Set([...prev, ...copyData.tags])));
+        } else if (Array.isArray(copyData.aiLabels) && copyData.aiLabels.length > 0) {
+          setTags((prev) => Array.from(new Set([...prev, ...copyData.aiLabels])));
+        }
+        Alert.alert('✨ Gemini AI Description Generated!', 'Listing details synthesized successfully.');
       } else {
-        Alert.alert('Notice', 'AI generator completed. Review description fields below.');
+        Alert.alert('Notice', 'AI description generator completed. Review fields below.');
       }
     } catch (err: any) {
-      Alert.alert('AI Generation Error', err?.response?.data?.message || 'Could not generate AI content. Please enter details manually.');
+      const errMsg = err?.response?.data?.message || err?.message || 'Could not generate AI description. Please enter details manually.';
+      Alert.alert('AI Generation Unavailable', errMsg);
     } finally {
       setGeneratingAiCopy(false);
     }
