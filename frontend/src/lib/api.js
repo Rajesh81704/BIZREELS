@@ -1,6 +1,7 @@
 import axios from "axios";
 
 const rawBackendUrl = import.meta.env.VITE_BACKEND_URL || '';
+const BACKEND_URL = rawBackendUrl.replace(/\/+$/, '');
 export const API_BASE = import.meta.env.VITE_API_URL
   ? (import.meta.env.VITE_API_URL.includes('/api')
       ? import.meta.env.VITE_API_URL.replace(/\/+$/, '')
