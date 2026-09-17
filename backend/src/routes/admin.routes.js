@@ -994,35 +994,188 @@ router.post('/wallet/refunds/:id/reject', requireAuth, requireAdmin, catchAsync(
 
 // ============================================================ REVIEWS MODERATION
 router.get('/reviews', requireAuth, requireAdmin, catchAsync(async (req, res) => {
-  const { target_type } = req.query;
-  const { Review } = require('../models/Phase4');
-  const q = { is_deleted: { $ne: true } };
-  if (target_type) q.target_type = target_type;
-  const reviews = await Review.find(q).sort({ created_at: -1 }).limit(50);
-  res.json({
-    items: reviews.map(r => ({
+  const { tab = 'all', rating, search, page = 1, limit = 50 } = req.query;
+  const Review = require('../models/Review');
+  const { Report } = require('../models/Misc');
+
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 50));
+
+  // Compute aggregate stats across all active reviews
+  const allActiveReviews = await Review.find({ isDeleted: { $ne: true } })
+    .select('_id rating targetListing targetUser')
+    .lean();
+
+  const totalReviews = allActiveReviews.length;
+  let totalRatingSum = 0;
+  const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+
+  allActiveReviews.forEach((r) => {
+    const star = Math.min(5, Math.max(1, Math.round(r.rating || 5)));
+    distribution[star] = (distribution[star] || 0) + 1;
+    totalRatingSum += (r.rating || 0);
+  });
+
+  const avgRating = totalReviews > 0 ? Math.round((totalRatingSum / totalReviews) * 10) / 10 : 0;
+  const fiveStarCount = distribution[5] || 0;
+  const oneStarCount = (distribution[1] || 0) + (distribution[2] || 0);
+
+  // Fetch pending review reports
+  const pendingReports = await Report.find({ target_type: 'review', status: 'pending', is_deleted: { $ne: true } })
+    .select('target_id reason description status created_at')
+    .lean();
+
+  const reportedReviewIds = new Set(pendingReports.map((rp) => rp.target_id?.toString()));
+  const reportedCount = reportedReviewIds.size;
+
+  // Build filter query
+  const q = { isDeleted: { $ne: true } };
+
+  if (rating && !isNaN(Number(rating))) {
+    q.rating = Number(rating);
+  }
+
+  if (tab === 'product') {
+    q.targetListing = { $exists: true, $ne: null };
+  } else if (tab === 'vendor') {
+    q.targetUser = { $exists: true, $ne: null };
+    q.targetListing = { $in: [null, undefined] };
+  } else if (tab === 'creator') {
+    q.targetUser = { $exists: true, $ne: null };
+  } else if (tab === 'reported') {
+    const reportIdsArr = Array.from(reportedReviewIds);
+    q._id = { $in: reportIdsArr };
+  }
+
+  if (search && search.trim()) {
+    q.comment = { $regex: search.trim(), $options: 'i' };
+  }
+
+  const totalCount = await Review.countDocuments(q);
+
+  const reviews = await Review.find(q)
+    .populate('author', 'name email avatarUrl phone')
+    .populate('targetListing', 'title thumbnail images price category vendor')
+    .populate('targetUser', 'name email avatarUrl roles vendorProfile creatorProfile')
+    .sort({ createdAt: -1 })
+    .skip((pageNum - 1) * limitNum)
+    .limit(limitNum)
+    .lean();
+
+  // Role-specific filtering for creator/vendor tabs
+  let filteredReviews = reviews;
+  if (tab === 'creator') {
+    filteredReviews = reviews.filter((r) => {
+      const u = r.targetUser;
+      return u && (u.roles?.includes('creator') || u.creatorProfile);
+    });
+  } else if (tab === 'vendor') {
+    filteredReviews = reviews.filter((r) => {
+      const u = r.targetUser;
+      return u && (u.roles?.includes('vendor') || u.vendorProfile || !r.targetListing);
+    });
+  }
+
+  // Attach report information and normalized fields
+  const items = filteredReviews.map((r) => {
+    const reportsForThis = pendingReports.filter((rp) => rp.target_id?.toString() === r._id.toString());
+    const isReported = reportsForThis.length > 0;
+
+    let targetType = 'listing';
+    if (!r.targetListing && r.targetUser) {
+      targetType = r.targetUser?.roles?.includes('creator') ? 'creator' : 'vendor';
+    } else if (r.targetListing) {
+      targetType = 'listing';
+    }
+
+    return {
       id: r._id.toString(),
-      reviewer_id: r.reviewer_id,
-      target_type: r.target_type,
-      target_id: r.target_id,
+      _id: r._id.toString(),
       rating: r.rating,
       comment: r.comment,
-      is_active: r.is_active,
-      created_at: r.created_at || r.createdAt,
-    })),
+      author: r.author
+        ? {
+            id: r.author._id?.toString(),
+            name: r.author.name || 'Anonymous User',
+            email: r.author.email || '',
+            avatarUrl: r.author.avatarUrl || null,
+            phone: r.author.phone || '',
+          }
+        : null,
+      targetListing: r.targetListing
+        ? {
+            id: r.targetListing._id?.toString(),
+            title: r.targetListing.title || 'Untitled Listing',
+            thumbnail:
+              r.targetListing.thumbnail ||
+              r.targetListing.images?.[0]?.url ||
+              r.targetListing.images?.[0] ||
+              null,
+            price: r.targetListing.price,
+            category: r.targetListing.category,
+          }
+        : null,
+      targetUser: r.targetUser
+        ? {
+            id: r.targetUser._id?.toString(),
+            name: r.targetUser.name || (targetType === 'creator' ? 'Creator' : 'Vendor'),
+            email: r.targetUser.email || '',
+            avatarUrl: r.targetUser.avatarUrl || null,
+            roles: r.targetUser.roles || [],
+          }
+        : null,
+      targetType,
+      target_type: targetType,
+      isReported,
+      reports: reportsForThis,
+      created_at: r.createdAt || r.created_at,
+      createdAt: r.createdAt || r.created_at,
+    };
+  });
+
+  res.json({
+    items,
+    stats: {
+      totalReviews,
+      avgRating,
+      fiveStarCount,
+      oneStarCount,
+      reportedCount,
+      distribution,
+    },
+    pagination: {
+      page: pageNum,
+      limit: limitNum,
+      total: totalCount,
+      totalPages: Math.ceil(totalCount / limitNum) || 1,
+    },
   });
 }));
 
 router.delete('/reviews/:id', requireAuth, requireAdmin, catchAsync(async (req, res) => {
-  const { Review } = require('../models/Phase4');
-  await Review.updateOne({ _id: req.params.id }, { $set: { is_deleted: true } });
+  const Review = require('../models/Review');
+  const reviewService = require('../services/review.service');
+
+  const review = await Review.findById(req.params.id);
+  if (!review) {
+    return res.status(404).json({ message: 'Review not found.' });
+  }
+
+  review.isDeleted = true;
+  review.deletedAt = new Date();
+  await review.save();
+
+  // Recalculate stats on Listing and User
+  if (review.targetListing || review.targetUser) {
+    await reviewService.updateStats(review.targetListing, review.targetUser);
+  }
   
   try {
     const { emitToAdmin } = require('../sockets');
     emitToAdmin('admin:update', { tags: ['Reviews'] });
   } catch (err) {}
 
-  res.json({ ok: true });
+  res.json({ ok: true, message: 'Review deleted and ratings recalculated successfully.' });
 }));
 
 // ============================================================ CHAT MONITORING
