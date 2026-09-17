@@ -31,36 +31,36 @@ class CreatorController {
       hireRequestsCount,
       pendingRequests,
       reels,
-      totalOrders,
+      campaignsCount,
       portfolioReelsCount,
       portfolioImagesCount,
       thisMonthHires,
       lastMonthHires,
-      thisMonthOrders,
-      lastMonthOrders,
+      thisMonthCampaigns,
+      lastMonthCampaigns,
       thisMonthReels,
       lastMonthReels
     ] = await Promise.all([
       HireRequest.countDocuments({ creator: userId }),
       HireRequest.countDocuments({ creator: userId, status: 'pending' }),
       Reel.find({ creator: userId }).select('views').lean(),
-      Order.countDocuments({ vendor: userId }),
+      Campaign.countDocuments({ creator: userId, hireRequest: { $exists: false } }),
       Reel.countDocuments({ creator: userId }),
-      Listing.countDocuments({ vendor: userId }),
+      Listing.countDocuments({ vendor: userId, category: 'Portfolio' }),
       HireRequest.countDocuments({ creator: userId, createdAt: { $gte: startOfThisMonth } }),
       HireRequest.countDocuments({ creator: userId, createdAt: { $gte: startOfLastMonth, $lt: startOfThisMonth } }),
-      Order.countDocuments({ vendor: userId, createdAt: { $gte: startOfThisMonth } }),
-      Order.countDocuments({ vendor: userId, createdAt: { $gte: startOfLastMonth, $lt: startOfThisMonth } }),
+      Campaign.countDocuments({ creator: userId, hireRequest: { $exists: false }, createdAt: { $gte: startOfThisMonth } }),
+      Campaign.countDocuments({ creator: userId, hireRequest: { $exists: false }, createdAt: { $gte: startOfLastMonth, $lt: startOfThisMonth } }),
       Reel.find({ creator: userId, createdAt: { $gte: startOfThisMonth } }).select('views').lean(),
       Reel.find({ creator: userId, createdAt: { $gte: startOfLastMonth, $lt: startOfThisMonth } }).select('views').lean()
     ]);
 
-    const totalProjectsCount = hireRequestsCount + totalOrders;
+    const totalProjectsCount = hireRequestsCount + campaignsCount;
     const totalViews = reels.reduce((acc, r) => acc + (r.views || 0), 0);
 
     // Dynamic calculations for Project Trends
-    const thisMonthProjects = thisMonthHires + thisMonthOrders;
-    const lastMonthProjects = lastMonthHires + lastMonthOrders;
+    const thisMonthProjects = thisMonthHires + thisMonthCampaigns;
+    const lastMonthProjects = lastMonthHires + lastMonthCampaigns;
     const projectsTrend = lastMonthProjects > 0
       ? Math.round(((thisMonthProjects - lastMonthProjects) / lastMonthProjects) * 100)
       : (thisMonthProjects > 0 ? 100 : 0);
@@ -180,7 +180,7 @@ class CreatorController {
 
     const [reels, listings] = await Promise.all([
       Reel.find({ creator: userId }).sort({ createdAt: -1 }).lean(),
-      Listing.find({ vendor: userId }).sort({ createdAt: -1 }).lean()
+      Listing.find({ vendor: userId, category: 'Portfolio' }).sort({ createdAt: -1 }).lean()
     ]);
 
     return ApiResponse.ok(res, 'Creator portfolio loaded.', {
@@ -343,16 +343,17 @@ class CreatorController {
   getOrders = asyncHandler(async (req, res) => {
     const userId = req.user._id;
 
-    const [hireRequests, orders] = await Promise.all([
-      HireRequest.find({ creator: userId }).sort({ createdAt: -1 }).populate('vendor', 'name').lean(),
-      Order.find({ vendor: userId }).sort({ createdAt: -1 }).populate('customer', 'name').populate('listing', 'title').lean()
+    // Strict role isolation: Only fetch Creator collaborations & campaigns (No vendor store product orders)
+    const [hireRequests, campaigns] = await Promise.all([
+      HireRequest.find({ creator: userId }).sort({ createdAt: -1 }).populate('vendor', 'name email phone avatar').lean(),
+      Campaign.find({ creator: userId, hireRequest: { $exists: false } }).sort({ createdAt: -1 }).populate('vendor', 'name email phone avatar').lean()
     ]);
 
     const mappedHires = hireRequests.map((h) => ({
       _id: h._id.toString(),
       id: h._id.toString(),
-      title: h.title || 'Creator Hire Request',
-      vendor_name: h.vendor?.name || 'Vendor Client',
+      title: h.title || 'Creator Collaboration',
+      vendor_name: h.vendor?.name || 'Brand Client',
       vendor_id: h.vendor?._id?.toString(),
       amount: h.budget || 0,
       status: h.status || 'pending',
@@ -360,25 +361,29 @@ class CreatorController {
       type: 'Collaboration',
       deliveryDays: h.deliveryDays,
       paymentStatus: h.paymentStatus || 'unpaid',
+      escrowStatus: h.escrowStatus || 'not_held',
       description: h.description || 'No campaign details provided.'
     }));
 
-    const mappedOrders = orders.map((o) => ({
-      _id: o._id.toString(),
-      id: o._id.toString(),
-      title: o.listing?.title || 'Promo Reel Shoot',
-      vendor_name: o.customer?.name || 'Vendor Client',
-      vendor_id: o.customer?._id?.toString(),
-      amount: o.price || 0,
-      status: o.status || 'completed',
-      created_at: o.createdAt,
-      type: 'Direct Purchase',
-      quantity: o.quantity || 1,
-      paymentStatus: o.paymentStatus || 'paid',
-      address: o.address || 'Local storefront pickup/delivery'
+    const mappedCampaigns = campaigns.map((c) => ({
+      _id: c._id.toString(),
+      id: c._id.toString(),
+      title: c.title || 'Brand Campaign',
+      vendor_name: c.vendor?.name || 'Brand Client',
+      vendor_id: c.vendor?._id?.toString(),
+      amount: c.budget || 0,
+      status: c.status || 'active',
+      created_at: c.createdAt,
+      type: 'Campaign',
+      deliveryDays: c.durationDays || 7,
+      paymentStatus: c.paymentStatus || 'unpaid',
+      escrowStatus: c.escrowStatus || 'not_held',
+      description: c.description || 'No campaign details provided.'
     }));
 
-    const allProjects = [...mappedHires, ...mappedOrders];
+    const allProjects = [...mappedHires, ...mappedCampaigns].sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    );
 
     return ApiResponse.ok(res, 'Creator projects loaded.', allProjects);
   });
@@ -392,17 +397,18 @@ class CreatorController {
     if (hire) {
       hire.status = status;
       await hire.save();
+      await Campaign.updateOne({ hireRequest: hire._id }, { $set: { status } });
       return ApiResponse.ok(res, `Project status updated to ${status}.`, { project: hire });
     }
 
-    let order = await Order.findOne({ _id: id, vendor: req.user._id });
-    if (order) {
-      order.status = status;
-      await order.save();
-      return ApiResponse.ok(res, `Order status updated to ${status}.`, { order });
+    let campaign = await Campaign.findOne({ _id: id, creator: req.user._id });
+    if (campaign) {
+      campaign.status = status;
+      await campaign.save();
+      return ApiResponse.ok(res, `Campaign status updated to ${status}.`, { campaign });
     }
 
-    throw ApiError.notFound('Project or order not found.');
+    throw ApiError.notFound('Creator project or campaign not found.');
   });
 }
 
