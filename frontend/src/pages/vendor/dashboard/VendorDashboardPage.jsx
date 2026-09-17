@@ -22,7 +22,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 
 export default function VendorDashboardPage() {
   const { bi, t } = useLanguage();
-  const { data: dashboardRes, isLoading, refetch: refetchDashboard } = useGetVendorDashboardQuery(undefined, { pollingInterval: 60000 });
+  const { data: dashboardRes, isLoading, isError, refetch: refetchDashboard } = useGetVendorDashboardQuery(undefined, { pollingInterval: 60000 });
   const { data: walletRes, refetch: refetchWallet } = useGetVendorWalletQuery(undefined, { pollingInterval: 30000 });
   const { data: leadsRes, refetch: refetchLeads } = useGetVendorLeadsQuery(undefined, { pollingInterval: 300000 });
   const { data: reelsRes, refetch: refetchReels } = useGetVendorReelsQuery(undefined, { pollingInterval: 300000 });
@@ -168,6 +168,19 @@ export default function VendorDashboardPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans p-2 sm:p-4 animate-fade-in">
       
+      {/* ── 0. ERROR RETRY BANNER ── */}
+      {isError && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-amber-900 shadow-xs">
+          <span>{bi('⚠️ Notice: Unable to sync latest dashboard metrics from server. Showing cached or fallback data.', '⚠️ सूचना: सर्वर से नवीनतम डेटा लोड नहीं हो सका।')}</span>
+          <button
+            onClick={() => refetchDashboard()}
+            className="px-3 py-1.5 bg-[#241b15] text-[#d99a3d] hover:bg-[#382b22] rounded-lg font-bold transition whitespace-nowrap self-start sm:self-auto cursor-pointer"
+          >
+            {bi('Retry Sync', 'पुनः प्रयास करें')}
+          </button>
+        </div>
+      )}
+
       {/* ── 0. UNVERIFIED VENDOR ALERT PROMPT ── */}
       {!isVendorKycApproved && (
         <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-amber-500/10 border-2 border-[#d99a3d] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs font-sans">

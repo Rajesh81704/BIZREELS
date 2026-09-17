@@ -19,9 +19,19 @@ const RATES_CACHE_TTL_MS = 30000; // 30 seconds cache
 class VendorController {
   // ── Vendor Dashboard ─────────────────────────────────────
   getDashboard = asyncHandler(async (req, res) => {
-    const userId = req.user._id;
-    const userIdStr = userId.toString();
-    const vendorMatch = { $in: [userId, userIdStr] };
+    const mongoose = require('mongoose');
+    const rawUserId = req.user?._id || req.user?.id;
+    const userIdStr = rawUserId ? rawUserId.toString() : '';
+    let userObjId = null;
+    try {
+      if (mongoose.Types.ObjectId.isValid(userIdStr)) {
+        userObjId = new mongoose.Types.ObjectId(userIdStr);
+      }
+    } catch (e) {}
+
+    const matchIds = userObjId ? [userObjId, userIdStr] : [userIdStr];
+    const vendorMatch = { $in: matchIds };
+    const userId = userObjId || userIdStr;
     const referralService = require('../services/referral.service');
     const walletService = require('../services/wallet.service');
 
@@ -54,23 +64,23 @@ class VendorController {
       recentFollowersCount,
       prevFollowersCount
     ] = await Promise.all([
-      Listing.countDocuments({ vendor: vendorMatch, type: 'product', isDeleted: { $ne: true } }),
-      Listing.countDocuments({ vendor: vendorMatch, type: 'product', isDeleted: { $ne: true }, createdAt: { $gte: thirtyDaysAgo } }),
-      Listing.countDocuments({ vendor: vendorMatch, type: 'product', isDeleted: { $ne: true }, createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }),
+      Listing.countDocuments({ vendor: vendorMatch, type: 'product', isDeleted: { $ne: true } }).catch(() => 0),
+      Listing.countDocuments({ vendor: vendorMatch, type: 'product', isDeleted: { $ne: true }, createdAt: { $gte: thirtyDaysAgo } }).catch(() => 0),
+      Listing.countDocuments({ vendor: vendorMatch, type: 'product', isDeleted: { $ne: true }, createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }).catch(() => 0),
       
-      Listing.countDocuments({ vendor: vendorMatch, type: 'service', isDeleted: { $ne: true } }),
-      Listing.countDocuments({ vendor: vendorMatch, type: 'service', isDeleted: { $ne: true }, createdAt: { $gte: thirtyDaysAgo } }),
-      Listing.countDocuments({ vendor: vendorMatch, type: 'service', isDeleted: { $ne: true }, createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }),
+      Listing.countDocuments({ vendor: vendorMatch, type: 'service', isDeleted: { $ne: true } }).catch(() => 0),
+      Listing.countDocuments({ vendor: vendorMatch, type: 'service', isDeleted: { $ne: true }, createdAt: { $gte: thirtyDaysAgo } }).catch(() => 0),
+      Listing.countDocuments({ vendor: vendorMatch, type: 'service', isDeleted: { $ne: true }, createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }).catch(() => 0),
       
-      Reel.find({ creator: vendorMatch, isDeleted: { $ne: true } }).select('views status createdAt').lean(),
+      Reel.find({ creator: vendorMatch, isDeleted: { $ne: true } }).select('views status createdAt').lean().catch(() => []),
       
-      Order.countDocuments({ vendor: vendorMatch }),
-      Order.countDocuments({ vendor: vendorMatch, createdAt: { $gte: thirtyDaysAgo } }),
-      Order.countDocuments({ vendor: vendorMatch, createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }),
+      Order.countDocuments({ vendor: vendorMatch }).catch(() => 0),
+      Order.countDocuments({ vendor: vendorMatch, createdAt: { $gte: thirtyDaysAgo } }).catch(() => 0),
+      Order.countDocuments({ vendor: vendorMatch, createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }).catch(() => 0),
       
-      Inquiry.countDocuments({ vendor: vendorMatch }),
-      Inquiry.countDocuments({ vendor: vendorMatch, createdAt: { $gte: thirtyDaysAgo } }),
-      Inquiry.countDocuments({ vendor: vendorMatch, createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }),
+      Inquiry.countDocuments({ vendor: vendorMatch }).catch(() => 0),
+      Inquiry.countDocuments({ vendor: vendorMatch, createdAt: { $gte: thirtyDaysAgo } }).catch(() => 0),
+      Inquiry.countDocuments({ vendor: vendorMatch, createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }).catch(() => 0),
       
       Promise.all([
         walletService.getOrCreateWallet(userId).catch(() => null),
@@ -173,7 +183,7 @@ class VendorController {
       ]).catch(() => []),
       
       Deal.aggregate([
-        { $match: { seller_id: { $in: [userIdStr, userId] }, status: 'completed' } },
+        { $match: { seller_id: { $in: matchIds }, status: 'completed' } },
         {
           $group: {
             _id: null,
@@ -194,7 +204,7 @@ class VendorController {
         }
       ]).catch(() => []),
       Deal.aggregate([
-        { $match: { seller_id: { $in: [userIdStr, userId] }, status: 'completed', created_at: { $gte: thirtyDaysAgo } } },
+        { $match: { seller_id: { $in: matchIds }, status: 'completed', created_at: { $gte: thirtyDaysAgo } } },
         {
           $group: {
             _id: null,
@@ -215,7 +225,7 @@ class VendorController {
         }
       ]).catch(() => []),
       Deal.aggregate([
-        { $match: { seller_id: { $in: [userIdStr, userId] }, status: 'completed', created_at: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } } },
+        { $match: { seller_id: { $in: matchIds }, status: 'completed', created_at: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } } },
         {
           $group: {
             _id: null,
@@ -236,8 +246,8 @@ class VendorController {
         }
       ]).catch(() => []),
       
-      Follow.countDocuments({ following_id: { $in: [userIdStr, userId] }, created_at: { $gte: thirtyDaysAgo } }),
-      Follow.countDocuments({ following_id: { $in: [userIdStr, userId] }, created_at: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } })
+      Follow.countDocuments({ following_id: { $in: matchIds }, created_at: { $gte: thirtyDaysAgo } }).catch(() => 0),
+      Follow.countDocuments({ following_id: { $in: matchIds }, created_at: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }).catch(() => 0)
     ]);
 
     const totalReels = reels.length;
