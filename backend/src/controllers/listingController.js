@@ -348,6 +348,36 @@ class ListingController {
       shares: updatedListing ? (updatedListing.shares || 0) : 1
     });
   });
+
+  // ── AI Copy Generation ──────────────────────────────────
+  generateAICopy = asyncHandler(async (req, res) => {
+    const aiService = require('../services/ai.service');
+    const { prompt, imageUrl, title, category, subcategory, type, brand, sellingPrice } = req.body;
+    const promptText = prompt || title || `${category || 'Product'} with features`;
+    
+    const result = await aiService.generateDescription({
+      prompt: promptText,
+      type: type || 'product',
+      category: category || '',
+      subcategory: subcategory || '',
+      context: {
+        title: title || '',
+        brand: brand || '',
+        sellingPrice: sellingPrice || '',
+        imageUrl: imageUrl || '',
+      },
+    });
+
+    return ApiResponse.ok(res, 'AI copy generated successfully.', {
+      title: title || result.title || '',
+      shortDescription: result.shortDescription || '',
+      description: result.detailedDescription || result.description || '',
+      copy: result.detailedDescription || result.description || '',
+      tags: result.tags || result.aiLabels || [],
+      serviceHighlights: result.serviceHighlights || '',
+      ...result,
+    });
+  });
 }
 
 module.exports = new ListingController();

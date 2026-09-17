@@ -554,19 +554,44 @@ export default function CreateListingScreen() {
           setVariantImageUrl(uploadedUrl);
         } else if (target === 'aiMedia') {
           setImageUrl(uploadedUrl);
+          if (!galleryImages.includes(uploadedUrl)) setGalleryImages([uploadedUrl, ...galleryImages]);
           // AI media scan auto-fill description
           setGeneratingAiCopy(true);
           try {
-            const aiRes = await api.post('/listings/ai-copy', {
-              imageUrl: uploadedUrl,
-              title: title || category,
-              category,
-            });
-            const copyData = aiRes.data?.data || aiRes.data;
-            if (copyData?.description || copyData?.copy) {
-              setDescription(copyData.description || copyData.copy);
+            let copyData: any = null;
+            try {
+              const aiRes = await api.post('/listings/ai-copy', {
+                imageUrl: uploadedUrl,
+                prompt: aiPrompt.trim() || title || category,
+                title: title || category,
+                category,
+                subcategory,
+                type,
+              });
+              copyData = aiRes.data?.data || aiRes.data;
+            } catch (e1) {
+              const aiRes = await api.post('/ai/generate-description', {
+                prompt: aiPrompt.trim() || title || category,
+                type,
+                category,
+                subcategory,
+                context: { imageUrl: uploadedUrl, title, brand, price: sellingPrice },
+              });
+              copyData = aiRes.data?.data || aiRes.data;
+            }
+
+            if (copyData) {
+              const desc = copyData.description || copyData.copy || copyData.detailedDescription;
+              if (desc) setDescription(desc);
               if (copyData.shortDescription) setShortDescription(copyData.shortDescription);
-              Alert.alert('✨ Gemini AI Scan Complete!', 'Product highlights extracted from media photo.');
+              if (copyData.title && !title) setTitle(copyData.title);
+              if (copyData.serviceHighlights && type === 'service') setServiceHighlights(copyData.serviceHighlights);
+              if (Array.isArray(copyData.tags) && copyData.tags.length > 0) {
+                setTags(prev => Array.from(new Set([...prev, ...copyData.tags])));
+              } else if (Array.isArray(copyData.aiLabels) && copyData.aiLabels.length > 0) {
+                setTags(prev => Array.from(new Set([...prev, ...copyData.aiLabels])));
+              }
+              Alert.alert('✨ Gemini AI Scan Complete!', 'Listing details auto-filled from sample media.');
             }
           } catch {
             Alert.alert('Notice', 'Photo uploaded. AI scan complete.');
@@ -585,27 +610,49 @@ export default function CreateListingScreen() {
 
   // AI Description Generator
   const handleGenerateAiCopy = async () => {
-    const promptText = aiPrompt.trim() || title.trim() || `${category} product`;
+    const promptText = aiPrompt.trim() || title.trim() || `${category} ${type}`;
     setGeneratingAiCopy(true);
     try {
-      const { data } = await api.post('/listings/ai-copy', {
-        prompt: promptText,
-        title: title.trim(),
-        category,
-        type,
-        brand,
-        sellingPrice,
-      });
-      const res = data?.data || data;
-      if (res?.description || res?.copy || res?.shortDescription) {
-        if (res.shortDescription) setShortDescription(res.shortDescription);
-        if (res.description || res.copy) setDescription(res.description || res.copy);
-        Alert.alert('✨ Gemini AI Description Generated!', 'Product highlights synthesized successfully.');
-      } else {
-        Alert.alert('Notice', 'AI copy generator completed. Review description below.');
+      let copyData: any = null;
+      try {
+        const { data } = await api.post('/listings/ai-copy', {
+          prompt: promptText,
+          title: title.trim(),
+          category,
+          subcategory,
+          type,
+          brand,
+          sellingPrice,
+        });
+        copyData = data?.data || data;
+      } catch (e1) {
+        const { data } = await api.post('/ai/generate-description', {
+          prompt: promptText,
+          type,
+          category,
+          subcategory,
+          context: { title: title.trim(), brand, price: sellingPrice },
+        });
+        copyData = data?.data || data;
       }
-    } catch (err) {
-      Alert.alert('Notice', 'Type description manually or try again.');
+
+      if (copyData) {
+        const desc = copyData.description || copyData.copy || copyData.detailedDescription;
+        if (desc) setDescription(desc);
+        if (copyData.shortDescription) setShortDescription(copyData.shortDescription);
+        if (copyData.title && !title) setTitle(copyData.title);
+        if (copyData.serviceHighlights && type === 'service') setServiceHighlights(copyData.serviceHighlights);
+        if (Array.isArray(copyData.tags) && copyData.tags.length > 0) {
+          setTags(prev => Array.from(new Set([...prev, ...copyData.tags])));
+        } else if (Array.isArray(copyData.aiLabels) && copyData.aiLabels.length > 0) {
+          setTags(prev => Array.from(new Set([...prev, ...copyData.aiLabels])));
+        }
+        Alert.alert('✨ Gemini AI Content Generated!', 'Listing details synthesized successfully.');
+      } else {
+        Alert.alert('Notice', 'AI generator completed. Review description fields below.');
+      }
+    } catch (err: any) {
+      Alert.alert('AI Generation Error', err?.response?.data?.message || 'Could not generate AI content. Please enter details manually.');
     } finally {
       setGeneratingAiCopy(false);
     }
