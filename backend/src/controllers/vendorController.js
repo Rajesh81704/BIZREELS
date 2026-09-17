@@ -17,11 +17,24 @@ const RATES_CACHE_TTL_MS = 30000; // 30 seconds cache
  * Handles Vendor Portal dashboard, analytics, and boost queries.
  */
 class VendorController {
-  // ── Vendor Dashboard ─────────────────────────────────────
+  // ── Vendor Dashboard (Production-Optimized with Redis Caching & $facet) ───
   getDashboard = asyncHandler(async (req, res) => {
     const mongoose = require('mongoose');
+    const cache = require('../utils/cache');
     const rawUserId = req.user?._id || req.user?.id;
     const userIdStr = rawUserId ? rawUserId.toString() : '';
+
+    if (!userIdStr) {
+      return ApiResponse.unauthorized(res, 'User identity could not be determined.');
+    }
+
+    // Fast-path: Check Redis cache first (TTL: 30s)
+    const cacheKey = `cache:vendor:dashboard:${userIdStr}`;
+    const cachedResponse = await cache.getCache(cacheKey).catch(() => null);
+    if (cachedResponse) {
+      return ApiResponse.ok(res, 'Vendor dashboard loaded (cached)', cachedResponse);
+    }
+
     let userObjId = null;
     try {
       if (mongoose.Types.ObjectId.isValid(userIdStr)) {
@@ -39,221 +52,273 @@ class VendorController {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
+    // Run consolidated aggregations in parallel (reduced from 22 queries to 8)
     const [
-      productsCount,
-      recentProductsCount,
-      prevProductsCount,
-      servicesCount,
-      recentServicesCount,
-      prevServicesCount,
-      reels,
-      ordersCount,
-      recentOrdersCount,
-      prevOrdersCount,
-      leadsCount,
-      recentLeadsCount,
-      prevLeadsCount,
+      listingAgg,
+      reelAgg,
+      orderAgg,
+      inquiryAgg,
+      dealAgg,
+      followAgg,
       walletInfo,
-      referralInfo,
-      orderSalesAgg,
-      currentOrderSalesAgg,
-      previousOrderSalesAgg,
-      dealSalesAgg,
-      currentDealSalesAgg,
-      previousDealSalesAgg,
-      recentFollowersCount,
-      prevFollowersCount
+      referralInfo
     ] = await Promise.all([
-      Listing.countDocuments({ vendor: vendorMatch, type: 'product', isDeleted: { $ne: true } }).catch(() => 0),
-      Listing.countDocuments({ vendor: vendorMatch, type: 'product', isDeleted: { $ne: true }, createdAt: { $gte: thirtyDaysAgo } }).catch(() => 0),
-      Listing.countDocuments({ vendor: vendorMatch, type: 'product', isDeleted: { $ne: true }, createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }).catch(() => 0),
-      
-      Listing.countDocuments({ vendor: vendorMatch, type: 'service', isDeleted: { $ne: true } }).catch(() => 0),
-      Listing.countDocuments({ vendor: vendorMatch, type: 'service', isDeleted: { $ne: true }, createdAt: { $gte: thirtyDaysAgo } }).catch(() => 0),
-      Listing.countDocuments({ vendor: vendorMatch, type: 'service', isDeleted: { $ne: true }, createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }).catch(() => 0),
-      
-      Reel.find({ creator: vendorMatch, isDeleted: { $ne: true } }).select('views status createdAt').lean().catch(() => []),
-      
-      Order.countDocuments({ vendor: vendorMatch }).catch(() => 0),
-      Order.countDocuments({ vendor: vendorMatch, createdAt: { $gte: thirtyDaysAgo } }).catch(() => 0),
-      Order.countDocuments({ vendor: vendorMatch, createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }).catch(() => 0),
-      
-      Inquiry.countDocuments({ vendor: vendorMatch }).catch(() => 0),
-      Inquiry.countDocuments({ vendor: vendorMatch, createdAt: { $gte: thirtyDaysAgo } }).catch(() => 0),
-      Inquiry.countDocuments({ vendor: vendorMatch, createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }).catch(() => 0),
-      
+      // 1. Listing Consolidation (1 query replacing 6 count queries)
+      Listing.aggregate([
+        { $match: { vendor: vendorMatch, isDeleted: { $ne: true } } },
+        {
+          $group: {
+            _id: '$type',
+            total: { $sum: 1 },
+            recent: { $sum: { $cond: [{ $gte: ['$createdAt', thirtyDaysAgo] }, 1, 0] } },
+            prev: {
+              $sum: {
+                $cond: [
+                  { $and: [{ $gte: ['$createdAt', sixtyDaysAgo] }, { $lt: ['$createdAt', thirtyDaysAgo] }] },
+                  1,
+                  0
+                ]
+              }
+            }
+          }
+        }
+      ]).catch(() => []),
+
+      // 2. Reel Metrics Aggregation (1 query replacing find + in-memory reduce/filter)
+      Reel.aggregate([
+        { $match: { creator: vendorMatch, isDeleted: { $ne: true } } },
+        {
+          $group: {
+            _id: null,
+            totalReels: { $sum: 1 },
+            totalViews: { $sum: { $ifNull: ['$views', 0] } },
+            recentReels: { $sum: { $cond: [{ $gte: ['$createdAt', thirtyDaysAgo] }, 1, 0] } },
+            prevReels: {
+              $sum: {
+                $cond: [
+                  { $and: [{ $gte: ['$createdAt', sixtyDaysAgo] }, { $lt: ['$createdAt', thirtyDaysAgo] }] },
+                  1,
+                  0
+                ]
+              }
+            },
+            reelIds: { $push: '$_id' }
+          }
+        }
+      ]).catch(() => []),
+
+      // 3. Order Consolidation (1 query replacing 3 count + 3 sales aggregations)
+      Order.aggregate([
+        { $match: { vendor: vendorMatch } },
+        {
+          $facet: {
+            counts: [
+              {
+                $group: {
+                  _id: null,
+                  total: { $sum: 1 },
+                  recent: { $sum: { $cond: [{ $gte: ['$createdAt', thirtyDaysAgo] }, 1, 0] } },
+                  prev: {
+                    $sum: {
+                      $cond: [
+                        { $and: [{ $gte: ['$createdAt', sixtyDaysAgo] }, { $lt: ['$createdAt', thirtyDaysAgo] }] },
+                        1,
+                        0
+                      ]
+                    }
+                  }
+                }
+              }
+            ],
+            sales: [
+              {
+                $match: {
+                  status: { $nin: ['cancelled', 'rejected', 'refunded'] },
+                  $or: [
+                    { paymentStatus: 'paid' },
+                    { status: { $in: ['accepted', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'completed'] } }
+                  ]
+                }
+              },
+              {
+                $project: {
+                  createdAt: 1,
+                  netAmount: {
+                    $max: [
+                      0,
+                      {
+                        $subtract: [
+                          { $ifNull: ['$itemTotal', { $multiply: [{ $ifNull: ['$price', 0] }, { $ifNull: ['$quantity', 1] }] }] },
+                          { $ifNull: ['$couponDiscount', 0] }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                $group: {
+                  _id: null,
+                  totalSales: { $sum: '$netAmount' },
+                  currentSales: {
+                    $sum: { $cond: [{ $gte: ['$createdAt', thirtyDaysAgo] }, '$netAmount', 0] }
+                  },
+                  prevSales: {
+                    $sum: {
+                      $cond: [
+                        { $and: [{ $gte: ['$createdAt', sixtyDaysAgo] }, { $lt: ['$createdAt', thirtyDaysAgo] }] },
+                        '$netAmount',
+                        0
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]).catch(() => []),
+
+      // 4. Inquiry Aggregation (1 query replacing 3 count queries)
+      Inquiry.aggregate([
+        { $match: { vendor: vendorMatch } },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: 1 },
+            recent: { $sum: { $cond: [{ $gte: ['$createdAt', thirtyDaysAgo] }, 1, 0] } },
+            prev: {
+              $sum: {
+                $cond: [
+                  { $and: [{ $gte: ['$createdAt', sixtyDaysAgo] }, { $lt: ['$createdAt', thirtyDaysAgo] }] },
+                  1,
+                  0
+                ]
+              }
+            }
+          }
+        }
+      ]).catch(() => []),
+
+      // 5. Deal Sales Aggregation (1 query replacing 3 aggregation pipelines)
+      Deal.aggregate([
+        { $match: { seller_id: { $in: matchIds }, status: 'completed' } },
+        {
+          $project: {
+            created_at: 1,
+            amount: {
+              $ifNull: [
+                '$final_amount',
+                {
+                  $ifNull: [
+                    '$current_offer',
+                    { $divide: [{ $ifNull: ['$amount_paise', 0] }, 100] }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalSales: { $sum: '$amount' },
+            currentSales: {
+              $sum: { $cond: [{ $gte: ['$created_at', thirtyDaysAgo] }, '$amount', 0] }
+            },
+            prevSales: {
+              $sum: {
+                $cond: [
+                  { $and: [{ $gte: ['$created_at', sixtyDaysAgo] }, { $lt: ['$created_at', thirtyDaysAgo] }] },
+                  '$amount',
+                  0
+                ]
+              }
+            }
+          }
+        }
+      ]).catch(() => []),
+
+      // 6. Follow Aggregation (1 query replacing 2 count queries)
+      Follow.aggregate([
+        {
+          $match: {
+            following_id: { $in: matchIds },
+            created_at: { $gte: sixtyDaysAgo }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            recent: { $sum: { $cond: [{ $gte: ['$created_at', thirtyDaysAgo] }, 1, 0] } },
+            prev: {
+              $sum: {
+                $cond: [{ $lt: ['$created_at', thirtyDaysAgo] }, 1, 0]
+              }
+            }
+          }
+        }
+      ]).catch(() => []),
+
+      // 7. Wallet & Balance resolution
       Promise.all([
         walletService.getOrCreateWallet(userId).catch(() => null),
         walletService.getRoleWallet(userId, 'vendor').catch(() => null),
         walletService.getRoleBalance(userId, 'vendor').catch(() => null),
       ]),
-      referralService.getVendorDashboard(userId).catch(() => null),
-      
-      Order.aggregate([
-        {
-          $match: {
-            vendor: vendorMatch,
-            status: { $nin: ['cancelled', 'rejected', 'refunded'] },
-            $or: [
-              { paymentStatus: 'paid' },
-              { status: { $in: ['accepted', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'completed'] } }
-            ]
-          }
-        },
-        {
-          $group: {
-            _id: null,
-            total: {
-              $sum: {
-                $max: [
-                  0,
-                  {
-                    $subtract: [
-                      { $ifNull: ['$itemTotal', { $multiply: [{ $ifNull: ['$price', 0] }, { $ifNull: ['$quantity', 1] }] }] },
-                      { $ifNull: ['$couponDiscount', 0] }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
-        }
-      ]).catch(() => []),
-      Order.aggregate([
-        {
-          $match: {
-            vendor: vendorMatch,
-            status: { $nin: ['cancelled', 'rejected', 'refunded'] },
-            $or: [
-              { paymentStatus: 'paid' },
-              { status: { $in: ['accepted', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'completed'] } }
-            ],
-            createdAt: { $gte: thirtyDaysAgo }
-          }
-        },
-        {
-          $group: {
-            _id: null,
-            total: {
-              $sum: {
-                $max: [
-                  0,
-                  {
-                    $subtract: [
-                      { $ifNull: ['$itemTotal', { $multiply: [{ $ifNull: ['$price', 0] }, { $ifNull: ['$quantity', 1] }] }] },
-                      { $ifNull: ['$couponDiscount', 0] }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
-        }
-      ]).catch(() => []),
-      Order.aggregate([
-        {
-          $match: {
-            vendor: vendorMatch,
-            status: { $nin: ['cancelled', 'rejected', 'refunded'] },
-            $or: [
-              { paymentStatus: 'paid' },
-              { status: { $in: ['accepted', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'completed'] } }
-            ],
-            createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo }
-          }
-        },
-        {
-          $group: {
-            _id: null,
-            total: {
-              $sum: {
-                $max: [
-                  0,
-                  {
-                    $subtract: [
-                      { $ifNull: ['$itemTotal', { $multiply: [{ $ifNull: ['$price', 0] }, { $ifNull: ['$quantity', 1] }] }] },
-                      { $ifNull: ['$couponDiscount', 0] }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
-        }
-      ]).catch(() => []),
-      
-      Deal.aggregate([
-        { $match: { seller_id: { $in: matchIds }, status: 'completed' } },
-        {
-          $group: {
-            _id: null,
-            total: {
-              $sum: {
-                $ifNull: [
-                  '$final_amount',
-                  {
-                    $ifNull: [
-                      '$current_offer',
-                      { $divide: [{ $ifNull: ['$amount_paise', 0] }, 100] }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
-        }
-      ]).catch(() => []),
-      Deal.aggregate([
-        { $match: { seller_id: { $in: matchIds }, status: 'completed', created_at: { $gte: thirtyDaysAgo } } },
-        {
-          $group: {
-            _id: null,
-            total: {
-              $sum: {
-                $ifNull: [
-                  '$final_amount',
-                  {
-                    $ifNull: [
-                      '$current_offer',
-                      { $divide: [{ $ifNull: ['$amount_paise', 0] }, 100] }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
-        }
-      ]).catch(() => []),
-      Deal.aggregate([
-        { $match: { seller_id: { $in: matchIds }, status: 'completed', created_at: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } } },
-        {
-          $group: {
-            _id: null,
-            total: {
-              $sum: {
-                $ifNull: [
-                  '$final_amount',
-                  {
-                    $ifNull: [
-                      '$current_offer',
-                      { $divide: [{ $ifNull: ['$amount_paise', 0] }, 100] }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
-        }
-      ]).catch(() => []),
-      
-      Follow.countDocuments({ following_id: { $in: matchIds }, created_at: { $gte: thirtyDaysAgo } }).catch(() => 0),
-      Follow.countDocuments({ following_id: { $in: matchIds }, created_at: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }).catch(() => 0)
+
+      // 8. Referral dashboard info
+      referralService.getVendorDashboard(userId).catch(() => null)
     ]);
 
-    const totalReels = reels.length;
-    const totalViews = reels.reduce((sum, r) => sum + (r.views || 0), 0);
+    // Unpack Listings metrics
+    const prodStats = Array.isArray(listingAgg) ? listingAgg.find(l => l._id === 'product') : null;
+    const servStats = Array.isArray(listingAgg) ? listingAgg.find(l => l._id === 'service') : null;
+    const productsCount = prodStats?.total || 0;
+    const recentProductsCount = prodStats?.recent || 0;
+    const prevProductsCount = prodStats?.prev || 0;
+    const servicesCount = servStats?.total || 0;
+    const recentServicesCount = servStats?.recent || 0;
+    const prevServicesCount = servStats?.prev || 0;
+
+    // Unpack Reels metrics
+    const reelData = Array.isArray(reelAgg) && reelAgg[0] ? reelAgg[0] : null;
+    const totalReels = reelData?.totalReels || 0;
+    const totalViews = reelData?.totalViews || 0;
+    const recentReelsCount = reelData?.recentReels || 0;
+    const prevReelsCount = reelData?.prevReels || 0;
+    const vendorReelIds = reelData?.reelIds || [];
+
+    // Unpack Orders & Sales metrics
+    const orderFacet = Array.isArray(orderAgg) && orderAgg[0] ? orderAgg[0] : {};
+    const orderCounts = Array.isArray(orderFacet.counts) && orderFacet.counts[0] ? orderFacet.counts[0] : null;
+    const orderSalesData = Array.isArray(orderFacet.sales) && orderFacet.sales[0] ? orderFacet.sales[0] : null;
+    const ordersCount = orderCounts?.total || 0;
+    const recentOrdersCount = orderCounts?.recent || 0;
+    const prevOrdersCount = orderCounts?.prev || 0;
+    const orderSalesTotal = orderSalesData?.totalSales || 0;
+    const currentOrderSales = orderSalesData?.currentSales || 0;
+    const prevOrderSales = orderSalesData?.prevSales || 0;
+
+    // Unpack Inquiries metrics
+    const inqData = Array.isArray(inquiryAgg) && inquiryAgg[0] ? inquiryAgg[0] : null;
+    const leadsCount = inqData?.total || 0;
+    const recentLeadsCount = inqData?.recent || 0;
+    const prevLeadsCount = inqData?.prev || 0;
+
+    // Unpack Deals metrics
+    const dealData = Array.isArray(dealAgg) && dealAgg[0] ? dealAgg[0] : null;
+    const dealSalesTotal = dealData?.totalSales || 0;
+    const currentDealSales = dealData?.currentSales || 0;
+    const prevDealSales = dealData?.prevSales || 0;
+
+    // Unpack Follows metrics
+    const followData = Array.isArray(followAgg) && followAgg[0] ? followAgg[0] : null;
+    const recentFollowersCount = followData?.recent || 0;
+    const prevFollowersCount = followData?.prev || 0;
     const followers = req.user.followersCount || (req.user.followers ? req.user.followers.length : 0);
 
+    // Unpack Wallet & Credits with clean rounding
     const roundCredit = (val) => {
       const num = Number(val || 0);
       return isNaN(num) ? 0 : Math.round(num * 100) / 100;
@@ -283,32 +348,25 @@ class VendorController {
       isoWallet?.lifetime_spent ?? 0
     ));
 
-    // Keep all balance stores synchronized in background
-    if (isoWallet && (isoWallet.balance || 0) < availableCredits) {
-      const IsolatedWallet = require('../models/IsolatedWallet.model');
-      IsolatedWallet.updateOne({ _id: isoWallet._id }, { $set: { balance: availableCredits } }).catch(() => {});
-    }
-    if (mainWallet && (mainWallet.credits || 0) < availableCredits) {
-      const { Wallet } = require('../models/Phase4');
-      Wallet.updateOne({ _id: mainWallet._id }, { $set: { credits: availableCredits } }).catch(() => {});
-    }
-    if (req.user && (req.user.walletBalance || 0) < availableCredits) {
-      const User = require('../models/User');
-      User.updateOne({ _id: userId }, { $set: { walletBalance: availableCredits, wallet_credits: availableCredits } }).catch(() => {});
-    }
-
     // View counts from ReelView model to determine historical views trend accurately
     let recentViews = 0;
     let prevViews = 0;
-    const vendorReelIds = reels.map(r => r._id);
     if (vendorReelIds.length > 0) {
       const ReelView = require('../models/ReelView');
-      const [recV, preV] = await Promise.all([
-        ReelView.countDocuments({ reel_id: { $in: vendorReelIds }, viewed_at: { $gte: thirtyDaysAgo } }),
-        ReelView.countDocuments({ reel_id: { $in: vendorReelIds }, viewed_at: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } })
-      ]).catch(() => [0, 0]);
-      recentViews = recV;
-      prevViews = preV;
+      const viewAgg = await ReelView.aggregate([
+        { $match: { reel_id: { $in: vendorReelIds }, viewed_at: { $gte: sixtyDaysAgo } } },
+        {
+          $group: {
+            _id: null,
+            recent: { $sum: { $cond: [{ $gte: ['$viewed_at', thirtyDaysAgo] }, 1, 0] } },
+            prev: { $sum: { $cond: [{ $lt: ['$viewed_at', thirtyDaysAgo] }, 1, 0] } }
+          }
+        }
+      ]).catch(() => []);
+      if (Array.isArray(viewAgg) && viewAgg[0]) {
+        recentViews = viewAgg[0].recent || 0;
+        prevViews = viewAgg[0].prev || 0;
+      }
     }
 
     // Helper to calculate percentages trend safely
@@ -323,22 +381,15 @@ class VendorController {
 
     const trendProducts = calculateTrend(recentProductsCount, prevProductsCount);
     const trendServices = calculateTrend(recentServicesCount, prevServicesCount);
-
-    const recentReelsCount = reels.filter(r => new Date(r.createdAt) >= thirtyDaysAgo).length;
-    const prevReelsCount = reels.filter(r => {
-      const d = new Date(r.createdAt);
-      return d >= sixtyDaysAgo && d < thirtyDaysAgo;
-    }).length;
     const trendReels = calculateTrend(recentReelsCount, prevReelsCount);
-
     const trendViews = calculateTrend(recentViews, prevViews);
     const trendFollowers = calculateTrend(recentFollowersCount, prevFollowersCount);
     const trendEnquiries = calculateTrend(recentLeadsCount, prevLeadsCount);
     const trendOrders = calculateTrend(recentOrdersCount, prevOrdersCount);
 
-    const totalSales = (orderSalesAgg[0]?.total || 0) + (dealSalesAgg[0]?.total || 0);
-    const currentSales = (currentOrderSalesAgg[0]?.total || 0) + (currentDealSalesAgg[0]?.total || 0);
-    const previousSales = (previousOrderSalesAgg[0]?.total || 0) + (previousDealSalesAgg[0]?.total || 0);
+    const totalSales = orderSalesTotal + dealSalesTotal;
+    const currentSales = currentOrderSales + currentDealSales;
+    const previousSales = prevOrderSales + prevDealSales;
     const trendSales = calculateTrend(currentSales, previousSales);
 
     const { AppSettings } = require('../models/Admin');
@@ -379,7 +430,7 @@ class VendorController {
       }
     }
 
-    return ApiResponse.ok(res, 'Vendor dashboard metrics loaded.', {
+    const responseData = {
       totalSales,
       totalOrders: ordersCount,
       activeListings: productsCount,
@@ -417,7 +468,12 @@ class VendorController {
         totalOrders: trendOrders,
         totalSales: trendSales
       }
-    });
+    };
+
+    // Store in Redis with a 30s TTL (fail-safe)
+    cache.setCache(cacheKey, responseData, 30).catch(() => {});
+
+    return ApiResponse.ok(res, 'Vendor dashboard metrics loaded.', responseData);
   });
 
   // ── Vendor Analytics ─────────────────────────────────────
@@ -748,6 +804,17 @@ class VendorController {
       status: 'Active'
     });
   });
+
+  /**
+   * Helper to bust cached dashboard response when listings, reels, or orders change
+   */
+  invalidateDashboardCache = async (userId) => {
+    try {
+      if (!userId) return;
+      const cache = require('../utils/cache');
+      await cache.deleteCache(`cache:vendor:dashboard:${userId.toString()}`);
+    } catch (_) {}
+  };
 }
 
 module.exports = new VendorController();
