@@ -1,8 +1,11 @@
 import axios from "axios";
 
 const rawBackendUrl = import.meta.env.VITE_BACKEND_URL || '';
-const BACKEND_URL = rawBackendUrl.replace(/\/+$/, '');
-export const API_BASE = import.meta.env.VITE_API_URL || (BACKEND_URL ? `${BACKEND_URL}/api` : '/api');
+export const API_BASE = import.meta.env.VITE_API_URL
+  ? (import.meta.env.VITE_API_URL.includes('/api')
+      ? import.meta.env.VITE_API_URL.replace(/\/+$/, '')
+      : `${import.meta.env.VITE_API_URL.replace(/\/+$/, '')}/api`)
+  : (BACKEND_URL ? (BACKEND_URL.includes('/api') ? BACKEND_URL : `${BACKEND_URL}/api`) : '/api');
 
 const ACCESS_KEY = "bizreels_access_token";
 const REFRESH_KEY = "bizreels_refresh_token";
