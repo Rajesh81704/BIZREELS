@@ -28,6 +28,8 @@ const getCategoryEmojiIcon = (categoryName) => {
   if (name.includes('real estate') || name.includes('property')) return '🏢';
   if (name.includes('jewelry') || name.includes('watch')) return '💎';
   if (name.includes('event') || name.includes('wedding')) return '🎉';
+  if (name.includes('shoe') || name.includes('footwear')) return '👟';
+  if (name.includes('gym') || name.includes('fitness') || name.includes('workout')) return '🏋️';
   return '📦';
 };
 
@@ -40,6 +42,9 @@ export default function SearchFiltersBar({
   setDistance,
   category,
   setCategory,
+  categoryChips = [],
+  selectedChipId = 'all',
+  onSelectChip,
   categories = [],
   maxPrice,
   setMaxPrice,
@@ -154,45 +159,49 @@ export default function SearchFiltersBar({
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
         <button
           type="button"
-          onClick={() => setCategory('all')}
+          onClick={() => (onSelectChip ? onSelectChip({ id: 'all' }) : setCategory('all'))}
           className={`px-3 py-1.5 rounded-full font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer border ${
-            category === 'all'
-              ? 'bg-[#d99a3d] text-[#1a1a1a] border-[#d99a3d]'
+            selectedChipId === 'all' || (!selectedChipId && category === 'all')
+              ? 'bg-[#d99a3d] text-[#1a1a1a] border-[#d99a3d] shadow-xs'
               : 'bg-[#f8f4ec] text-slate-600 border-[#e3dccb] hover:border-[#d99a3d]'
           }`}
         >
           All Categories
         </button>
-        {(categories.length > 0
-          ? categories
+        {(categoryChips && categoryChips.length > 0
+          ? categoryChips
+          : categories.length > 0
+          ? categories.map(c => ({ id: c._id || c.id || c.name || c, label: c.name || c, category: c.name || c, type: 'category' }))
           : [
-              { name: 'Electronics' },
-              { name: 'Fashion' },
-              { name: 'Furniture' },
-              { name: 'Services' },
-              { name: 'Automobile' },
-              { name: 'Grocery' },
-              { name: 'Healthcare' },
-              { name: 'Restaurant' },
-              { name: 'Education' },
+              { id: 'cat_electronics', label: 'Electronics', category: 'Electronics', type: 'category' },
+              { id: 'cat_fashion', label: 'Fashion', category: 'Fashion', type: 'category' },
+              { id: 'cat_furniture', label: 'Furniture', category: 'Furniture', type: 'category' },
+              { id: 'cat_services', label: 'Services', category: 'Services', type: 'category' },
+              { id: 'cat_automobile', label: 'Automobile', category: 'Automobile', type: 'category' },
+              { id: 'cat_grocery', label: 'Grocery', category: 'Grocery', type: 'category' },
+              { id: 'cat_healthcare', label: 'Healthcare', category: 'Healthcare', type: 'category' },
+              { id: 'cat_restaurant', label: 'Restaurant', category: 'Restaurant', type: 'category' },
+              { id: 'cat_education', label: 'Education', category: 'Education', type: 'category' },
             ]
-        ).map((cat) => {
-          const catName = cat.name || cat;
-          const active = category === catName;
+        ).map((chip) => {
+          const chipLabel = chip.label || chip.name || String(chip);
+          const active = selectedChipId
+            ? selectedChipId === chip.id
+            : category === chipLabel || category === chip.category;
           return (
             <button
-              key={cat._id || cat.id || catName}
+              key={chip.id || chipLabel}
               type="button"
-              onClick={() => setCategory(catName)}
+              onClick={() => (onSelectChip ? onSelectChip(chip) : setCategory(chipLabel))}
               className={`px-3 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all shrink-0 cursor-pointer border ${
                 active
-                  ? 'bg-[#d99a3d] text-[#1a1a1a] border-[#d99a3d]'
+                  ? 'bg-[#d99a3d] text-[#1a1a1a] border-[#d99a3d] shadow-xs'
                   : 'bg-[#f8f4ec] text-slate-600 border-[#e3dccb] hover:border-[#d99a3d]'
               }`}
             >
               <span className="flex items-center gap-1">
-                <span>{getCategoryEmojiIcon(catName)}</span>
-                <span>{catName}</span>
+                <span>{getCategoryEmojiIcon(chipLabel)}</span>
+                <span>{chipLabel}</span>
               </span>
             </button>
           );

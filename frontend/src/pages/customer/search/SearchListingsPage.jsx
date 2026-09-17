@@ -27,6 +27,9 @@ export default function SearchListingsPage() {
   const [query, setQuery] = useState('');
   const [type, setType] = useState('all'); // 'all' | 'product' | 'service'
   const [category, setCategory] = useState('all');
+  const [subcategory, setSubcategory] = useState('all');
+  const [selectedChipId, setSelectedChipId] = useState('all');
+  const [userInterests, setUserInterests] = useState(() => user?.customerProfile?.interests || []);
   const [maxPrice, setMaxPrice] = useState(20000000);
   const [distance, setDistance] = useState('all');
   const [listings, setListings] = useState([]);
@@ -184,17 +187,108 @@ export default function SearchListingsPage() {
 
   useEffect(() => {
     fetchInteractions();
-    const loadCategories = async () => {
+    if (user?.customerProfile?.interests && Array.isArray(user.customerProfile.interests) && user.customerProfile.interests.length > 0) {
+      setUserInterests(user.customerProfile.interests);
+    }
+    const loadUserInterests = async () => {
+      if (!user) return;
       try {
-        const res = await api.get('/v1/categories');
-        const items = res.data?.items || res.data?.data || [];
-        setCategories(items);
+        const res = await api.get('/v1/users/me/interests');
+        const list = res.data?.interests || [];
+        if (Array.isArray(list) && list.length > 0) {
+          setUserInterests(list);
+        }
       } catch (err) {
-        console.warn('Failed to fetch categories:', err);
+        // guest or non-auth
       }
     };
-    loadCategories();
-  }, []);
+    loadUserInterests();
+  }, [user]);
+
+  // Build category & subcategory chips strictly from onboarding interests (or default curated catalog)
+  const categoryChips = React.useMemo(() => {
+    if (userInterests && userInterests.length > 0) {
+      const chips = [];
+      const seenLabels = new Set();
+
+      // 1. First add unique categories chosen by user
+      userInterests.forEach((item) => {
+        const cat = typeof item === 'string' ? item : item.category;
+        if (cat && cat.trim() && !seenLabels.has(cat.trim().toLowerCase())) {
+          seenLabels.add(cat.trim().toLowerCase());
+          chips.push({
+            id: `cat_${cat.trim().toLowerCase()}`,
+            label: cat.trim(),
+            category: cat.trim(),
+            subcategory: null,
+            type: 'category',
+          });
+        }
+      });
+
+      // 2. Then add unique subcategories chosen by user
+      userInterests.forEach((item) => {
+        if (typeof item === 'object' && item.subcategory && item.subcategory.trim()) {
+          const sub = item.subcategory.trim();
+          if (!seenLabels.has(sub.toLowerCase())) {
+            seenLabels.add(sub.toLowerCase());
+            chips.push({
+              id: `sub_${sub.toLowerCase()}`,
+              label: sub,
+              category: item.category ? item.category.trim() : null,
+              subcategory: sub,
+              type: 'subcategory',
+            });
+          }
+        }
+      });
+
+      return chips;
+    }
+
+    // Default clean catalog if guest or no onboarding interests selected
+    return [
+      { id: 'cat_electronics', label: 'Electronics', category: 'Electronics', type: 'category' },
+      { id: 'cat_fashion', label: 'Fashion', category: 'Fashion', type: 'category' },
+      { id: 'cat_home', label: 'Home & Furniture', category: 'Home & Furniture', type: 'category' },
+      { id: 'cat_services', label: 'Services', category: 'Services', type: 'category' },
+      { id: 'cat_vehicles', label: 'Vehicles', category: 'Vehicles', type: 'category' },
+      { id: 'cat_food', label: 'Food & Grocery', category: 'Food & Grocery', type: 'category' },
+      { id: 'cat_beauty', label: 'Beauty & Salon', category: 'Beauty & Salon', type: 'category' },
+      { id: 'cat_realestate', label: 'Real Estate', category: 'Real Estate', type: 'category' },
+    ];
+  }, [userInterests]);
+
+  const handleSelectChip = (chip) => {
+    if (!chip || chip.id === 'all' || selectedChipId === chip.id) {
+      setSelectedChipId('all');
+      setCategory('all');
+      setSubcategory('all');
+    } else if (chip.type === 'category') {
+      setSelectedChipId(chip.id);
+      setCategory(chip.category);
+      setSubcategory('all');
+    } else if (chip.type === 'subcategory') {
+      setSelectedChipId(chip.id);
+      setCategory(chip.category || chip.label);
+      setSubcategory(chip.subcategory || chip.label);
+    }
+  };
+
+  // Sync URL search params with category filter
+  useEffect(() => {
+    const urlCategory = searchParams.get('category');
+    const urlSubcategory = searchParams.get('subcategory');
+    if (urlCategory && urlCategory !== 'all') {
+      setCategory(urlCategory);
+      if (urlSubcategory && urlSubcategory !== 'all') {
+        setSubcategory(urlSubcategory);
+        setSelectedChipId(`sub_${urlSubcategory.toLowerCase()}`);
+      } else {
+        setSelectedChipId(`cat_${urlCategory.toLowerCase()}`);
+      }
+    }
+  }, [searchParams]);
 
   // Geocode vendor/listing locations if coordinates are [0, 0] or missing
   useEffect(() => {
@@ -522,6 +616,7 @@ export default function SearchListingsPage() {
     query,
     type,
     category,
+    subcategory,
     maxPrice,
     distance,
     coords,
@@ -540,6 +635,7 @@ export default function SearchListingsPage() {
       const params = new URLSearchParams();
       if (type !== 'all') params.append('type', type);
       if (category !== 'all') params.append('category', category);
+      if (subcategory !== 'all') params.append('subcategory', subcategory);
       if (query.trim()) params.append('search', query.trim());
       if (maxPrice < 20000000) params.append('maxPrice', maxPrice);
       if (distance && distance !== 'all') params.append('distance', distance);
@@ -550,7 +646,7 @@ export default function SearchListingsPage() {
       if (shopName.trim()) params.append('shopName', shopName.trim());
       if (openNow) params.append('openNow', 'true');
       if (deliveryType.length > 0) params.append('deliveryType', deliveryType.join(','));
-      if (coords) {
+      if (coords && distance && distance !== 'all') {
         params.append('lat', coords.lat);
         params.append('lng', coords.lng);
       }
@@ -737,6 +833,9 @@ export default function SearchListingsPage() {
           setDistance={setDistance}
           category={category}
           setCategory={setCategory}
+          categoryChips={categoryChips}
+          selectedChipId={selectedChipId}
+          onSelectChip={handleSelectChip}
           categories={categories}
           maxPrice={maxPrice}
           setMaxPrice={setMaxPrice}

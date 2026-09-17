@@ -72,6 +72,9 @@ const listingValidation = {
     query('category')
       .optional({ checkFalsy: true })
       .isString().withMessage('Category must be a string.'),
+    query('subcategory')
+      .optional({ checkFalsy: true })
+      .isString().withMessage('Subcategory must be a string.'),
     query('search')
       .optional({ checkFalsy: true })
       .isString().withMessage('Search must be a string.'),
