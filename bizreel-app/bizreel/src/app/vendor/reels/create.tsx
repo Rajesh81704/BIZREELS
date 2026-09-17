@@ -699,6 +699,7 @@ export default function CreateReelScreen() {
   // Step 3: Targeting
   const [promotionArea, setPromotionArea] = useState('Within 5 KM');
   const [selectedAudiences, setSelectedAudiences] = useState<string[]>(['Anyone (All Users)']);
+  const [isTransitioningStep, setIsTransitioningStep] = useState(false);
 
   const { data: listings = [], isLoading: listingsLoading } = useVendorListings();
   const createReelMutation = useCreateReel();
@@ -960,6 +961,30 @@ export default function CreateReelScreen() {
       Alert.alert('Picker Error', err?.message || 'Could not open media library.');
     }
   }
+
+  const handleContinueToStep2 = () => {
+    setIsTransitioningStep(true);
+    setTimeout(() => {
+      setIsTransitioningStep(false);
+      setStep(2);
+    }, 350);
+  };
+
+  const handleContinueToStep3 = () => {
+    if (uploadingVideo || uploadingThumbnail) {
+      Alert.alert('Media Uploading', 'Please wait until your video or thumbnail finished uploading.');
+      return;
+    }
+    if (!videoUrl.trim()) {
+      Alert.alert('Video Media Required', 'Please pick a video file or enter a direct video URL before proceeding to Step 3.');
+      return;
+    }
+    setIsTransitioningStep(true);
+    setTimeout(() => {
+      setIsTransitioningStep(false);
+      setStep(3);
+    }, 500);
+  };
 
   const handleGenerateAiBio = async (customPromptOverride?: string) => {
     setGeneratingAiBio(true);
@@ -1496,8 +1521,18 @@ export default function CreateReelScreen() {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.nextStepBtn} onPress={() => setStep(2)}>
-              <Text style={styles.nextStepBtnText}>CONTINUE TO MEDIA & CAPTION SELECTION →</Text>
+            <TouchableOpacity
+              style={[styles.nextStepBtn, isTransitioningStep && { opacity: 0.85 }]}
+              onPress={handleContinueToStep2}
+              disabled={isTransitioningStep}>
+              {isTransitioningStep ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+                  <ActivityIndicator size="small" color="#F59E0B" />
+                  <Text style={styles.nextStepBtnText}>LOADING MEDIA & CAPTION...</Text>
+                </View>
+              ) : (
+                <Text style={styles.nextStepBtnText}>CONTINUE TO MEDIA & CAPTION SELECTION →</Text>
+              )}
             </TouchableOpacity>
           </View>
         )}
@@ -1693,8 +1728,18 @@ export default function CreateReelScreen() {
               )}
             </View>
 
-            <TouchableOpacity style={styles.nextStepBtn} onPress={() => setStep(3)}>
-              <Text style={styles.nextStepBtnText}>CONTINUE TO TARGETING & PUBLISH →</Text>
+            <TouchableOpacity
+              style={[styles.nextStepBtn, isTransitioningStep && { opacity: 0.85 }]}
+              onPress={handleContinueToStep3}
+              disabled={isTransitioningStep}>
+              {isTransitioningStep ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+                  <ActivityIndicator size="small" color="#F59E0B" />
+                  <Text style={styles.nextStepBtnText}>PROCESSING MEDIA & CAPTION...</Text>
+                </View>
+              ) : (
+                <Text style={styles.nextStepBtnText}>CONTINUE TO TARGETING & PUBLISH →</Text>
+              )}
             </TouchableOpacity>
           </View>
         )}
@@ -1702,6 +1747,71 @@ export default function CreateReelScreen() {
         {/* ── STEP 3: TARGETING & PUBLISH ── */}
         {step === 3 && (
           <View style={styles.wizardStepContainer}>
+            {/* ── SELECTED MEDIA & CAPTION REVIEW (PERSISTENT SUMMARY) ── */}
+            <View style={styles.selectedContentReviewCard}>
+              <View style={styles.reviewHeaderRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="document-text-outline" size={18} color="#F59E0B" />
+                  <Text style={styles.reviewCardTitle}>REEL CAPTION & MEDIA REVIEW</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.editStep2Btn}
+                  onPress={() => setStep(2)}>
+                  <Ionicons name="create-outline" size={13} color="#D97706" />
+                  <Text style={styles.editStep2BtnText}>Edit Caption / Media</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Caption Display Box */}
+              <View style={styles.reviewCaptionBox}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <Text style={styles.reviewCaptionLabel}>SELECTED CAPTION TEXT:</Text>
+                  <Text style={{ fontSize: 10, color: '#94A3B8', fontWeight: '700' }}>
+                    {caption.length}/2200 chars
+                  </Text>
+                </View>
+                <Text style={styles.reviewCaptionText}>
+                  {caption.trim() ? caption.trim() : 'No caption text entered yet. Tap Edit to add text.'}
+                </Text>
+                {hashtagsStr.trim() ? (
+                  <Text style={styles.reviewHashtagsText}>{hashtagsStr.trim()}</Text>
+                ) : null}
+              </View>
+
+              {/* Media & Metadata Pills Row */}
+              <View style={styles.reviewDetailsRow}>
+                <View style={[styles.reviewDetailPill, { backgroundColor: '#065F46' }]}>
+                  <Ionicons name="checkmark-circle" size={13} color="#34D399" />
+                  <Text style={styles.reviewDetailPillText}>
+                    Video Ready ({mediaTab === 'upload' ? 'File' : 'URL'})
+                  </Text>
+                </View>
+
+                {thumbnailUrl ? (
+                  <View style={[styles.reviewDetailPill, { backgroundColor: '#1E3A8A' }]}>
+                    <Ionicons name="image" size={13} color="#60A5FA" />
+                    <Text style={styles.reviewDetailPillText}>Cover Attached</Text>
+                  </View>
+                ) : null}
+
+                <View style={[styles.reviewDetailPill, { backgroundColor: '#451A03' }]}>
+                  <Ionicons name="pricetag" size={13} color="#F59E0B" />
+                  <Text style={styles.reviewDetailPillText}>
+                    {category} • {postType}
+                  </Text>
+                </View>
+
+                {selectedListingData ? (
+                  <View style={[styles.reviewDetailPill, { backgroundColor: '#4C1D95' }]}>
+                    <Ionicons name="cube" size={13} color="#C084FC" />
+                    <Text style={styles.reviewDetailPillText} numberOfLines={1}>
+                      Tagged: {selectedListingData.title}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+
             {/* PROMOTION RADIUS */}
             <View style={styles.darkSectionCard}>
               <View style={styles.darkSectionHeader}>
@@ -2983,5 +3093,91 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 11,
     color: '#0F172A',
+  },
+
+  // persistent Step 3 Media & Caption Summary Styles
+  selectedContentReviewCard: {
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#D97706',
+    padding: 14,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  reviewHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  reviewCardTitle: {
+    color: '#F59E0B',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  editStep2Btn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  editStep2BtnText: {
+    color: '#D97706',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  reviewCaptionBox: {
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    padding: 12,
+    gap: 6,
+  },
+  reviewCaptionLabel: {
+    color: '#94A3B8',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  reviewCaptionText: {
+    color: '#F8FAFC',
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  reviewHashtagsText: {
+    color: '#3B82F6',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  reviewDetailsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  reviewDetailPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  reviewDetailPillText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });
