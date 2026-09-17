@@ -19,6 +19,7 @@
     },
     "android": {
       "package": "in.bizreels.app",
+      "versionCode": 4,
       "allowBackup": false,
       "permissions": [
         "android.permission.INTERNET",
@@ -30,7 +31,8 @@
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_MEDIA_VIDEO",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -86,9 +88,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "37d95876-5c2f-4061-b07e-82f23fc9f733"
+        "projectId": "d542cfb7-3422-4289-baf5-16993d35aa6f"
       }
     },
-    "owner": "rajesh736146"
+    "owner": "rajeshexpo1"
   }
 }
