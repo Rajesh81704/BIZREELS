@@ -21,6 +21,7 @@ import {
 } from '../../../features/chat/chatApi';
 
 const TABS = [
+  { key: 'all', label: 'All Messages', icon: FiMessageSquare },
   { key: 'vendors', label: 'Vendor Messages', icon: FiBriefcase },
   { key: 'service-providers', label: 'Service Provider Chats', icon: FiTool },
 ];
@@ -28,14 +29,15 @@ const TABS = [
 export default function CustomerChatPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const queryConversationId = searchParams.get('conversationId') || searchParams.get('threadId');
   const queryUserId = searchParams.get('userId') || searchParams.get('vendorId');
   const queryName = searchParams.get('name');
   const queryAvatar = searchParams.get('avatar');
 
   const currentUser = useSelector(selectCurrentUser);
   const currentUserId = currentUser?._id || currentUser?.id;
-  const [activeTab, setActiveTab] = useState('vendors');
-  const [selectedThreadId, setSelectedThreadId] = useState(null);
+  const [activeTab, setActiveTab] = useState('all');
+  const [selectedThreadId, setSelectedThreadId] = useState(queryConversationId || null);
   const [messageInput, setMessageInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [hasCheckedQuery, setHasCheckedQuery] = useState(false);
@@ -54,10 +56,10 @@ export default function CustomerChatPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Reset check when queryUserId changes
+  // Reset check when queryUserId or queryConversationId changes
   useEffect(() => {
     setHasCheckedQuery(false);
-  }, [queryUserId]);
+  }, [queryConversationId, queryUserId]);
 
   // RTK Query hooks with 5m polling for real-time sync (Scoped to Customer role)
   const { data: convData, isFetching: isConvLoading, refetch: refetchConvs } = useGetConversationsQuery('customer', { pollingInterval: 300000 });
@@ -84,11 +86,23 @@ export default function CustomerChatPage() {
   // Process live database threads
   const baseThreads = conversationsList.map((c) => {
     const participants = c.participants || [];
-    const other = participants.find((p) => (p._id || p.id || p) !== currentUserId) || {};
+    const other = participants.find((p) => String(p._id || p.id || p) !== String(currentUserId)) || {};
     const recipientId = other._id || other.id || (typeof other === 'string' ? other : null);
-    const name = other.name || other.shopName || other.businessName || 'Vendor';
+    const name = other.name || other.shopName || other.businessName || (c.roleContext === 'creator' ? 'Creator' : 'Vendor');
     const avatar = other.avatarUrl || other.profile_pic || other.vendorProfile?.logo || null;
-    const isService = other.activeRole === 'service-provider' || other.roles?.includes('creator') || false;
+    
+    // Determine whether this conversation is with a Service Provider (creator) or Vendor
+    const isService = c.roleContext === 'creator' || 
+      (c.roleContext !== 'vendor' && (
+        other.activeRole === 'service-provider' || 
+        other.activeRole === 'creator' || 
+        (!other.roles?.includes('vendor') && other.roles?.includes('creator'))
+      ));
+
+    const rawUnread = c.unreadCount instanceof Map
+      ? c.unreadCount.get(String(currentUserId))
+      : c.unreadCount?.[String(currentUserId)];
+    const unread = Number(rawUnread || 0);
 
     return {
       id: c._id || c.id,
@@ -96,19 +110,22 @@ export default function CustomerChatPage() {
       avatar,
       lastMessage: c.lastMessage?.text || c.lastMessage?.content || 'No messages yet',
       time: c.updatedAt ? new Date(c.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently',
-      unread: c.unreadCount || 0,
+      unread,
       recipientId,
       role: isService ? 'service-providers' : 'vendors',
       rawConversation: c,
     };
   });
 
-  const hasExisting = baseThreads.some((t) => t.recipientId === queryUserId);
+  const hasExisting = baseThreads.some((t) => 
+    (queryConversationId && (String(t.id) === String(queryConversationId) || String(t.rawConversation?._id) === String(queryConversationId))) ||
+    (queryUserId && String(t.recipientId) === String(queryUserId))
+  );
   const liveThreads = [...baseThreads];
 
   if (queryUserId && !hasExisting) {
     liveThreads.unshift({
-      id: `temp-${queryUserId}`,
+      id: queryConversationId || `temp-${queryUserId}`,
       name: queryName || 'Vendor',
       avatar: queryAvatar || null,
       lastMessage: 'Start typing to begin conversation...',
@@ -116,33 +133,43 @@ export default function CustomerChatPage() {
       unread: 0,
       recipientId: queryUserId,
       role: 'vendors',
-      isVirtual: true,
+      isVirtual: !queryConversationId,
     });
   }
 
   const filteredThreads = liveThreads.filter((t) => {
-    const matchesTab = activeTab === 'vendors' ? t.role !== 'service-providers' : t.role === 'service-providers';
+    const matchesTab = activeTab === 'all'
+      ? true
+      : activeTab === 'vendors'
+        ? t.role !== 'service-providers'
+        : t.role === 'service-providers';
     const matchesSearch = !searchTerm || t.name.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesTab && matchesSearch;
   });
 
   // Auto-select thread based on query param or select first thread if none selected
   useEffect(() => {
-    if (queryUserId && !hasCheckedQuery && liveThreads.length > 0) {
-      const targetThread = liveThreads.find((t) => t.recipientId === queryUserId);
+    if ((queryConversationId || queryUserId) && !hasCheckedQuery && liveThreads.length > 0) {
+      const targetThread = liveThreads.find((t) =>
+        (queryConversationId && (String(t.id) === String(queryConversationId) || String(t.rawConversation?._id) === String(queryConversationId))) ||
+        (queryUserId && String(t.recipientId) === String(queryUserId))
+      );
       if (targetThread) {
         setSelectedThreadId(targetThread.id);
-        if (targetThread.role) {
+        if (activeTab !== 'all' && targetThread.role && targetThread.role !== activeTab) {
           setActiveTab(targetThread.role);
         }
         setHasCheckedQuery(true);
+      } else if (queryConversationId) {
+        setSelectedThreadId(queryConversationId);
+        setHasCheckedQuery(true);
       }
-    } else if (!queryUserId && !selectedThreadId && filteredThreads.length > 0) {
+    } else if (!queryUserId && !queryConversationId && !selectedThreadId && filteredThreads.length > 0) {
       setSelectedThreadId(filteredThreads[0].id);
     }
-  }, [queryUserId, hasCheckedQuery, liveThreads, filteredThreads, selectedThreadId]);
+  }, [queryConversationId, queryUserId, hasCheckedQuery, liveThreads, filteredThreads, selectedThreadId, activeTab]);
 
-  const currentThread = filteredThreads.find((t) => t.id === selectedThreadId) || filteredThreads[0] || {};
+  const currentThread = liveThreads.find((t) => t.id === selectedThreadId) || filteredThreads.find((t) => t.id === selectedThreadId) || filteredThreads[0] || {};
 
   // Fetch real message history for selected thread, skipping virtual ones
   const { data: msgData, isFetching: isMsgLoading, refetch: refetchMessages } = useGetMessagesQuery(

@@ -134,6 +134,28 @@ export default function NotificationsPage({ role: propRole }) {
         else if (target.startsWith('/subscription')) target = '/creator/subscription';
         else if (target.startsWith('/chat')) target = '/creator/chat';
       }
+
+      // If it's a message notification or chat link, ensure conversationId and userId are passed in URL
+      if (n.type === 'message' || target.includes('/chat') || n.data?.conversationId) {
+        const convId = n.data?.conversationId || n.data?.threadId;
+        const senderId = typeof n.sender === 'object' ? (n.sender?._id || n.sender?.id) : n.sender;
+        const senderName = typeof n.sender === 'object' ? n.sender?.name : (n.title ? n.title.replace(/^Message from\s+/i, '') : '');
+
+        const [basePath, existingQuery] = target.split('?');
+        const urlParams = new URLSearchParams(existingQuery || '');
+        if (convId && !urlParams.has('conversationId')) {
+          urlParams.set('conversationId', convId);
+        }
+        if (senderId && !urlParams.has('userId')) {
+          urlParams.set('userId', senderId);
+        }
+        if (senderName && !urlParams.has('name')) {
+          urlParams.set('name', senderName);
+        }
+        const qs = urlParams.toString();
+        target = qs ? `${basePath}?${qs}` : basePath;
+      }
+
       navigate(target);
     }
   };

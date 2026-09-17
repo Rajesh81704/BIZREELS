@@ -68,8 +68,10 @@ class ChatService {
     };
     if (targetRoleContext === 'creator') {
       options.creatorId = senderId;
+      options.customerId = recipientId;
     } else if (targetRoleContext === 'vendor') {
       options.vendorId = senderId;
+      options.customerId = recipientId;
     } else if (targetRoleContext === 'customer') {
       options.customerId = senderId;
     }
@@ -90,10 +92,25 @@ class ChatService {
 
     try {
       const sender = await User.findById(senderId).select('name activeRole avatarUrl').lean();
-      let actionUrl = '/vendor/chat';
-      if (sender && sender.activeRole === 'vendor') {
-        actionUrl = '/customer/chat';
+      const recipientUser = await User.findById(recipientId).select('activeRole current_role roles').lean();
+      const recipientRole = recipientUser?.activeRole || recipientUser?.current_role || (recipientUser?.roles?.includes('vendor') ? 'vendor' : recipientUser?.roles?.includes('creator') ? 'creator' : 'customer');
+
+      let basePath = '/customer/chat';
+      if (recipientRole === 'vendor') {
+        basePath = '/vendor/chat';
+      } else if (recipientRole === 'creator') {
+        basePath = '/creator/chat';
       }
+
+      const params = new URLSearchParams({
+        conversationId: conversation._id.toString(),
+        userId: senderId.toString(),
+        name: sender?.name || 'User',
+      });
+      if (sender?.avatarUrl) {
+        params.append('avatar', sender.avatarUrl);
+      }
+      const actionUrl = `${basePath}?${params.toString()}`;
 
       const notifyRecord = await Notification.create({
         recipient: recipientId,

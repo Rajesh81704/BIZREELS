@@ -38,6 +38,13 @@ class ChatRepository {
     }
 
     if (!conversation) {
+      if (options.vendorId && !options.customerId) {
+        options.customerId = (participantA.toString() === options.vendorId.toString()) ? participantB : participantA;
+      }
+      if (options.creatorId && !options.customerId) {
+        options.customerId = (participantA.toString() === options.creatorId.toString()) ? participantB : participantA;
+      }
+
       conversation = await Conversation.create({
         participants: [participantA, participantB],
         roleContext: roleContext || 'vendor',
@@ -70,19 +77,23 @@ class ChatRepository {
 
     if (roleFilter === 'vendor') {
       query.$or = [
-        { roleContext: 'vendor' },
         { vendorId: userId },
+        { roleContext: 'vendor', vendorId: { $in: [userId, null] }, creatorId: { $ne: userId } },
         { roleContext: { $exists: false } }
       ];
     } else if (roleFilter === 'creator') {
       query.$or = [
-        { roleContext: 'creator' },
-        { creatorId: userId }
+        { creatorId: userId },
+        { roleContext: 'creator', creatorId: { $in: [userId, null] }, vendorId: { $ne: userId } }
       ];
     } else if (roleFilter === 'customer') {
       query.$or = [
         { roleContext: 'customer' },
-        { customerId: userId }
+        { customerId: userId },
+        {
+          vendorId: { $ne: userId },
+          creatorId: { $ne: userId }
+        }
       ];
     }
 
