@@ -21,17 +21,7 @@ function App() {
   const dispatch = useDispatch();
   const isAuthLoading = useSelector(selectAuthLoading);
 
-  // One-time cleanup: remove stale tokens from localStorage (tokens are now in HTTP-only cookies)
-  useEffect(() => {
-    try {
-      localStorage.removeItem('bizreels_access_token');
-      localStorage.removeItem('bizreels_refresh_token');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-    } catch {}
-  }, []);
-
-  const hasSession = !!tokenStore.getUser();
+  const hasSession = !!tokenStore.getUser() || !!tokenStore.getAccess();
 
   // Trigger base profile query on mount only if user has a stored session
   const { data: profileRes, error, isSuccess, isLoading, isFetching } = useGetMeQuery(undefined, {
@@ -54,15 +44,21 @@ function App() {
 
     if (isSuccess && profileRes) {
       // Session exists, populate credentials (silent sign-in)
-      const fetchedUser = profileRes?.data?.user || profileRes?.user;
+      const fetchedUser = profileRes?.data?.user || profileRes?.user || profileRes?.data;
       dispatch(
         setCredentials({
           user: fetchedUser,
+          accessToken: tokenStore.getAccess(),
+          refreshToken: tokenStore.getRefresh(),
         })
       );
     } else if (error) {
-      // No active session cookie or invalid, clear auth state
-      dispatch(logout());
+      // Only logout if 401 Unauthorized
+      if (error.status === 401) {
+        dispatch(logout());
+      } else {
+        dispatch(setLoading(false));
+      }
     }
   }, [hasSession, isLoading, isFetching, isSuccess, profileRes, error, dispatch]);
 

@@ -8,7 +8,7 @@ import { tokenStore } from '../../lib/api';
 const initialState = {
   user: tokenStore.getUser(),
   accessToken: tokenStore.getAccess(),
-  isAuthenticated: !!tokenStore.getAccess(),
+  isAuthenticated: !!(tokenStore.getUser() || tokenStore.getAccess()),
   isLoading: false,
   activeRole: tokenStore.getUser()?.activeRole || tokenStore.getUser()?.current_role || 'customer',
 };
@@ -20,8 +20,8 @@ const authSlice = createSlice({
     setCredentials: (state, action) => {
       const payload = action.payload || {};
       const rawUser = payload.user !== undefined ? payload.user : payload;
-      const accessToken = payload.accessToken || payload.access_token || state.accessToken;
-      const refreshToken = payload.refreshToken || payload.refresh_token;
+      const accessToken = payload.accessToken || payload.access_token || state.accessToken || tokenStore.getAccess();
+      const refreshToken = payload.refreshToken || payload.refresh_token || tokenStore.getRefresh();
 
       if (rawUser && typeof rawUser === 'object') {
         const effectiveRole = rawUser.activeRole || rawUser.current_role || 'customer';
@@ -34,12 +34,12 @@ const authSlice = createSlice({
         state.activeRole = effectiveRole;
       }
       if (accessToken) state.accessToken = accessToken;
-      state.isAuthenticated = !!(state.user || accessToken);
+      state.isAuthenticated = !!(state.user || state.accessToken);
       state.isLoading = false;
 
       tokenStore.set({
         user: state.user,
-        accessToken,
+        accessToken: state.accessToken,
         refreshToken,
       });
     },
