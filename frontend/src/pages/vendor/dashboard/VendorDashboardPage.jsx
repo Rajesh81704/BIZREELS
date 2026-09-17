@@ -119,6 +119,17 @@ export default function VendorDashboardPage() {
     used: metrics.credits?.used ?? 0,
   };
 
+  const formatCredits = (val) => {
+    const num = Number(val || 0);
+    if (isNaN(num)) return '0';
+    if (Number.isInteger(num) || num % 1 === 0) {
+      return Math.round(num).toLocaleString('en-IN');
+    }
+    return Number(num.toFixed(2)).toLocaleString('en-IN', {
+      maximumFractionDigits: 2,
+    });
+  };
+
   const stats = [
     { label: bi('Total Products', 'कुल उत्पाद (Total Products)'), value: metrics.totalProducts ?? metrics.activeListings ?? 0, icon: FiPackage, color: 'purple', trend: metrics.trends?.totalProducts ?? 0 },
     { label: bi('Total Services', 'कुल सेवाएं (Total Services)'), value: metrics.totalServices ?? 0, icon: FiTool, color: 'blue', trend: metrics.trends?.totalServices ?? 0 },
@@ -235,25 +246,25 @@ export default function VendorDashboardPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-[#f8f4ec] p-3.5 rounded-xl border border-[#e3dccb] text-center space-y-0.5">
             <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest block">{bi('AVAILABLE', 'उपलब्ध')}</span>
-            <span className="text-2xl font-black text-emerald-600 block">{credits.available}</span>
-            <span className="text-[10px] text-slate-500 font-extrabold block">₹{credits.available} {bi('Balance', 'बैलेंस')}</span>
+            <span className="text-2xl font-black text-emerald-600 block">{formatCredits(credits.available)}</span>
+            <span className="text-[10px] text-slate-500 font-extrabold block">₹{formatCredits(credits.available)} {bi('Balance', 'बैलेंस')}</span>
           </div>
 
           <div className="bg-[#f8f4ec] p-3.5 rounded-xl border border-[#e3dccb] text-center space-y-0.5">
             <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest block">{bi('DEPOSITED', 'जमा किया गया')}</span>
-            <span className="text-2xl font-black text-blue-600 block">{credits.deposited}</span>
-            <span className="text-[10px] text-slate-500 font-extrabold block">₹{credits.deposited} {bi('Added', 'जोड़ा गया')}</span>
+            <span className="text-2xl font-black text-blue-600 block">{formatCredits(credits.deposited)}</span>
+            <span className="text-[10px] text-slate-500 font-extrabold block">₹{formatCredits(credits.deposited)} {bi('Added', 'जोड़ा गया')}</span>
           </div>
 
           <div className="bg-[#f8f4ec] p-3.5 rounded-xl border border-[#e3dccb] text-center space-y-0.5">
             <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest block">{bi('EARNED', 'अर्जित इनाम')}</span>
-            <span className="text-2xl font-black text-[#d99a3d] block">{credits.earned}</span>
-            <span className="text-[10px] text-slate-500 font-extrabold block">₹{credits.earned} {bi('Rewards', 'पुरस्कार')}</span>
+            <span className="text-2xl font-black text-[#d99a3d] block">{formatCredits(credits.earned)}</span>
+            <span className="text-[10px] text-slate-500 font-extrabold block">₹{formatCredits(credits.earned)} {bi('Rewards', 'पुरस्कार')}</span>
           </div>
 
           <div className="bg-[#f8f4ec] p-3.5 rounded-xl border border-[#e3dccb] text-center space-y-0.5">
             <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest block">{bi('USED SPENT', 'उपयोग किया गया')}</span>
-            <span className="text-2xl font-black text-slate-700 block">{credits.used}</span>
+            <span className="text-2xl font-black text-slate-700 block">{formatCredits(credits.used)}</span>
             <span className="text-[10px] text-slate-500 font-extrabold block">{bi('Credits Used', 'क्रेडिट प्रयुक्त')}</span>
           </div>
         </div>

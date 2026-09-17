@@ -244,29 +244,34 @@ class VendorController {
     const totalViews = reels.reduce((sum, r) => sum + (r.views || 0), 0);
     const followers = req.user.followersCount || (req.user.followers ? req.user.followers.length : 0);
 
+    const roundCredit = (val) => {
+      const num = Number(val || 0);
+      return isNaN(num) ? 0 : Math.round(num * 100) / 100;
+    };
+
     const [mainWallet, isoWallet, roleBalance] = Array.isArray(walletInfo) ? walletInfo : [];
-    const availableCredits = Math.max(
+    const availableCredits = roundCredit(Math.max(
       roleBalance?.balance ?? 0,
       isoWallet?.balance ?? 0,
       mainWallet?.credits ?? 0,
       req.user.walletBalance ?? 0,
       req.user.wallet_credits ?? 0
-    );
+    ));
     const freeReelBoosts = mainWallet ? (mainWallet.free_reel_boosts ?? req.user.free_reel_boosts ?? 0) : (req.user.free_reel_boosts ?? 0);
-    const depositedCredits = Math.max(
+    const depositedCredits = roundCredit(Math.max(
       mainWallet?.lifetime_deposited_paise ? Math.floor(mainWallet.lifetime_deposited_paise / 100) : 0,
       isoWallet?.lifetime_earned ?? 0,
       mainWallet?.lifetime_earned_credits ?? 0,
       availableCredits
-    );
-    const earnedCredits = Math.max(
+    ));
+    const earnedCredits = roundCredit(Math.max(
       mainWallet?.lifetime_earned_credits ?? 0,
       isoWallet?.lifetime_earned ?? 0
-    );
-    const usedCreditHistory = Math.max(
+    ));
+    const usedCreditHistory = roundCredit(Math.max(
       mainWallet?.lifetime_spent_credits ?? 0,
       isoWallet?.lifetime_spent ?? 0
-    );
+    ));
 
     // Keep all balance stores synchronized in background
     if (isoWallet && (isoWallet.balance || 0) < availableCredits) {
