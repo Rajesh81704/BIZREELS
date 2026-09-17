@@ -73,7 +73,7 @@ class OtpService {
       });
 
       // Clear the OTP key so user is not stuck on a failed dispatch
-      await redisOtpService.deleteOtp(formattedIdentifier, normalizedPurpose).catch(() => {});
+      await redisOtpService.deleteOtp(formattedIdentifier, normalizedPurpose).catch(() => { });
 
       throw ApiError.internal(`Failed to send verification code via ${cleanChannel.toUpperCase()}. Please try again or use another channel.`);
     }

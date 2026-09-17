@@ -213,7 +213,23 @@ class RecommendationService {
     }
 
     pipeline.push(
-      { $sort: { boostExpiresAt: -1, createdAt: -1 } },
+      {
+        $addFields: {
+          isActivelyBoosted: {
+            $cond: [
+              {
+                $and: [
+                  { $ifNull: ['$boostExpiresAt', false] },
+                  { $gt: ['$boostExpiresAt', new Date()] },
+                ],
+              },
+              1,
+              0,
+            ],
+          },
+        },
+      },
+      { $sort: { isActivelyBoosted: -1, createdAt: -1 } },
       { $limit: limit },
       {
         $project: {

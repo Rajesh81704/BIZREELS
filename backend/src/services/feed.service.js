@@ -165,7 +165,8 @@ const buildFeed = async ({
     if (item.postType === 'reel') {
       score += 10;
     }
-    if (d.isBoosted || d.boostExpiresAt) {
+    const isActivelyBoosted = (d.isBoosted || d.is_boosted) && d.boostExpiresAt && new Date(d.boostExpiresAt) > new Date();
+    if (isActivelyBoosted) {
       score += 25;
     }
     scored.push({ score, item });

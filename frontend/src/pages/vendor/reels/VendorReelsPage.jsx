@@ -18,6 +18,8 @@ import {
 
 // Subcomponents
 import ReelCardMediaCarousel from './ReelCardMediaCarousel';
+import ReelCard from './ReelCard';
+import ReelWatchModal from './ReelWatchModal';
 import CreateReelWizardModal from './CreateReelWizardModal';
 import ReelPreviewModal from './ReelPreviewModal';
 import ReelBoostModal from './ReelBoostModal';
@@ -35,6 +37,7 @@ export default function VendorReelsPage() {
   const [showBoostModal, setShowBoostModal] = useState(false);
   const [selectedReelForBoost, setSelectedReelForBoost] = useState(null);
   const [showBoostPromptModal, setShowBoostPromptModal] = useState(false);
+  const [previewReelItem, setPreviewReelItem] = useState(null);
 
   const handleOpenBoostModal = (reel) => {
     setSelectedReelForBoost(reel);
@@ -430,58 +433,13 @@ export default function VendorReelsPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
           {filtered.map((reel) => (
-            <div key={reel._id || reel.id} className="bg-white rounded-2xl border border-[#e3dccb] shadow-2xs hover:shadow-md transition-all overflow-hidden">
-              <ReelCardMediaCarousel reel={reel} />
-
-              <div className="p-4 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <h4 style={{ fontFamily: "'Archivo Black', sans-serif" }} className="text-xs text-[#1a1a1a] line-clamp-2 uppercase">{reel.caption || reel.title || 'Service Reel'}</h4>
-                  <div className="flex items-center gap-1">
-                    {(reel.isBoosted || reel.is_boosted) && (
-                      <span className="bg-[#241b15] text-[#d99a3d] border border-[#241b15] px-2 py-0.5 rounded text-[10px] font-black flex items-center gap-0.5" title={`Boost active until ${new Date(reel.boostExpiresAt || reel.boosted_until || Date.now() + 7*24*3600*1000).toLocaleDateString()}`}>
-                        <FiZap size={11} className="fill-[#d99a3d]" />
-                        Boosted
-                      </span>
-                    )}
-                    {!reel.isBoosted && !reel.is_boosted && reel.status === 'published' && (
-                      <button
-                        type="button"
-                        onClick={() => handleOpenBoostModal(reel)}
-                        className="px-2 py-1 rounded-lg hover:bg-amber-100 text-amber-900 border border-amber-300 bg-amber-50 transition flex-shrink-0 flex items-center gap-1 cursor-pointer shadow-2xs font-sans"
-                        title="Boost Reel"
-                      >
-                        <FiZap size={12} className="text-amber-600 fill-amber-500" />
-                        <span className="text-[10px] font-black uppercase tracking-wider">Boost</span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteReel(reel._id || reel.id)}
-                      className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition flex-shrink-0 cursor-pointer"
-                      title="Delete Reel"
-                    >
-                      <FiTrash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-1">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-[#f8f4ec] text-[#241b15] border border-[#e3dccb]">
-                    {reel.category || 'Service'} • {reel.subcategory || 'General'}
-                  </span>
-                  {reel.promotionArea && (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-blue-50 text-blue-800 border border-blue-200">
-                      📍 {reel.promotionArea}
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between text-xs font-bold text-slate-500 border-t border-[#e3dccb] pt-2">
-                  <span className="flex items-center gap-1"><FiEye size={13} /> {reel.views !== undefined ? reel.views.toLocaleString() : 0}</span>
-                  <span className="flex items-center gap-1"><FiHeart size={13} className="text-rose-600" /> {reel.likesCount || 0}</span>
-                </div>
-              </div>
-            </div>
+            <ReelCard
+              key={reel._id || reel.id}
+              reel={reel}
+              onBoost={handleOpenBoostModal}
+              onDelete={handleDeleteReel}
+              onPreview={(r) => setPreviewReelItem(r)}
+            />
           ))}
         </div>
       )}
@@ -592,6 +550,14 @@ export default function VendorReelsPage() {
         onClose={handleDismissBoostPrompt}
         unboostedReels={unboostedPublishedReels}
         onSelectReelToBoost={handleSelectReelToBoostFromPrompt}
+      />
+
+      {/* MODAL 5: FULL-SCREEN REEL WATCH PREVIEW */}
+      <ReelWatchModal
+        isOpen={Boolean(previewReelItem)}
+        onClose={() => setPreviewReelItem(null)}
+        reel={previewReelItem}
+        onBoost={handleOpenBoostModal}
       />
     </div>
   );

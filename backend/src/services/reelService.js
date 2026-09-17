@@ -321,15 +321,65 @@ class ReelService {
   async getVendorReels(userId, page = 1, limit = 50) {
     const Reel = require('../models/Reel');
     const skip = (page - 1) * limit;
+    const now = new Date();
 
-    const [reels, total] = await Promise.all([
+    // 1. Sanitize expired boosts for this vendor on-the-fly
+    try {
+      await Reel.updateMany(
+        {
+          creator: userId,
+          boostExpiresAt: { $lte: now, $ne: null },
+          $or: [{ isBoosted: true }, { is_boosted: true }, { boost_status: 'active' }],
+        },
+        {
+          $set: {
+            isBoosted: false,
+            is_boosted: false,
+            boost_status: 'expired',
+          },
+        }
+      );
+    } catch (e) {}
+
+    const [rawReels, total] = await Promise.all([
       Reel.find({ creator: userId, isDeleted: { $ne: true } })
+        .populate('targetListing', 'title name price salePrice sellingPrice images thumbnailUrl category')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
       Reel.countDocuments({ creator: userId, isDeleted: { $ne: true } }),
     ]);
+
+    // 2. Format reels with real-time dynamic boost calculation
+    const reels = rawReels.map((r) => {
+      const expiresAt = r.boostExpiresAt || r.boosted_until;
+      const isActivelyBoosted = Boolean(
+        (r.isBoosted || r.is_boosted) && expiresAt && new Date(expiresAt) > now
+      );
+      const isExpired = Boolean(expiresAt && new Date(expiresAt) <= now);
+
+      let remainingMs = 0;
+      let remainingDays = 0;
+      let remainingHours = 0;
+
+      if (isActivelyBoosted && expiresAt) {
+        remainingMs = Math.max(0, new Date(expiresAt).getTime() - now.getTime());
+        remainingHours = Math.ceil(remainingMs / (1000 * 60 * 60));
+        remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
+      }
+
+      return {
+        ...r,
+        isBoosted: isActivelyBoosted,
+        is_boosted: isActivelyBoosted,
+        boostStatus: isActivelyBoosted ? 'active' : isExpired ? 'expired' : 'none',
+        boostRemainingHours: remainingHours,
+        boostRemainingDays: remainingDays,
+        boostRemainingMs: remainingMs,
+        isBoostExpired: isExpired,
+      };
+    });
 
     return { reels, total };
   }
