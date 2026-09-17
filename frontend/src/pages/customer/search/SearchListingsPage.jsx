@@ -34,6 +34,10 @@ export default function SearchListingsPage() {
   const [distance, setDistance] = useState('all');
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [categories, setCategories] = useState([]);
   const [inquiringId, setInquiringId] = useState(null);
 
@@ -629,10 +633,16 @@ export default function SearchListingsPage() {
     deliveryType,
   ]);
 
-  const fetchListings = async () => {
-    setLoading(true);
+  const fetchListings = async (pageNum = 1, append = false) => {
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const params = new URLSearchParams();
+      params.append('page', pageNum);
+      params.append('limit', '50');
       if (type !== 'all') params.append('type', type);
       if (category !== 'all') params.append('category', category);
       if (subcategory !== 'all') params.append('subcategory', subcategory);
@@ -654,14 +664,26 @@ export default function SearchListingsPage() {
       const res = await api.get(`/v1/listings?${params.toString()}`);
       const data = res.data;
       const list = data.data?.listings || data.listings || data.data || (Array.isArray(data) ? data : []);
+      const meta = data.meta || data.data?.meta || {};
+      const total = meta.total !== undefined ? meta.total : (Array.isArray(list) ? list.length : 0);
+      const totalPages = meta.totalPages || (total > 0 ? Math.ceil(total / 50) : 1);
 
-      setListings(Array.isArray(list) ? list : []);
+      setTotalCount(total);
+      setHasMore(pageNum < totalPages);
+      setPage(pageNum);
+
+      if (append) {
+        setListings((prev) => [...prev, ...(Array.isArray(list) ? list : [])]);
+      } else {
+        setListings(Array.isArray(list) ? list : []);
+      }
     } catch (err) {
       console.warn('Search query failed:', err);
       toast.error('Could not fetch listings. Showing latest products.');
-      setListings([]);
+      if (!append) setListings([]);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -819,7 +841,7 @@ export default function SearchListingsPage() {
             </p>
           </div>
           <span className="text-xs font-bold text-slate-600 bg-white px-3 py-1.5 rounded-lg border border-[#e3dccb] w-fit shadow-xs">
-            {listings.length} {bi('Results Found', 'परिणाम मिले')}
+            {totalCount || listings.length} {bi('Results Found', 'परिणाम मिले')}
           </span>
         </div>
 
@@ -874,26 +896,49 @@ export default function SearchListingsPage() {
             <p className="text-xs">Try searching with different keywords, widening the distance, or increasing budget.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {listings.map((item) => {
-              const itemId = item._id || item.id;
-              return (
-                <ListingCard
-                  key={itemId}
-                  item={item}
-                  coords={coords}
-                  geocodedCache={geocodedCache}
-                  onSelect={handleSelectItem}
-                  isSaved={!!savedItems[itemId]}
-                  isLiked={!!likedItems[itemId]}
-                  onToggleSave={toggleSave}
-                  onToggleLike={toggleLike}
-                  onShare={handleShare}
-                  onWhatsApp={handleWhatsApp}
-                  onCall={(it) => setCallItem(it)}
-                />
-              );
-            })}
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {listings.map((item) => {
+                const itemId = item._id || item.id;
+                return (
+                  <ListingCard
+                    key={itemId}
+                    item={item}
+                    coords={coords}
+                    geocodedCache={geocodedCache}
+                    onSelect={handleSelectItem}
+                    isSaved={!!savedItems[itemId]}
+                    isLiked={!!likedItems[itemId]}
+                    onToggleSave={toggleSave}
+                    onToggleLike={toggleLike}
+                    onShare={handleShare}
+                    onWhatsApp={handleWhatsApp}
+                    onCall={(it) => setCallItem(it)}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Load More Button if results exceed initial page */}
+            {hasMore && (
+              <div className="flex justify-center pt-4 pb-2">
+                <button
+                  type="button"
+                  onClick={() => fetchListings(page + 1, true)}
+                  disabled={loadingMore}
+                  className="px-6 py-2.5 rounded-xl bg-[#1a1a1a] text-[#d99a3d] font-bold text-xs hover:bg-[#2a2a2a] transition shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {loadingMore ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-[#d99a3d] border-t-transparent rounded-full animate-spin" />
+                      <span>Loading more listings...</span>
+                    </>
+                  ) : (
+                    <span>Load More Listings ({totalCount - listings.length} remaining)</span>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
