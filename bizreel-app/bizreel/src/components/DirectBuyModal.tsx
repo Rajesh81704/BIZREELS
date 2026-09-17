@@ -194,6 +194,7 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
           address: fullAddressString,
           pincode: pincode.trim(),
           paymentMethod: paymentMethod === 'wallet' ? 'wallet' : 'cod',
+          shippingCharges: 40,
         });
       }
 

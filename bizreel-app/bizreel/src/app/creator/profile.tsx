@@ -117,18 +117,18 @@ export default function CreatorProfileScreen() {
       {/* Top Header Bar */}
       <View style={styles.headerBar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.replace('/(tabs)/home')}>
-          <Ionicons name="arrow-back" size={20} color={AMBER_GOLD} />
+          <Ionicons name="arrow-back" size={20} color="#241B15" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerBadge}>CREATOR HUB</Text>
           <Text style={styles.headerTitle}>CREATOR PROFILE &amp; BIO</Text>
         </View>
         <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/creator/onboarding')}>
-          <Ionicons name="create-outline" size={18} color={AMBER_GOLD} />
+          <Ionicons name="create-outline" size={18} color="#241B15" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Banner Intro */}
         <View style={styles.bannerCard}>
           <View style={{ flex: 1 }}>
@@ -137,7 +137,7 @@ export default function CreatorProfileScreen() {
             <Text style={styles.bannerDesc}>Update your stage name, bio pitch, contact info, and portfolio links for local business clients.</Text>
           </View>
           <View style={styles.bannerIconBox}>
-            <Ionicons name="person" size={22} color={DARK_ESPRESSO} />
+            <Ionicons name="person" size={22} color="#D99A3D" />
           </View>
         </View>
 
@@ -156,7 +156,7 @@ export default function CreatorProfileScreen() {
             value={displayName}
             onChangeText={setDisplayName}
             placeholder="e.g. Rahul Content Studio"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#9E9287"
           />
 
           <Text style={styles.label}>Primary Specialty / Category</Text>
@@ -165,7 +165,7 @@ export default function CreatorProfileScreen() {
             value={category}
             onChangeText={setCategory}
             placeholder="e.g. Product Reel Creator"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#9E9287"
           />
 
           <Text style={styles.label}>Creator Bio / Pitch</Text>
@@ -174,7 +174,7 @@ export default function CreatorProfileScreen() {
             value={bio}
             onChangeText={setBio}
             placeholder="Tell local vendors and brands why they should collaborate with you..."
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#9E9287"
             multiline
           />
         </View>
@@ -195,7 +195,7 @@ export default function CreatorProfileScreen() {
             onChangeText={setMobileNumber}
             keyboardType="phone-pad"
             placeholder="+91 98765 43210"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#9E9287"
           />
 
           <Text style={styles.label}>Email Address</Text>
@@ -205,7 +205,7 @@ export default function CreatorProfileScreen() {
             onChangeText={setEmail}
             keyboardType="email-address"
             placeholder="creator@example.com"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#9E9287"
             autoCapitalize="none"
           />
 
@@ -215,7 +215,7 @@ export default function CreatorProfileScreen() {
             value={city}
             onChangeText={setCity}
             placeholder="e.g. Mumbai, Bengaluru, Raipur"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#9E9287"
           />
 
           <Text style={styles.label}>State</Text>
@@ -224,7 +224,7 @@ export default function CreatorProfileScreen() {
             value={stateName}
             onChangeText={setStateName}
             placeholder="e.g. Maharashtra"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#9E9287"
           />
         </View>
 
@@ -243,7 +243,7 @@ export default function CreatorProfileScreen() {
             value={instagram}
             onChangeText={setInstagram}
             placeholder="https://instagram.com/handle"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#9E9287"
             autoCapitalize="none"
           />
 
@@ -253,7 +253,7 @@ export default function CreatorProfileScreen() {
             value={youtube}
             onChangeText={setYoutube}
             placeholder="https://youtube.com/@channel"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#9E9287"
             autoCapitalize="none"
           />
 
@@ -263,7 +263,7 @@ export default function CreatorProfileScreen() {
             value={portfolioVideo}
             onChangeText={setPortfolioVideo}
             placeholder="https://drive.google.com/..."
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#9E9287"
             autoCapitalize="none"
           />
         </View>
@@ -291,29 +291,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
-    backgroundColor: DARK_ESPRESSO,
+    backgroundColor: WHITE_CARD,
     borderBottomWidth: 1,
-    borderBottomColor: '#3A2C22',
+    borderBottomColor: BORDER_COLOR,
     gap: Spacing.three,
   },
   backBtn: {
     width: 38,
     height: 38,
-    backgroundColor: '#1A1410',
+    backgroundColor: '#F4EFE6',
     borderWidth: 1,
-    borderColor: '#3A2C22',
+    borderColor: BORDER_COLOR,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 10,
   },
   headerBadge: { color: AMBER_GOLD, fontSize: 10, fontWeight: '900', letterSpacing: 1.5 },
-  headerTitle: { color: '#FFFFFF', fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 0.5 },
+  headerTitle: { color: DARK_ESPRESSO, fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 0.5 },
   actionBtn: {
     width: 38,
     height: 38,
-    backgroundColor: '#1A1410',
+    backgroundColor: '#F4EFE6',
     borderWidth: 1,
-    borderColor: '#3A2C22',
+    borderColor: BORDER_COLOR,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 10,
@@ -322,24 +322,24 @@ const styles = StyleSheet.create({
   scrollContent: { padding: Spacing.four, gap: Spacing.four, paddingBottom: 40 },
 
   bannerCard: {
-    backgroundColor: DARK_ESPRESSO,
+    backgroundColor: WHITE_CARD,
     padding: Spacing.four,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#3A2C22',
+    borderColor: BORDER_COLOR,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.three,
   },
   bannerSubtitle: { color: AMBER_GOLD, fontSize: 9.5, fontWeight: '900', letterSpacing: 1.5, marginBottom: 2 },
-  bannerTitle: { color: '#FFFFFF', fontSize: FontSize.base, fontWeight: '900', letterSpacing: 0.5 },
-  bannerDesc: { color: '#CBD5E1', fontSize: FontSize.xs, marginTop: 4, lineHeight: 16 },
+  bannerTitle: { color: DARK_ESPRESSO, fontSize: FontSize.base, fontWeight: '900', letterSpacing: 0.5 },
+  bannerDesc: { color: TEXT_MUTED, fontSize: FontSize.xs, marginTop: 4, lineHeight: 16 },
   bannerIconBox: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: AMBER_GOLD,
+    backgroundColor: DARK_ESPRESSO,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -351,11 +351,6 @@ const styles = StyleSheet.create({
     padding: Spacing.four,
     borderRadius: 14,
     gap: Spacing.two,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -377,9 +372,9 @@ const styles = StyleSheet.create({
   numBadgeText: { color: AMBER_GOLD, fontSize: 11, fontWeight: '900' },
   cardTitle: { color: DARK_ESPRESSO, fontSize: FontSize.xs, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
 
-  label: { color: '#334155', fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 6 },
+  label: { color: DARK_ESPRESSO, fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 6 },
   input: {
-    backgroundColor: WARM_CREAM,
+    backgroundColor: '#FDFBF7',
     borderWidth: 1,
     borderColor: BORDER_COLOR,
     color: TEXT_DARK,
@@ -387,23 +382,18 @@ const styles = StyleSheet.create({
     height: 44,
     fontSize: FontSize.xs,
     fontWeight: '600',
-    borderRadius: 8,
+    borderRadius: 10,
   },
 
   submitBtn: {
     backgroundColor: DARK_ESPRESSO,
-    borderWidth: 1,
-    borderColor: DARK_ESPRESSO,
+    borderWidth: 1.5,
+    borderColor: AMBER_GOLD,
     height: 50,
-    borderRadius: 10,
+    borderRadius: 9999,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
   submitBtnText: { color: AMBER_GOLD, fontSize: FontSize.xs, fontWeight: '900', letterSpacing: 1 },
 });

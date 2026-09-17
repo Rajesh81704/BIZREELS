@@ -33,12 +33,14 @@ import { api } from '@/lib/api';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GRID_COL_WIDTH = (SCREEN_WIDTH - Spacing.four * 3) / 2;
 const REEL_GRID_WIDTH = (SCREEN_WIDTH - Spacing.four * 4) / 3;
-
 const YELLOW = '#D99A3D';
 const AMBER_GOLD = '#D99A3D';
+const DARK_ESPRESSO = '#241B15';
 const BLACK = '#241B15';
-const DARK_CARD = '#1A1410';
-const BORDER = '#3A2C22';
+const DARK_CARD = '#FFFFFF';
+const BORDER = '#E3DCCB';
+const WARM_BG = '#F8F4EC';
+const TEXT_MUTED = '#7A6E65';
 
 interface CreatorProfileData {
   _id: string;
@@ -305,7 +307,7 @@ export default function PublicCreatorProfileScreen() {
   if (loading) {
     return (
       <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={YELLOW} />
+        <ActivityIndicator size="large" color={AMBER_GOLD} />
         <Text style={styles.loadingText}>Loading Creator Profile...</Text>
       </View>
     );
@@ -314,7 +316,7 @@ export default function PublicCreatorProfileScreen() {
   if (!creator) {
     return (
       <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
-        <Ionicons name="alert-circle-outline" size={48} color="rgba(255,255,255,0.3)" />
+        <Ionicons name="alert-circle-outline" size={48} color="rgba(36,27,21,0.3)" />
         <Text style={styles.notFoundTitle}>Creator Profile Not Found</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Go Back</Text>
@@ -331,13 +333,13 @@ export default function PublicCreatorProfileScreen() {
       {/* Dynamic Header Overlay */}
       <View style={[styles.fixedHeader, { paddingTop: insets.top + 6 }]}>
         <TouchableOpacity style={styles.iconCircle} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
+          <Ionicons name="arrow-back" size={20} color={DARK_ESPRESSO} />
         </TouchableOpacity>
         <Text style={styles.fixedHeaderTitle} numberOfLines={1}>
           {creator.name}
         </Text>
         <TouchableOpacity style={styles.iconCircle} onPress={handleShareProfile}>
-          <Ionicons name="share-social-outline" size={20} color="#fff" />
+          <Ionicons name="share-social-outline" size={20} color={DARK_ESPRESSO} />
         </TouchableOpacity>
       </View>
 
@@ -351,8 +353,8 @@ export default function PublicCreatorProfileScreen() {
               setRefreshing(true);
               fetchCreatorProfile();
             }}
-            tintColor={YELLOW}
-            colors={[YELLOW]}
+            tintColor={AMBER_GOLD}
+            colors={[AMBER_GOLD]}
           />
         }>
         {/* Cover Banner */}
@@ -369,7 +371,7 @@ export default function PublicCreatorProfileScreen() {
               <Image source={{ uri: avatarUri }} style={styles.avatarImage} contentFit="cover" />
               {creator.isVerified && (
                 <View style={styles.verifiedBadge}>
-                  <Ionicons name="checkmark-circle" size={18} color={YELLOW} />
+                  <Ionicons name="checkmark-circle" size={18} color={AMBER_GOLD} />
                 </View>
               )}
             </View>
@@ -397,7 +399,7 @@ export default function PublicCreatorProfileScreen() {
               </View>
 
               <View style={styles.locationPill}>
-                <Ionicons name="location-outline" size={12} color={YELLOW} />
+                <Ionicons name="location-outline" size={12} color={AMBER_GOLD} />
                 <Text style={styles.locationPillText}>
                   {creator.city}
                   {creator.state ? `, ${creator.state}` : ''}
@@ -405,7 +407,7 @@ export default function PublicCreatorProfileScreen() {
               </View>
 
               <View style={styles.ratingPill}>
-                <Ionicons name="star" size={12} color={BLACK} />
+                <Ionicons name="star" size={12} color={AMBER_GOLD} />
                 <Text style={styles.ratingPillText}>
                   {Number(creator.rating_avg).toFixed(1)} ({creator.rating_count})
                 </Text>
@@ -442,19 +444,19 @@ export default function PublicCreatorProfileScreen() {
           {/* CTA Action Buttons */}
           <View style={styles.actionsRow}>
             <TouchableOpacity style={styles.hireCtaBtn} onPress={() => handleOpenHireModal()}>
-              <Ionicons name="flash" size={16} color={BLACK} />
+              <Ionicons name="flash" size={16} color={AMBER_GOLD} />
               <Text style={styles.hireCtaBtnText}>HIRE CREATOR</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.followBtn, isFollowing && styles.followingBtn]}
               onPress={handleFollowToggle}>
-              <Ionicons name={isFollowing ? 'checkmark-outline' : 'person-add-outline'} size={15} color="#fff" />
-              <Text style={styles.followBtnText}>{isFollowing ? 'Following' : 'Follow'}</Text>
+              <Ionicons name={isFollowing ? 'checkmark-outline' : 'person-add-outline'} size={15} color={isFollowing ? AMBER_GOLD : DARK_ESPRESSO} />
+              <Text style={[styles.followBtnText, isFollowing && { color: AMBER_GOLD }]}>{isFollowing ? 'Following' : 'Follow'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.chatBtn} onPress={handleOpenChat}>
-              <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" />
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color={DARK_ESPRESSO} />
             </TouchableOpacity>
           </View>
         </View>
@@ -464,7 +466,7 @@ export default function PublicCreatorProfileScreen() {
           <TouchableOpacity
             style={[styles.tabItem, activeTab === 'reels' && styles.tabItemActive]}
             onPress={() => setActiveTab('reels')}>
-            <Ionicons name="videocam-outline" size={16} color={activeTab === 'reels' ? YELLOW : 'rgba(255,255,255,0.6)'} />
+            <Ionicons name="videocam-outline" size={16} color={activeTab === 'reels' ? AMBER_GOLD : TEXT_MUTED} />
             <Text style={[styles.tabText, activeTab === 'reels' && styles.tabTextActive]}>
               Reels ({reels.length})
             </Text>
@@ -473,7 +475,7 @@ export default function PublicCreatorProfileScreen() {
           <TouchableOpacity
             style={[styles.tabItem, activeTab === 'portfolio' && styles.tabItemActive]}
             onPress={() => setActiveTab('portfolio')}>
-            <Ionicons name="images-outline" size={16} color={activeTab === 'portfolio' ? YELLOW : 'rgba(255,255,255,0.6)'} />
+            <Ionicons name="images-outline" size={16} color={activeTab === 'portfolio' ? AMBER_GOLD : TEXT_MUTED} />
             <Text style={[styles.tabText, activeTab === 'portfolio' && styles.tabTextActive]}>
               Portfolio
             </Text>
@@ -482,7 +484,7 @@ export default function PublicCreatorProfileScreen() {
           <TouchableOpacity
             style={[styles.tabItem, activeTab === 'pricing' && styles.tabItemActive]}
             onPress={() => setActiveTab('pricing')}>
-            <Ionicons name="pricetag-outline" size={16} color={activeTab === 'pricing' ? YELLOW : 'rgba(255,255,255,0.6)'} />
+            <Ionicons name="pricetag-outline" size={16} color={activeTab === 'pricing' ? AMBER_GOLD : TEXT_MUTED} />
             <Text style={[styles.tabText, activeTab === 'pricing' && styles.tabTextActive]}>
               Packages
             </Text>
@@ -491,7 +493,7 @@ export default function PublicCreatorProfileScreen() {
           <TouchableOpacity
             style={[styles.tabItem, activeTab === 'reviews' && styles.tabItemActive]}
             onPress={() => setActiveTab('reviews')}>
-            <Ionicons name="star-outline" size={16} color={activeTab === 'reviews' ? YELLOW : 'rgba(255,255,255,0.6)'} />
+            <Ionicons name="star-outline" size={16} color={activeTab === 'reviews' ? AMBER_GOLD : TEXT_MUTED} />
             <Text style={[styles.tabText, activeTab === 'reviews' && styles.tabTextActive]}>
               Reviews ({reviews.length})
             </Text>
@@ -505,7 +507,7 @@ export default function PublicCreatorProfileScreen() {
             <View>
               {reels.length === 0 ? (
                 <View style={styles.emptyTabBox}>
-                  <Ionicons name="videocam-outline" size={40} color="rgba(255,255,255,0.2)" />
+                  <Ionicons name="videocam-outline" size={40} color={TEXT_MUTED} />
                   <Text style={styles.emptyTabTitle}>No Reels Uploaded Yet</Text>
                   <Text style={styles.emptyTabSub}>Creator hasn't added showcase reels to portfolio yet.</Text>
                 </View>
@@ -539,7 +541,7 @@ export default function PublicCreatorProfileScreen() {
             <View>
               {portfolioImages.length === 0 ? (
                 <View style={styles.emptyTabBox}>
-                  <Ionicons name="images-outline" size={40} color="rgba(255,255,255,0.2)" />
+                  <Ionicons name="images-outline" size={40} color={TEXT_MUTED} />
                   <Text style={styles.emptyTabTitle}>No Portfolio Photos</Text>
                   <Text style={styles.emptyTabSub}>No photo gallery uploads available.</Text>
                 </View>
@@ -563,7 +565,7 @@ export default function PublicCreatorProfileScreen() {
               <View style={styles.packageCard}>
                 <View style={styles.packageHeader}>
                   <View style={styles.packageTitleGroup}>
-                    <Ionicons name="videocam" size={20} color={YELLOW} />
+                    <Ionicons name="videocam" size={20} color={AMBER_GOLD} />
                     <Text style={styles.packageTitle}>Single Reel Showcase</Text>
                   </View>
                   <Text style={styles.packagePrice}>₹{(creator.pricing?.reel1 || 1500).toLocaleString('en-IN')}</Text>
@@ -585,7 +587,7 @@ export default function PublicCreatorProfileScreen() {
                 </View>
                 <View style={styles.packageHeader}>
                   <View style={styles.packageTitleGroup}>
-                    <Ionicons name="film" size={20} color={YELLOW} />
+                    <Ionicons name="film" size={20} color={AMBER_GOLD} />
                     <Text style={styles.packageTitle}>3 Reels Growth Pack</Text>
                   </View>
                   <Text style={styles.packagePrice}>₹{(creator.pricing?.reel3 || 4000).toLocaleString('en-IN')}</Text>
@@ -594,9 +596,9 @@ export default function PublicCreatorProfileScreen() {
                   3 High-impact commercial reels designed for product highlights, unboxing, and customer testimonials with priority 48h delivery.
                 </Text>
                 <TouchableOpacity
-                  style={[styles.packageHireBtn, { backgroundColor: YELLOW }]}
+                  style={[styles.packageHireBtn, { backgroundColor: AMBER_GOLD }]}
                   onPress={() => handleOpenHireModal(creator.pricing?.reel3 || 4000, '3')}>
-                  <Text style={[styles.packageHireBtnText, { color: BLACK }]}>HIRE FOR 3 REELS</Text>
+                  <Text style={[styles.packageHireBtnText, { color: DARK_ESPRESSO }]}>HIRE FOR 3 REELS</Text>
                 </TouchableOpacity>
               </View>
 
@@ -604,7 +606,7 @@ export default function PublicCreatorProfileScreen() {
               <View style={styles.packageCard}>
                 <View style={styles.packageHeader}>
                   <View style={styles.packageTitleGroup}>
-                    <Ionicons name="flame" size={20} color={YELLOW} />
+                    <Ionicons name="flame" size={20} color={AMBER_GOLD} />
                     <Text style={styles.packageTitle}>10 Reels Monthly Campaign</Text>
                   </View>
                   <Text style={styles.packagePrice}>₹{(creator.pricing?.reel10 || 12000).toLocaleString('en-IN')}</Text>
@@ -663,7 +665,7 @@ export default function PublicCreatorProfileScreen() {
 
                 {reviews.length === 0 ? (
                   <View style={styles.emptyTabBox}>
-                    <Ionicons name="star-outline" size={40} color="rgba(255,255,255,0.2)" />
+                    <Ionicons name="star-outline" size={40} color={TEXT_MUTED} />
                     <Text style={styles.emptyTabTitle}>No Client Reviews Yet</Text>
                     <Text style={styles.emptyTabSub}>Be the first vendor to work with {creator.name}!</Text>
                   </View>
@@ -685,7 +687,7 @@ export default function PublicCreatorProfileScreen() {
                                 key={star}
                                 name={star <= rev.rating ? 'star' : 'star-outline'}
                                 size={12}
-                                color={YELLOW}
+                                color={AMBER_GOLD}
                               />
                             ))}
                           </View>
@@ -712,7 +714,7 @@ export default function PublicCreatorProfileScreen() {
                 <Text style={styles.modalSub}>Target Creator: {creator.name}</Text>
               </View>
               <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setHireModalVisible(false)}>
-                <Ionicons name="close" size={20} color="#fff" />
+                <Ionicons name="close" size={20} color={DARK_ESPRESSO} />
               </TouchableOpacity>
             </View>
 
@@ -737,7 +739,7 @@ export default function PublicCreatorProfileScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="e.g. Diwali Collection Video Reel Showcase"
-                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  placeholderTextColor={TEXT_MUTED}
                   value={campaignTitle}
                   onChangeText={setCampaignTitle}
                 />
@@ -749,7 +751,7 @@ export default function PublicCreatorProfileScreen() {
                   <TextInput
                     style={styles.input}
                     placeholder="1500"
-                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    placeholderTextColor={TEXT_MUTED}
                     value={offeredRate}
                     onChangeText={setOfferedRate}
                     keyboardType="number-pad"
@@ -761,7 +763,7 @@ export default function PublicCreatorProfileScreen() {
                   <TextInput
                     style={styles.input}
                     placeholder="1"
-                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    placeholderTextColor={TEXT_MUTED}
                     value={reelsCount}
                     onChangeText={setReelsCount}
                     keyboardType="number-pad"
@@ -774,7 +776,7 @@ export default function PublicCreatorProfileScreen() {
                 <TextInput
                   style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
                   placeholder="Describe your product specs, key talking points, and delivery deadline..."
-                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  placeholderTextColor={TEXT_MUTED}
                   value={requirements}
                   onChangeText={setRequirements}
                   multiline
@@ -786,7 +788,7 @@ export default function PublicCreatorProfileScreen() {
                 onPress={handleSendProposal}
                 disabled={submittingProposal}>
                 {submittingProposal ? (
-                  <ActivityIndicator color={BLACK} />
+                  <ActivityIndicator color={AMBER_GOLD} />
                 ) : (
                   <Text style={styles.submitProposalBtnText}>🚀 SEND PROPOSAL REQUEST NOW</Text>
                 )}

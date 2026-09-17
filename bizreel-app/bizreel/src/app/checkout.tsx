@@ -156,23 +156,22 @@ export default function CheckoutScreen() {
 
     try {
       if (params.listingId) {
-        // Direct single item purchase
+        // Direct single item purchase with mandatory ₹40 delivery charge
         await createOrder({
           listingId: params.listingId as string,
           quantity: Number((params as any).quantity || 1),
-
           address: address.trim(),
           paymentMethod,
+          shippingCharges: 40,
         });
       } else {
-        // Full shopping cart checkout with delivery fee
+        // Full shopping cart checkout with mandatory ₹40 delivery charge
         await checkoutCart({
           address: address.trim(),
           paymentMethod,
           shippingCharges: 40,
         });
         await refetchCart();
-
       }
 
       Alert.alert(
