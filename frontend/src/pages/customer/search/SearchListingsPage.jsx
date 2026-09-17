@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { FiSearch, FiPackage, FiShoppingBag } from 'react-icons/fi';
+import { FiSearch, FiPackage, FiShoppingBag, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { api } from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
@@ -36,8 +36,7 @@ export default function SearchListingsPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
   const [categories, setCategories] = useState([]);
   const [inquiringId, setInquiringId] = useState(null);
 
@@ -633,16 +632,12 @@ export default function SearchListingsPage() {
     deliveryType,
   ]);
 
-  const fetchListings = async (pageNum = 1, append = false) => {
-    if (append) {
-      setLoadingMore(true);
-    } else {
-      setLoading(true);
-    }
+  const fetchListings = async (pageNum = 1) => {
+    setLoading(true);
     try {
       const params = new URLSearchParams();
       params.append('page', pageNum);
-      params.append('limit', '100');
+      params.append('limit', '50');
       if (type !== 'all') params.append('type', type);
       if (category !== 'all') params.append('category', category);
       if (subcategory !== 'all') params.append('subcategory', subcategory);
@@ -666,25 +661,26 @@ export default function SearchListingsPage() {
       const list = data.data?.listings || data.listings || data.data || (Array.isArray(data) ? data : []);
       const meta = data.meta || data.data?.meta || {};
       const total = meta.total !== undefined ? meta.total : (Array.isArray(list) ? list.length : 0);
-      const totalPages = meta.totalPages || (total > 0 ? Math.ceil(total / 100) : 1);
+      const calculatedTotalPages = meta.totalPages || (total > 0 ? Math.ceil(total / 50) : 1);
 
       setTotalCount(total);
-      setHasMore(pageNum < totalPages);
+      setTotalPages(calculatedTotalPages);
       setPage(pageNum);
-
-      if (append) {
-        setListings((prev) => [...prev, ...(Array.isArray(list) ? list : [])]);
-      } else {
-        setListings(Array.isArray(list) ? list : []);
-      }
+      setListings(Array.isArray(list) ? list : []);
     } catch (err) {
       console.warn('Search query failed:', err);
       toast.error('Could not fetch listings. Showing latest products.');
-      if (!append) setListings([]);
+      setListings([]);
     } finally {
       setLoading(false);
-      setLoadingMore(false);
     }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages || newPage === page) return;
+    setPage(newPage);
+    fetchListings(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleInquire = async (item) => {
@@ -919,24 +915,76 @@ export default function SearchListingsPage() {
               })}
             </div>
 
-            {/* Load More Button if results exceed initial page */}
-            {hasMore && (
-              <div className="flex justify-center pt-4 pb-2">
-                <button
-                  type="button"
-                  onClick={() => fetchListings(page + 1, true)}
-                  disabled={loadingMore}
-                  className="px-6 py-2.5 rounded-xl bg-[#1a1a1a] text-[#d99a3d] font-bold text-xs hover:bg-[#2a2a2a] transition shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {loadingMore ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-[#d99a3d] border-t-transparent rounded-full animate-spin" />
-                      <span>Loading more listings...</span>
-                    </>
-                  ) : (
-                    <span>Load More Listings ({totalCount - listings.length} remaining)</span>
-                  )}
-                </button>
+            {/* Standard Next / Prev Pagination Footer */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-[#e3dccb] mt-4">
+                <p className="text-xs text-slate-500 font-medium">
+                  Showing{' '}
+                  <span className="font-bold text-[#1a1a1a]">
+                    {Math.min((page - 1) * 50 + 1, totalCount)}
+                  </span>{' '}
+                  to{' '}
+                  <span className="font-bold text-[#1a1a1a]">
+                    {Math.min(page * 50, totalCount)}
+                  </span>{' '}
+                  of <span className="font-bold text-[#1a1a1a]">{totalCount}</span> items
+                </p>
+
+                <div className="flex items-center gap-1.5">
+                  {/* Previous Button */}
+                  <button
+                    type="button"
+                    onClick={() => handlePageChange(page - 1)}
+                    disabled={page <= 1 || loading}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#e3dccb] bg-white text-xs font-bold text-[#1a1a1a] hover:border-[#d99a3d] hover:bg-[#f8f4ec] transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+                  >
+                    <FiChevronLeft size={15} />
+                    <span>Prev</span>
+                  </button>
+
+                  {/* Page Numbers */}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                    .reduce((acc, p, idx, arr) => {
+                      if (idx > 0 && p - arr[idx - 1] > 1) {
+                        acc.push('...');
+                      }
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((item, idx) =>
+                      item === '...' ? (
+                        <span key={`dots-${idx}`} className="px-2 text-xs font-bold text-slate-400">
+                          ...
+                        </span>
+                      ) : (
+                        <button
+                          key={`page-${item}`}
+                          type="button"
+                          onClick={() => handlePageChange(item)}
+                          disabled={loading}
+                          className={`min-w-[32px] h-8 rounded-lg text-xs font-bold transition flex items-center justify-center cursor-pointer border ${
+                            page === item
+                              ? 'bg-[#d99a3d] text-[#1a1a1a] border-[#d99a3d] shadow-xs'
+                              : 'bg-white text-slate-700 border-[#e3dccb] hover:border-[#d99a3d] hover:bg-[#f8f4ec]'
+                          }`}
+                        >
+                          {item}
+                        </button>
+                      )
+                    )}
+
+                  {/* Next Button */}
+                  <button
+                    type="button"
+                    onClick={() => handlePageChange(page + 1)}
+                    disabled={page >= totalPages || loading}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#e3dccb] bg-white text-xs font-bold text-[#1a1a1a] hover:border-[#d99a3d] hover:bg-[#f8f4ec] transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+                  >
+                    <span>Next</span>
+                    <FiChevronRight size={15} />
+                  </button>
+                </div>
               </div>
             )}
           </div>
