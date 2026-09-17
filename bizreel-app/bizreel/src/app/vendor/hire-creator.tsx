@@ -23,11 +23,12 @@ import { api } from '@/lib/api';
 
 const GOLD = '#D99A3D';
 const ESPRESSO = '#241B15';
-const BG_COLOR = '#F8FAFC';
+const BG_COLOR = '#F8F4EC';
 const CARD_BG = '#FFFFFF';
-const BORDER = '#E2E8F0';
-const TEXT_MAIN = '#0F172A';
-const TEXT_MUTED = '#64748B';
+const BORDER = '#E3DCCB';
+const TEXT_MAIN = '#241B15';
+const TEXT_MUTED = '#7A6E65';
+const INPUT_BG = '#FDFBF7';
 
 const CATEGORIES = [
   'All Categories',
@@ -444,18 +445,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
     backgroundColor: CARD_BG,
-    borderBottomWidth: 1,
+    borderBottomWidth: 1.5,
     borderBottomColor: BORDER,
   },
   backBtn: {
     width: 36,
     height: 36,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F5EFE6',
     borderWidth: 1,
     borderColor: BORDER,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
+    borderRadius: 10,
   },
   headerTitle: {
     color: TEXT_MAIN,
@@ -466,34 +467,35 @@ const styles = StyleSheet.create({
   searchSection: {
     backgroundColor: CARD_BG,
     padding: Spacing.three,
-    borderBottomWidth: 1,
+    borderBottomWidth: 1.5,
     borderBottomColor: BORDER,
-    gap: 8,
+    gap: 10,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
+    backgroundColor: INPUT_BG,
+    borderWidth: 1.5,
     borderColor: BORDER,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    height: 40,
-    gap: 6,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 42,
+    gap: 8,
   },
   searchInput: {
     flex: 1,
     color: TEXT_MAIN,
     fontSize: FontSize.xs,
+    fontWeight: '600',
   },
   filterScroll: {
     gap: 6,
   },
   filterPill: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    backgroundColor: '#F5EFE6',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: BORDER,
   },
@@ -517,10 +519,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: INPUT_BG,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: BORDER,
   },
@@ -534,7 +536,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   cityChipTextActive: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontWeight: '900',
   },
   centered: {
@@ -544,13 +546,13 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: Spacing.four,
-    gap: 12,
+    gap: 14,
   },
   creatorCard: {
     backgroundColor: CARD_BG,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: BORDER,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 14,
     gap: 10,
     ...Shadows.sm,
@@ -560,9 +562,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   avatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     borderWidth: 2,
     borderColor: GOLD,
   },
@@ -583,6 +585,7 @@ const styles = StyleSheet.create({
   handleText: {
     color: TEXT_MUTED,
     fontSize: 10,
+    fontWeight: '600',
   },
   metaBadgeRow: {
     flexDirection: 'row',
@@ -595,9 +598,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
     backgroundColor: ESPRESSO,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   ratingText: {
     color: GOLD,
@@ -605,12 +608,12 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   catBadge: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F5EFE6',
     borderWidth: 1,
     borderColor: BORDER,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   catBadgeText: {
     color: TEXT_MUTED,
@@ -621,6 +624,7 @@ const styles = StyleSheet.create({
     color: TEXT_MUTED,
     fontSize: 11,
     lineHeight: 16,
+    fontWeight: '500',
   },
   cardFooter: {
     flexDirection: 'row',
@@ -636,6 +640,7 @@ const styles = StyleSheet.create({
     color: TEXT_MUTED,
     fontSize: 9,
     fontWeight: '800',
+    letterSpacing: 0.5,
   },
   rateValue: {
     color: TEXT_MAIN,
@@ -650,17 +655,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F5EFE6',
     borderWidth: 1,
     borderColor: BORDER,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   viewProfileBtnText: {
     color: TEXT_MAIN,
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '900',
   },
   hireBtn: {
     flexDirection: 'row',
@@ -669,7 +674,7 @@ const styles = StyleSheet.create({
     backgroundColor: ESPRESSO,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   hireBtnText: {
     color: GOLD,
@@ -692,17 +697,18 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     textAlign: 'center',
     paddingHorizontal: 40,
+    lineHeight: 18,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(36, 27, 21, 0.65)',
   },
   modalContent: {
     flex: 1,
     backgroundColor: CARD_BG,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderTopWidth: 3,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 4,
     borderTopColor: GOLD,
   },
   modalHeader: {
@@ -711,7 +717,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
     backgroundColor: CARD_BG,
-    borderBottomWidth: 1,
+    borderBottomWidth: 1.5,
     borderBottomColor: BORDER,
   },
   modalTitle: {
@@ -727,10 +733,10 @@ const styles = StyleSheet.create({
   modalCloseBtn: {
     width: 32,
     height: 32,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F5EFE6',
     borderWidth: 1,
     borderColor: BORDER,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -744,14 +750,16 @@ const styles = StyleSheet.create({
     gap: 12,
     backgroundColor: '#FFFBEB',
     padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 14,
+    borderWidth: 1.5,
     borderColor: '#FCD34D',
   },
   modalAvatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: GOLD,
   },
   modalCreatorName: {
     color: TEXT_MAIN,
@@ -769,7 +777,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   fieldGroup: {
-    gap: 4,
+    gap: 5,
   },
   fieldLabel: {
     color: TEXT_MUTED,
@@ -778,14 +786,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   input: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: INPUT_BG,
     color: TEXT_MAIN,
     fontSize: FontSize.xs,
-    borderWidth: 1,
+    fontWeight: '600',
+    borderWidth: 1.5,
     borderColor: BORDER,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   row: {
     flexDirection: 'row',
@@ -794,7 +803,7 @@ const styles = StyleSheet.create({
   submitProposalBtn: {
     backgroundColor: ESPRESSO,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
