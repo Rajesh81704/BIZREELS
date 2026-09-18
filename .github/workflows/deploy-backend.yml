@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "backend/**"
 
 jobs:
   deploy:
@@ -31,7 +29,7 @@ jobs:
             echo "Installing production dependencies..."
             npm ci --omit=dev
 
-            echo "Restarting PM2..."
+            echo "Restarting backend..."
             pm2 restart bizreels-backend
 
             pm2 save
