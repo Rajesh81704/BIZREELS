@@ -1,0 +1,39 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy backend to VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+
+            echo "Starting backend deployment..."
+
+            cd /var/www/BIZREELS/backend
+
+            echo "Pulling latest code..."
+            git pull origin main
+
+            echo "Installing production dependencies..."
+            npm ci --omit=dev
+
+            echo "Restarting PM2..."
+            pm2 restart bizreels-backend
+
+            pm2 save
+
+            echo "Backend deployment completed successfully."
