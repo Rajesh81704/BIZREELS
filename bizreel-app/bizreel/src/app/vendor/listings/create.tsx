@@ -50,6 +50,13 @@ const PURPLE_ACCENT = '#9333EA';
 const PURPLE_BG = '#F3E8FF';
 const PURPLE_BORDER = '#D8B4FE';
 
+function safeTrim(val: any): string {
+  if (typeof val === 'string') return val.trim();
+  if (typeof val === 'number') return String(val).trim();
+  if (Array.isArray(val)) return val.map((v) => (typeof v === 'string' ? v.trim() : String(v))).filter(Boolean).join('\n');
+  return '';
+}
+
 const STANDARD_UNITS = [
   { value: 'piece', label: 'Piece (Pcs)' },
   { value: 'kg', label: 'Kilogram (kg)' },
@@ -297,19 +304,31 @@ export default function CreateListingScreen() {
 
             // Service details
             if (sd) {
-              if (sd.serviceHighlights) setServiceHighlights(sd.serviceHighlights);
-              if (sd.termsAndConditions) setTermsAndConditions(sd.termsAndConditions);
-              if (sd.serviceType) setServiceType(sd.serviceType);
-              if (sd.priceType) setPriceType(sd.priceType);
-              if (sd.duration || sd.durationText) setDuration(sd.duration || sd.durationText);
-              if (sd.serviceArea) setServiceArea(sd.serviceArea);
+              if (sd.serviceHighlights !== undefined && sd.serviceHighlights !== null) {
+                setServiceHighlights(
+                  Array.isArray(sd.serviceHighlights)
+                    ? sd.serviceHighlights.join('\n')
+                    : String(sd.serviceHighlights)
+                );
+              }
+              if (sd.termsAndConditions !== undefined && sd.termsAndConditions !== null) {
+                setTermsAndConditions(
+                  Array.isArray(sd.termsAndConditions)
+                    ? sd.termsAndConditions.join('\n')
+                    : String(sd.termsAndConditions)
+                );
+              }
+              if (sd.serviceType) setServiceType(String(sd.serviceType));
+              if (sd.priceType) setPriceType(String(sd.priceType));
+              if (sd.duration || sd.durationText) setDuration(String(sd.duration || sd.durationText));
+              if (sd.serviceArea) setServiceArea(String(sd.serviceArea));
               if (sd.minOrderValue) setMinOrderValue(String(sd.minOrderValue));
               if (sd.homeVisitAvailable !== undefined) setHomeVisitAvailable(Boolean(sd.homeVisitAvailable));
               if (sd.maxTravelDistanceKm) setMaxTravelDistanceKm(String(sd.maxTravelDistanceKm));
-              if (sd.availableCities) setAvailableCities(sd.availableCities);
+              if (sd.availableCities) setAvailableCities(String(sd.availableCities));
               if (sd.emergencyService24x7 !== undefined) setEmergencyService24x7(Boolean(sd.emergencyService24x7));
               if (sd.advanceBookingRequired !== undefined) setAdvanceBookingRequired(Boolean(sd.advanceBookingRequired));
-              if (sd.bookingAvailability) setBookingAvailability(sd.bookingAvailability);
+              if (sd.bookingAvailability) setBookingAvailability(String(sd.bookingAvailability));
             }
 
             // Populate cover and gallery images
@@ -737,15 +756,28 @@ export default function CreateListingScreen() {
       ? Math.round(((actual - selling) / actual) * 100)
       : 0;
 
-  const finalUnit = unit === 'other' ? (customUnit.trim() || 'piece') : unit;
+  const finalUnit = unit === 'other' ? (safeTrim(customUnit) || 'piece') : unit;
 
   function handleSubmit() {
-    if (!title.trim()) {
+    const cleanTitle = safeTrim(title);
+    const cleanBrand = safeTrim(brand);
+    const cleanSku = safeTrim(sku);
+    const cleanCategory = safeTrim(category);
+    const cleanSubcategory = safeTrim(subcategory);
+    const cleanShortDesc = safeTrim(shortDescription);
+    const cleanDesc = safeTrim(description);
+    const cleanWarranty = safeTrim(warranty);
+    const cleanReturnPolicy = safeTrim(returnPolicy);
+    const cleanGst = safeTrim(gst);
+    const cleanImage = safeTrim(imageUrl);
+    const cleanVideo = safeTrim(videoUrl);
+
+    if (!cleanTitle) {
       Alert.alert('Title Required', `Please enter ${type} title.`);
       return;
     }
 
-    if (!sellingPrice.trim()) {
+    if (!safeTrim(sellingPrice)) {
       Alert.alert('Price Required', 'Please enter selling price (₹).');
       return;
     }
@@ -756,17 +788,17 @@ export default function CreateListingScreen() {
       return;
     }
 
-    const finalImages = galleryImages.length > 0 ? galleryImages : imageUrl.trim() ? [imageUrl.trim()] : [];
+    const finalImages = galleryImages.length > 0 ? galleryImages : cleanImage ? [cleanImage] : [];
 
     const payload: any = {
       type,
-      title: title.trim(),
-      brand: brand.trim() || undefined,
-      sku: sku.trim() || undefined,
-      category: category.trim(),
-      subcategory: subcategory.trim(),
-      shortDescription: shortDescription.trim() || undefined,
-      description: description.trim() || undefined,
+      title: cleanTitle,
+      brand: cleanBrand || undefined,
+      sku: cleanSku || undefined,
+      category: cleanCategory,
+      subcategory: cleanSubcategory,
+      shortDescription: cleanShortDesc || undefined,
+      description: cleanDesc || undefined,
       price: basePrice,
       salePrice: selling,
       actualPrice: actual > 0 ? actual : basePrice,
@@ -774,37 +806,43 @@ export default function CreateListingScreen() {
       stock: type === 'product' ? parseInt(stock || '10', 10) : undefined,
       minOrderQty: parseInt(minOrderQty || '1', 10),
       unit: finalUnit,
-      warranty: warranty.trim() || undefined,
-      returnPolicy: returnPolicy.trim() || undefined,
-      gst: gst.trim() || undefined,
+      warranty: cleanWarranty || undefined,
+      returnPolicy: cleanReturnPolicy || undefined,
+      gst: cleanGst || undefined,
       tags,
       labels,
       variants,
-      image: imageUrl.trim() || finalImages[0] || undefined,
+      image: cleanImage || finalImages[0] || undefined,
       images: finalImages,
-      video: videoUrl.trim() || undefined,
+      video: cleanVideo || undefined,
       status: 'published',
     };
 
     if (type === 'service') {
+      const cleanServiceHighlights = safeTrim(serviceHighlights);
+      const cleanTerms = safeTrim(termsAndConditions);
+      const cleanDuration = safeTrim(duration);
+      const cleanServiceArea = safeTrim(serviceArea);
+      const cleanCities = safeTrim(availableCities);
+
       payload.serviceDetails = {
         serviceType,
         priceType,
         price: basePrice,
-        serviceHighlights: serviceHighlights.trim() || undefined,
-        termsAndConditions: termsAndConditions.trim() || undefined,
-        duration: duration.trim() || '1 Hour',
-        serviceArea: serviceArea.trim() || 'Local Area',
+        serviceHighlights: cleanServiceHighlights || undefined,
+        termsAndConditions: cleanTerms || undefined,
+        duration: cleanDuration || '1 Hour',
+        serviceArea: cleanServiceArea || 'Local Area',
         minOrderValue: minOrderValue ? parseFloat(minOrderValue) : undefined,
         homeVisitAvailable,
         maxTravelDistanceKm: maxTravelDistanceKm ? parseFloat(maxTravelDistanceKm) : 15,
-        availableCities: availableCities.trim() || undefined,
+        availableCities: cleanCities || undefined,
         emergencyService24x7,
         advanceBookingRequired,
         bookingAvailability,
-        coverImage: imageUrl.trim() || finalImages[0] || undefined,
+        coverImage: cleanImage || finalImages[0] || undefined,
         galleryImages: finalImages.slice(1),
-        reelVideo: videoUrl.trim() || undefined,
+        reelVideo: cleanVideo || undefined,
       };
     } else {
       const dimL = shippingLength ? parseFloat(shippingLength) : undefined;
