@@ -397,21 +397,23 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
 
               {/* Price Details Breakdown matching Web */}
               <View style={styles.summaryCard}>
-                <Text style={styles.priceDetailsHeading}>PRICE DETAILS</Text>
+                <Text style={styles.priceDetailsHeading}>PRICE DETAILS &amp; SHIPPING</Text>
 
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Price ({quantity} {quantity === 1 ? 'item' : 'items'})</Text>
+                  <Text style={styles.summaryLabel}>Item Price ({quantity} {quantity === 1 ? 'item' : 'items'})</Text>
                   <Text style={styles.summaryVal}>₹{totalPrice.toLocaleString('en-IN')}</Text>
                 </View>
 
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Delivery Charges</Text>
-                  <Text style={styles.summaryVal}>₹{DELIVERY_FEE}</Text>
+                  <Text style={styles.summaryLabel}>Shipping &amp; Delivery Charge</Text>
+                  <Text style={[styles.summaryVal, { color: GOLD, fontWeight: '900' }]}>
+                    {DELIVERY_FEE > 0 ? `+ ₹${DELIVERY_FEE}` : 'FREE'}
+                  </Text>
                 </View>
 
-                <View style={[styles.summaryRow, { borderTopWidth: 1, borderTopColor: BORDER_COLOR, paddingTop: 8, marginTop: 4 }]}>
-                  <Text style={styles.totalLabel}>TOTAL AMOUNT</Text>
-                  <Text style={styles.totalVal}>₹{grandTotal.toLocaleString('en-IN')}</Text>
+                <View style={[styles.summaryRow, { borderTopWidth: 1, borderTopColor: BORDER_COLOR, paddingTop: 10, marginTop: 4 }]}>
+                  <Text style={styles.totalLabel}>TOTAL PAYABLE AMOUNT</Text>
+                  <Text style={[styles.totalVal, { fontSize: 16 }]}>₹{grandTotal.toLocaleString('en-IN')}</Text>
                 </View>
               </View>
 
@@ -425,7 +427,7 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
                 ) : (
                   <>
                     <Ionicons name="flash" size={16} color={GOLD} />
-                    <Text style={styles.confirmBtnText}>Place Order (₹{grandTotal.toLocaleString('en-IN')})</Text>
+                    <Text style={styles.confirmBtnText}>CONFIRM &amp; PLACE ORDER • ₹{grandTotal.toLocaleString('en-IN')}</Text>
                   </>
                 )}
               </TouchableOpacity>

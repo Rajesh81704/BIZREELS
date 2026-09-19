@@ -631,8 +631,11 @@ export const ReelItem = memo(function ReelItem({ reel, isActive, height, userLat
         {/* PROMINENT REEL PRODUCT PRICE & DISCOUNT BADGE */}
         {displayPrice ? (
           <View style={[styles.topPriceBadge, { top: insets.top + 16, zIndex: 999 }]}>
-            <Ionicons name="pricetag" size={13} color="#0F0F12" />
+            <Ionicons name="pricetag" size={13} color="#D99A3D" />
             <Text style={styles.topPriceText}>₹{displayPrice}</Text>
+            <View style={styles.deliveryBadgeTag}>
+              <Text style={styles.deliveryBadgeText}>+ ₹40 Delivery</Text>
+            </View>
             {displayOriginalPrice ? (
               <Text style={styles.topOriginalPriceText}>₹{displayOriginalPrice}</Text>
             ) : null}
@@ -786,6 +789,7 @@ export const ReelItem = memo(function ReelItem({ reel, isActive, height, userLat
                     <Text style={styles.originalPricePillText}>₹{displayOriginalPrice}</Text>
                   ) : null}
                 </View>
+                <Text style={styles.deliveryPillSubText}>+ ₹40 Delivery</Text>
                 {discountPercent > 0 ? (
                   <View style={styles.discountPillTag}>
                     <Text style={styles.discountPillText}>{discountPercent}% OFF</Text>
@@ -1556,6 +1560,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 9,
     fontWeight: '900',
+  },
+  deliveryBadgeTag: {
+    backgroundColor: '#241B15',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#D99A3D',
+    marginLeft: 4,
+  },
+  deliveryBadgeText: {
+    color: '#D99A3D',
+    fontSize: 9,
+    fontWeight: '900',
+  },
+  deliveryPillSubText: {
+    color: '#D97706',
+    fontSize: 8.5,
+    fontWeight: '800',
+    marginTop: 1,
   },
   originalPricePillText: {
     color: 'rgba(15,15,18,0.6)',
