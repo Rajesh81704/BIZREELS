@@ -188,7 +188,7 @@ class ReelService {
     }
 
     const isLocalPath = (u) => typeof u === 'string' && (/file:\/\//i.test(u) || u.includes('/host.exp.exponent/') || u.includes('cache/ImagePicker'));
-    if (isLocalPath(finalVideoUrl) || isLocalPath(videoUrl)) {
+    if (isLocalPath(finalVideoUrl) || (!fileBuffer && isLocalPath(videoUrl))) {
       throw ApiError.badRequest('Local device file paths cannot be accepted. Please upload the video file directly.');
     }
 

@@ -130,6 +130,74 @@ export async function createReel(payload: {
   mediaType?: 'video' | 'image';
   saveToServiceGallery?: boolean;
 }): Promise<any> {
+  const isLocalVideo =
+    payload.videoUrl &&
+    (payload.videoUrl.startsWith('file://') ||
+      payload.videoUrl.includes('cache/ImagePicker') ||
+      payload.videoUrl.startsWith('ph://') ||
+      payload.videoUrl.startsWith('content://'));
+
+  const isLocalThumb =
+    payload.thumbnailUrl &&
+    (payload.thumbnailUrl.startsWith('file://') ||
+      payload.thumbnailUrl.includes('cache/ImagePicker') ||
+      payload.thumbnailUrl.startsWith('ph://') ||
+      payload.thumbnailUrl.startsWith('content://'));
+
+  if (isLocalVideo || isLocalThumb) {
+    const formData = new FormData();
+    if (isLocalVideo) {
+      formData.append('video', {
+        uri: payload.videoUrl,
+        name: 'reel-video.mp4',
+        type: 'video/mp4',
+      } as any);
+    } else {
+      formData.append('videoUrl', payload.videoUrl);
+      formData.append('mediaUrl', payload.videoUrl);
+    }
+
+    if (isLocalThumb) {
+      formData.append('thumbnail', {
+        uri: payload.thumbnailUrl,
+        name: 'cover.jpg',
+        type: 'image/jpeg',
+      } as any);
+    } else if (payload.thumbnailUrl) {
+      formData.append('thumbnailUrl', payload.thumbnailUrl);
+    }
+
+    if (payload.caption) {
+      formData.append('caption', payload.caption);
+      formData.append('title', payload.caption);
+    }
+    if (payload.postType) formData.append('postType', payload.postType || 'product');
+    if (payload.postPurpose) formData.append('postPurpose', payload.postPurpose || 'General Promotion');
+    if (payload.announcementTagline) formData.append('announcementTagline', payload.announcementTagline);
+    if (payload.taggedListing) formData.append('taggedListing', payload.taggedListing);
+    if (payload.offerId) formData.append('offerId', payload.offerId);
+    if (payload.couponCode) formData.append('couponCode', payload.couponCode);
+    if (payload.discountPercent) formData.append('discountPercent', payload.discountPercent);
+    if (payload.promotionArea) formData.append('promotionArea', payload.promotionArea);
+    if (payload.category) formData.append('category', payload.category);
+    if (payload.subcategory) formData.append('subcategory', payload.subcategory);
+    if (payload.mediaType) formData.append('mediaType', payload.mediaType);
+
+    if (payload.hashtags && Array.isArray(payload.hashtags)) {
+      formData.append('tags', payload.hashtags.join(','));
+      formData.append('hashtags', JSON.stringify(payload.hashtags));
+    }
+    if (payload.targetAudiences && Array.isArray(payload.targetAudiences)) {
+      formData.append('targetAudiences', JSON.stringify(payload.targetAudiences));
+      formData.append('targeting', JSON.stringify({ audience: payload.targetAudiences, radius: payload.promotionArea }));
+    }
+
+    const { data } = await api.post('/reels', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data.data || data;
+  }
+
   const body = {
     ...payload,
     videoUrl: payload.videoUrl,
@@ -139,6 +207,12 @@ export async function createReel(payload: {
     targetListing: payload.taggedListing,
     postType: payload.postType || 'product',
     postPurpose: payload.postPurpose || 'General Promotion',
+    title: payload.caption,
+    tags: payload.hashtags ? payload.hashtags.join(',') : undefined,
+    targeting: {
+      audience: payload.targetAudiences,
+      radius: payload.promotionArea,
+    },
   };
   const { data } = await api.post('/reels', body);
   return data.data || data;

@@ -896,22 +896,32 @@ export default function CreateReelScreen() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      const uploadedUrl = res.data?.secure_url || res.data?.url || res.data?.path || uri;
-      if (isVideo) {
-        setVideoUrl(uploadedUrl);
-        Alert.alert('Video Uploaded!', 'Video file uploaded successfully to server.');
+      const uploadedUrl = res.data?.secure_url || res.data?.url || res.data?.path;
+      if (uploadedUrl && !uploadedUrl.startsWith('file://') && !uploadedUrl.includes('cache/ImagePicker')) {
+        if (isVideo) {
+          setVideoUrl(uploadedUrl);
+          Alert.alert('Video Uploaded!', 'Video file uploaded successfully to server.');
+        } else {
+          setThumbnailUrl(uploadedUrl);
+          Alert.alert('Thumbnail Uploaded!', 'Cover image uploaded successfully.');
+        }
       } else {
-        setThumbnailUrl(uploadedUrl);
-        Alert.alert('Thumbnail Uploaded!', 'Cover image uploaded successfully.');
+        if (isVideo) {
+          setVideoUrl(uri);
+          Alert.alert('Video Attached!', 'Video attached and ready for reel publishing.');
+        } else {
+          setThumbnailUrl(uri);
+          Alert.alert('Cover Image Attached!', 'Thumbnail cover attached.');
+        }
       }
     } catch (uploadErr) {
-      console.warn('Backend upload fallback:', uploadErr);
+      console.warn('Backend upload notice:', uploadErr);
       if (isVideo) {
-        setVideoUrl(uri || 'https://assets.mixkit.co/videos/preview/mixkit-tree-with-yellow-flowers-1173-large.mp4');
-        Alert.alert('Video File Selected!', 'Video attached and ready for reel publishing.');
+        setVideoUrl(uri);
+        Alert.alert('Video Attached!', 'Video ready for reel publishing.');
       } else {
         setThumbnailUrl(uri);
-        Alert.alert('Cover Image Selected!', 'Thumbnail cover attached.');
+        Alert.alert('Cover Image Attached!', 'Thumbnail cover attached.');
       }
     } finally {
       if (isVideo) setUploadingVideo(false);
