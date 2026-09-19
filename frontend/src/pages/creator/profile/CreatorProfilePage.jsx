@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { FiUser, FiFileText, FiCheck } from 'react-icons/fi';
+import {
+  FiUser, FiFileText, FiCheck, FiEye, FiStar, FiAward,
+  FiMapPin, FiInstagram, FiVideo, FiShield, FiX, FiExternalLink
+} from 'react-icons/fi';
 import { useGetMeQuery, useUpdateProfileMutation } from '../../../features/auth/authApi';
 import { setCredentials } from '../../../features/auth/authSlice';
 import { api, tokenStore } from '../../../lib/api';
@@ -55,10 +58,10 @@ export default function CreatorProfilePage() {
   });
 
   const [saving, setSaving] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   useEffect(() => {
     if (user && Object.keys(user).length > 0) {
-      // 1. Basic Info
       setName(creatorProfile.name || user.name || '');
 
       const currentProf =
@@ -81,7 +84,6 @@ export default function CreatorProfilePage() {
       setTravelAvailable(creatorProfile.travelAvailable ? 'Yes' : 'No');
       setProfilePhoto(creatorProfile.profilePhoto || user.avatarUrl || user.profile_pic || '');
 
-      // 2. Languages
       const rawLang = creatorProfile.languages || user.language || 'English, Hindi';
       const normalizedLangStr = Array.isArray(rawLang)
         ? rawLang.join(', ')
@@ -90,7 +92,6 @@ export default function CreatorProfilePage() {
         : 'English, Hindi';
       setLanguages(normalizedLangStr);
 
-      // 3. Address
       const existingAddr =
         typeof creatorProfile.address === 'object' && creatorProfile.address
           ? creatorProfile.address
@@ -106,7 +107,6 @@ export default function CreatorProfilePage() {
         country: existingAddr.country || 'India'
       });
 
-      // 4. Social Media
       const rawSm = creatorProfile.socialMedia;
       let insta = { handleOrUrl: '', totalReels: '', totalFollowers: '' };
       let fb = { handleOrUrl: '', totalReels: '', totalFollowers: '' };
@@ -141,16 +141,7 @@ export default function CreatorProfilePage() {
         if (rawSm.instagram) insta = { ...insta, ...rawSm.instagram };
         if (rawSm.facebook) fb = { ...fb, ...rawSm.facebook };
         if (Array.isArray(rawSm.customPlatforms)) custom = rawSm.customPlatforms;
-      } else {
-        // Fallbacks from previous data models
-        if (creatorProfile.portfolio?.instagramLink || creatorProfile.socialLinks?.instagram) {
-          insta.handleOrUrl = creatorProfile.portfolio?.instagramLink || creatorProfile.socialLinks?.instagram || '';
-        }
-        if (creatorProfile.portfolio?.facebookLink || creatorProfile.socialLinks?.facebook) {
-          fb.handleOrUrl = creatorProfile.portfolio?.facebookLink || creatorProfile.socialLinks?.facebook || '';
-        }
       }
-
       setSocialMedia({
         instagram: insta,
         facebook: fb,
@@ -158,6 +149,18 @@ export default function CreatorProfilePage() {
       });
     }
   }, [creatorProfile, user]);
+
+  // Profile Completeness Score (0 - 100%)
+  const completeness = React.useMemo(() => {
+    let score = 0;
+    if (name) score += 20;
+    if (profilePhoto) score += 20;
+    if (bio) score += 20;
+    if (address.city) score += 15;
+    if (socialMedia.instagram?.handleOrUrl || socialMedia.facebook?.handleOrUrl) score += 15;
+    if (languages) score += 10;
+    return Math.min(score, 100);
+  }, [name, profilePhoto, bio, address.city, socialMedia, languages]);
 
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
@@ -188,10 +191,8 @@ export default function CreatorProfilePage() {
     setSaving(true);
     const resolvedProf =
       profession === 'Other / Custom Creative Field' ? customProfession.trim() : profession;
-
     const normalizedCity = address.city?.trim() || 'Mumbai';
 
-    // Compile social media list
     const socialMediaList = [
       {
         platform: 'Instagram',
@@ -280,43 +281,73 @@ export default function CreatorProfilePage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 font-sans p-2 sm:p-4 min-h-screen">
-      {/* Header Banner in Onboarding Style */}
-      <div className="bg-[#241b15] text-white p-6 rounded-md border-2 border-[#241b15] shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <span className="text-[9.5px] font-black text-[#d99a3d] uppercase tracking-widest block mb-1">
-            CREATOR PROFILE &amp; SOCIAL METRICS
-          </span>
-          <h1
-            style={{ fontFamily: "'Archivo Black', sans-serif" }}
-            className="text-xl sm:text-2xl uppercase tracking-wide text-white"
-          >
-            CREATOR PROFILE DETAILS
+    <div className="max-w-5xl mx-auto space-y-6 font-sans p-3 sm:p-6 min-h-screen">
+      {/* Warm Gold & Dark Espresso Banner */}
+      <div className="bg-[#241b15] text-white p-6 rounded-2xl border-2 border-[#241b15] shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-5 relative overflow-hidden">
+        <div className="space-y-2 relative z-10">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black bg-[#d99a3d] text-[#241b15] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              ✦ CREATOR STUDIO PORTAL
+            </span>
+            <span className="text-[10px] font-bold text-slate-300 bg-white/10 px-2.5 py-0.5 rounded-full">
+              Verified Marketplace Profile
+            </span>
+          </div>
+
+          <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wide text-white">
+            CREATOR PROFILE &amp; BRAND BRANDING
           </h1>
-          <p className="text-xs text-slate-300 mt-1 max-w-md">
-            Manage your stage name, social media metrics, physical studio address, and language fluencies.
+          <p className="text-xs text-slate-300 max-w-lg leading-relaxed">
+            Manage your stage identity, social channel metrics, physical studio address, and language fluencies to get hired for video reels.
           </p>
+
+          {/* Profile Completeness Bar */}
+          <div className="pt-2 flex items-center gap-3 max-w-sm">
+            <div className="flex-1 bg-white/10 h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-[#d99a3d] h-full transition-all duration-500 rounded-full"
+                style={{ width: `${completeness}%` }}
+              />
+            </div>
+            <span className="text-[11px] font-black text-[#d99a3d]">{completeness}% Complete</span>
+          </div>
         </div>
 
-        <div className="w-10 h-10 rounded-full bg-[#d99a3d] text-[#1a1a1a] flex items-center justify-center font-black shrink-0 border border-[#1a1a1a]">
-          <FiUser size={20} />
+        {/* Action Controls */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto relative z-10">
+          <button
+            type="button"
+            onClick={() => setShowPreviewModal(true)}
+            className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 border border-white/20 cursor-pointer"
+          >
+            <FiEye className="w-4 h-4 text-[#d99a3d]" />
+            <span>Preview Card</span>
+          </button>
+          <Link
+            to="/creator-marketplace"
+            target="_blank"
+            className="px-4 py-2.5 bg-[#d99a3d] hover:bg-[#b8802e] text-[#241b15] text-xs font-black rounded-xl transition flex items-center justify-center gap-2 shadow-md border-none"
+          >
+            <FiExternalLink className="w-4 h-4" />
+            <span>Marketplace ↗</span>
+          </Link>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-[#e3dccb] pb-2 flex-wrap">
+      {/* Navigation Segmented Tabs */}
+      <div className="flex items-center gap-2 border-b border-[#e3dccb] pb-3 flex-wrap">
         <Link
           to="/creator/profile"
-          className="px-4 py-2 rounded-md text-xs font-black bg-[#241b15] text-[#d99a3d] shadow-xs flex items-center gap-2"
+          className="px-4 py-2.5 rounded-xl text-xs font-black bg-[#241b15] text-[#d99a3d] shadow-2xs flex items-center gap-2"
         >
-          <FiUser className="w-3.5 h-3.5" />
+          <FiUser className="w-4 h-4 text-[#d99a3d]" />
           <span>Basic &amp; Social Profile</span>
         </Link>
         <Link
           to="/creator/onboarding-details"
-          className="px-4 py-2 rounded-md text-xs font-bold text-slate-600 hover:text-[#1a1a1a] hover:bg-[#f8f4ec] transition flex items-center gap-2"
+          className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-[#1a1a1a] hover:bg-[#f8f4ec] transition flex items-center gap-2 border border-[#e3dccb]"
         >
-          <FiFileText className="w-3.5 h-3.5" />
+          <FiFileText className="w-4 h-4 text-slate-400" />
           <span>Full Creator Setup Details</span>
         </Link>
       </div>
@@ -358,16 +389,83 @@ export default function CreatorProfilePage() {
           setLanguages={setLanguages}
         />
 
-        {/* SUBMIT BUTTON AT THE VERY END (NON-STICKY, NATURAL FLOW) */}
+        {/* SUBMIT BUTTON */}
         <button
           type="submit"
           disabled={saving}
-          className="w-full py-3.5 bg-[#241b15] text-[#d99a3d] border border-[#241b15] rounded-md text-xs font-black uppercase tracking-wider shadow-xs hover:bg-[#342820] transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+          className="w-full py-4 bg-[#241b15] text-[#d99a3d] border border-[#241b15] rounded-2xl text-xs font-black uppercase tracking-wider shadow-md hover:bg-[#342820] transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
         >
-          <FiCheck size={16} />
+          <FiCheck size={18} />
           <span>{saving ? 'Saving Creator Profile...' : 'Save Creator Profile'}</span>
         </button>
       </form>
+
+      {/* PUBLIC MARKETPLACE CARD PREVIEW MODAL */}
+      {showPreviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-[#e3dccb] overflow-hidden animate-scale-up">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-4 bg-[#241b15] text-white">
+              <span className="text-xs font-black text-[#d99a3d] uppercase tracking-wider">
+                Public Marketplace Card Preview
+              </span>
+              <button
+                onClick={() => setShowPreviewModal(false)}
+                className="p-1 rounded-lg hover:bg-white/10 text-slate-300 hover:text-white border-none cursor-pointer"
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Preview Card Content */}
+            <div className="p-6 space-y-4 text-center">
+              <div className="relative w-24 h-24 mx-auto rounded-full overflow-hidden border-2 border-[#d99a3d] shadow-sm bg-[#f8f4ec]">
+                <img
+                  src={profilePhoto || '/logo.png'}
+                  alt={name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <div>
+                <h3 className="font-extrabold text-base text-[#1a1a1a]">{name || 'Creator Name'}</h3>
+                <p className="text-xs font-bold text-[#d99a3d] uppercase tracking-wider mt-0.5">
+                  {profession === 'Other / Custom Creative Field' ? customProfession || 'Creator' : profession}
+                </p>
+                <p className="text-xs text-slate-500 mt-1 flex items-center justify-center gap-1">
+                  <FiMapPin className="w-3.5 h-3.5 text-slate-400" />
+                  {address.city || 'Mumbai'}, {address.state || 'Maharashtra'}
+                </p>
+              </div>
+
+              {/* Badges */}
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <span className="px-3 py-1 bg-[#f8f4ec] text-[#241b15] border border-[#e3dccb] rounded-full text-[10px] font-extrabold">
+                  {experienceYears} Years Exp
+                </span>
+                <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-extrabold">
+                  {travelAvailable === 'Yes' ? '✈️ Shoots Nationwide' : '📍 Local Shoots'}
+                </span>
+              </div>
+
+              {bio ? (
+                <p className="text-xs text-slate-600 line-clamp-3 bg-[#f8f4ec] p-3 rounded-xl border border-[#e3dccb] text-left italic">
+                  "{bio}"
+                </p>
+              ) : null}
+
+              <div className="pt-2">
+                <button
+                  onClick={() => setShowPreviewModal(false)}
+                  className="w-full py-2.5 bg-[#241b15] text-[#d99a3d] text-xs font-black rounded-xl border-none cursor-pointer"
+                >
+                  Close Preview
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

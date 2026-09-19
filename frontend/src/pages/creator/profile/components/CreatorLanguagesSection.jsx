@@ -23,14 +23,12 @@ export default function CreatorLanguagesSection({
   languages = '',
   setLanguages
 }) {
-  // Normalize languages into a safe comma-separated string
   const safeLangStr = Array.isArray(languages)
     ? languages.join(', ')
     : typeof languages === 'string'
     ? languages
     : '';
 
-  // Parse comma-separated string into a trimmed array for easy chip matching
   const currentLangList = safeLangStr
     ? safeLangStr.split(',').map((l) => l.trim()).filter(Boolean)
     : [];
@@ -46,31 +44,28 @@ export default function CreatorLanguagesSection({
   };
 
   return (
-    <div className="bg-white rounded-md p-5 sm:p-6 border border-[#e3dccb] shadow-xs space-y-4">
-      {/* Section Header with Onboarding Number Badge */}
-      <div className="border-b border-[#e3dccb] pb-3 flex items-center gap-3">
-        <span className="w-7 h-7 rounded bg-[#241b15] text-[#d99a3d] flex items-center justify-center font-black text-xs">
+    <div className="bg-white rounded-2xl p-5 sm:p-6 border border-[#e3dccb] shadow-2xs space-y-5">
+      {/* Section Header */}
+      <div className="border-b border-[#e3dccb] pb-3.5 flex items-center gap-3">
+        <span className="w-8 h-8 rounded-xl bg-[#241b15] text-[#d99a3d] flex items-center justify-center font-black text-xs shadow-xs">
           4
         </span>
         <div>
-          <h3
-            style={{ fontFamily: "'Archivo Black', sans-serif" }}
-            className="text-sm uppercase text-[#1a1a1a]"
-          >
-            LANGUAGES SPOKEN &amp; DIALECTS
+          <h3 className="text-sm font-black uppercase tracking-wider text-[#1a1a1a]">
+            LANGUAGES SPOKEN &amp; REGIONAL DIALECTS
           </h3>
-          <p className="text-[11px] text-slate-500">
+          <p className="text-[11px] text-slate-500 font-medium">
             Select the languages you can speak, record voice-overs in, or create video captions for
           </p>
         </div>
       </div>
 
-      {/* Popular Language Badges matching Onboarding tag pill style */}
+      {/* Language Selection Pills */}
       <div>
-        <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest block mb-2">
+        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">
           Select Languages Spoken *
         </label>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {POPULAR_LANGUAGES.map((lang) => {
             const isSelected = currentLangList.some(
               (l) => l.toLowerCase() === lang.toLowerCase()
@@ -80,30 +75,30 @@ export default function CreatorLanguagesSection({
                 key={lang}
                 type="button"
                 onClick={() => toggleLanguage(lang)}
-                className={`px-3 py-1.5 rounded-md text-xs font-extrabold transition cursor-pointer border ${
+                className={`px-3.5 py-2 rounded-xl text-xs font-black transition cursor-pointer border ${
                   isSelected
-                    ? 'bg-[#241b15] text-[#d99a3d] border-[#241b15] shadow-xs'
-                    : 'bg-[#f8f4ec] border-[#e3dccb] text-slate-700 hover:bg-slate-200'
+                    ? 'bg-[#241b15] text-[#d99a3d] border-[#241b15] shadow-2xs'
+                    : 'bg-[#f8f4ec] border-[#e3dccb] text-slate-700 hover:bg-[#e3dccb]/50'
                 }`}
               >
-                {lang}
+                {isSelected ? `✓ ${lang}` : lang}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Manual text input for comma-separated or custom dialects */}
+      {/* Manual Comma-Separated Input */}
       <div>
-        <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest block mb-1">
+        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">
           Other Regional Dialects / Comma Separated Languages
         </label>
         <input
           type="text"
-          placeholder="e.g. English, Hindi, Bhojpuri, Chhattisgarhi"
+          placeholder="e.g. Marwari, Tulu, Konkani, French"
           value={safeLangStr}
           onChange={(e) => setLanguages(e.target.value)}
-          className="w-full bg-[#f8f4ec] border border-[#e3dccb] rounded-md px-3 py-2 text-xs font-bold text-[#1a1a1a] focus:outline-none focus:border-[#d99a3d]"
+          className="w-full bg-[#f8f4ec] border border-[#e3dccb] rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1a1a1a] focus:outline-none focus:border-[#d99a3d]"
         />
       </div>
     </div>
