@@ -194,6 +194,24 @@ router.post(['/', '/me/offers', '/offers'], requireAuth, catchAsync(async (req, 
   });
 }));
 
+// ── GET /vendors/me/offers/:offerId — Get single offer details ──
+router.get(['/:offerId', '/me/offers/:offerId', '/offers/:offerId'], requireAuth, catchAsync(async (req, res) => {
+  const { offerId } = req.params;
+  const offer = await Offer.findOne({
+    _id: offerId,
+    vendorId: req.user._id,
+    isVendorOffer: true,
+    isDeleted: { $ne: true },
+  });
+
+  if (!offer) throw ApiError.notFound('Offer not found');
+
+  res.json({
+    success: true,
+    data: offer,
+  });
+}));
+
 // ── PUT /vendors/me/offers/:offerId — Update offer ────────────
 router.put(['/:offerId', '/me/offers/:offerId', '/offers/:offerId'], requireAuth, catchAsync(async (req, res) => {
   const { offerId } = req.params;

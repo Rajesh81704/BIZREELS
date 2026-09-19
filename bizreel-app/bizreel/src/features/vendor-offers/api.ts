@@ -74,6 +74,16 @@ export async function duplicateVendorOffer(id: string): Promise<VendorOffer> {
   }
 }
 
+export async function fetchVendorOfferDetails(id: string): Promise<VendorOffer> {
+  const { data } = await api.get(`/vendors/me/offers/${id}`);
+  return data.data || data;
+}
+
+export async function testValidateCoupon(id: string, payload: { couponCode?: string; orderSubtotal?: number; itemIds?: string[] }): Promise<any> {
+  const { data } = await api.post(`/vendors/me/offers/${id}/validate-coupon`, payload);
+  return data;
+}
+
 export async function deleteVendorOffer(id: string): Promise<boolean> {
   try {
     const { data } = await api.delete(`/vendors/me/offers/${id}`);
@@ -83,3 +93,4 @@ export async function deleteVendorOffer(id: string): Promise<boolean> {
     return true;
   }
 }
+

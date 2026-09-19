@@ -3,7 +3,9 @@ import {
   createVendorOffer,
   deleteVendorOffer,
   duplicateVendorOffer,
+  fetchVendorOfferDetails,
   fetchVendorOffers,
+  testValidateCoupon,
   toggleVendorOfferStatus,
   updateVendorOffer,
 } from './api';
@@ -12,6 +14,20 @@ export function useVendorOffers() {
   return useQuery({
     queryKey: ['vendor', 'offers'],
     queryFn: fetchVendorOffers,
+  });
+}
+
+export function useVendorOfferDetails(id?: string) {
+  return useQuery({
+    queryKey: ['vendor', 'offer', id],
+    queryFn: () => (id ? fetchVendorOfferDetails(id) : null),
+    enabled: Boolean(id),
+  });
+}
+
+export function useTestValidateCoupon() {
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: any }) => testValidateCoupon(id, payload),
   });
 }
 
@@ -29,8 +45,11 @@ export function useUpdateVendorOffer() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: updateVendorOffer,
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['vendor', 'offers'] });
+      if (variables.id) {
+        queryClient.invalidateQueries({ queryKey: ['vendor', 'offer', variables.id] });
+      }
     },
   });
 }
@@ -64,3 +83,4 @@ export function useDeleteVendorOffer() {
     },
   });
 }
+

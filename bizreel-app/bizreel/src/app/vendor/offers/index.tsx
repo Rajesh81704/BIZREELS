@@ -352,13 +352,16 @@ export default function VendorOffersScreen() {
                   </View>
                 </View>
 
-                <View style={styles.cardMain}>
+                <TouchableOpacity
+                  style={styles.cardMain}
+                  activeOpacity={0.7}
+                  onPress={() => router.push(`/vendor/offers/${item._id || (item as any).id}` as any)}>
                   <View style={styles.highlightBadge}>
                     <Text style={styles.highlightText}>{highlight}</Text>
                   </View>
                   <Text style={styles.offerTitle}>{item.title}</Text>
                   {item.description && <Text style={styles.offerDesc}>{item.description}</Text>}
-                </View>
+                </TouchableOpacity>
 
                 <View style={styles.cardFooter}>
                   <View style={styles.couponCodePill}>
