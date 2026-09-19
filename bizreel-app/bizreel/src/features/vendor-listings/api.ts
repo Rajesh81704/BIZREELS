@@ -63,7 +63,28 @@ export async function updateVendorListing({
   return data.data || data;
 }
 
+export async function fetchListingDetails(id: string): Promise<Listing> {
+  const { data } = await api.get(`/listings/${id}`);
+  return data.data?.listing || data.data || data;
+}
+
+export async function fetchListingAnalytics(id: string): Promise<any> {
+  const { data } = await api.get(`/listings/${id}/analytics`);
+  return data.data || data;
+}
+
+export async function updateListingStock(id: string, stock: number): Promise<Listing> {
+  const { data } = await api.patch(`/listings/${id}/stock`, { stock });
+  return data.data?.listing || data.data || data;
+}
+
+export async function duplicateListing(id: string): Promise<Listing> {
+  const { data } = await api.post(`/listings/${id}/duplicate`);
+  return data.data?.listing || data.data || data;
+}
+
 export async function deleteVendorListing(id: string): Promise<boolean> {
   const { data } = await api.delete(`/listings/${id}`);
   return data.success || true;
 }
+

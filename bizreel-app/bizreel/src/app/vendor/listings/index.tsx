@@ -355,8 +355,13 @@ export default function VendorCatalogScreen() {
 
             return (
               <View style={[styles.card, isHidden && styles.cardHidden]}>
-                {/* Top Item Row */}
-                <View style={styles.cardMainRow}>
+                {/* Top Item Row — Clickable to detail page */}
+                <TouchableOpacity
+                  style={styles.cardMainRow}
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    router.push(`/vendor/listings/${item._id || (item as any).id}` as any)
+                  }>
                   {/* Thumbnail Image */}
                   {image ? (
                     <Image source={{ uri: image }} style={styles.cardImage} contentFit="cover" />
@@ -393,7 +398,8 @@ export default function VendorCatalogScreen() {
                       )}
                     </View>
                   </View>
-                </View>
+                </TouchableOpacity>
+
 
                 {/* Bottom Stats & Actions Footer */}
                 <View style={styles.cardFooter}>

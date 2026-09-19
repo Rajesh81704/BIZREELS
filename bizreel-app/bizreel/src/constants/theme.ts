@@ -104,6 +104,7 @@ export const FontWeight = {
   medium: '500',
   semibold: '600',
   bold: '700',
+  black: '900',
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -121,7 +122,16 @@ export const Spacing = {
   eight: 32,
   ten: 40,
   twelve: 48,
+
+  // Standard alias tokens
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  xxl: 32,
 } as const;
+
 
 export const MaxContentWidth = 1200;
 export const BottomTabInset = 64;
