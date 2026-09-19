@@ -461,7 +461,7 @@ export default function ServiceFormModal({
         const res = await api.post('/v1/upload/image', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        const url = res.data?.url || res.data?.data?.url;
+        const url = res.data?.url || res.data?.data?.url || res.data?.secure_url;
         if (url) uploadedUrls.push(url);
       }
       if (type === 'cover') {

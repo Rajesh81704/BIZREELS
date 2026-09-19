@@ -2,16 +2,20 @@ const express = require('express');
 const multer = require('multer');
 const { requireAuth } = require('../middleware/auth.middleware');
 const cloudinaryService = require('../services/cloudinary.service');
+const { uploadSingleImage } = require('../middleware/upload.middleware');
+const { uploadImage } = require('../controllers/upload.controller');
 const { catchAsync } = require('../utils/helpers');
 const ApiError = require('../utils/ApiError');
+
+const router = express.Router();
 
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
 });
 
-router.post('/sign', requireAuth, catchAsync(async (req, res) => {
-  const { folder = 'listings/misc', resource_type = 'image' } = req.body;
+router.post('/sign', catchAsync(async (req, res) => {
+  const { folder = 'listings/misc', resource_type = 'image' } = req.body || {};
   try {
     const result = cloudinaryService.signUpload(folder, resource_type);
     res.json(result);
@@ -20,28 +24,10 @@ router.post('/sign', requireAuth, catchAsync(async (req, res) => {
   }
 }));
 
-router.post('/upload', requireAuth, upload.single('file'), catchAsync(async (req, res) => {
-  if (!req.file) {
-    throw ApiError.badRequest('No file uploaded');
-  }
-  const folder = req.body.folder || 'listings/misc';
-  const resourceType = req.body.resource_type || 'image';
+// Route for direct file upload - handles 'file', 'image', 'photo', 'media', etc.
+router.post('/upload', uploadSingleImage('file'), uploadImage);
 
-  try {
-    const result = await cloudinaryService.uploadFile(
-      req.file.buffer,
-      req.file.originalname || 'upload',
-      req.file.mimetype || 'application/octet-stream',
-      folder,
-      resourceType
-    );
-    res.json(result);
-  } catch (err) {
-    if (err.name === 'CloudinaryConfigError') {
-      return res.status(503).json({ message: err.message });
-    }
-    throw ApiError.badRequest(err.message);
-  }
-}));
+// Additional aliases for upload endpoint
+router.post(['/image', '/file', '/document', '/media', '/'], uploadSingleImage('image'), uploadImage);
 
 module.exports = router;
