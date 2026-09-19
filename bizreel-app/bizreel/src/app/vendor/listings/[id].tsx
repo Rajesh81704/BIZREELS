@@ -31,7 +31,7 @@ import {
   useUpdateListingStock,
   useUpdateVendorListing,
 } from '@/features/vendor-listings/queries';
-import { getListingImage } from '@/utils/image';
+import { getAllListingImages, getListingImage, resolveImageUrl } from '@/utils/image';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -75,12 +75,7 @@ export default function SingleListingDetailScreen() {
   const listing: any = listingData || {};
   const isService = listing.type === 'service';
 
-  const images: string[] =
-    Array.isArray(listing.images) && listing.images.length > 0
-      ? listing.images
-      : listing.image
-      ? [listing.image]
-      : [];
+  const images: string[] = getAllListingImages(listing);
 
   const price = listing.price || 0;
   const sellingPrice = listing.sellingPrice || price;
@@ -243,7 +238,7 @@ export default function SingleListingDetailScreen() {
               {images.map((imgUri, idx) => (
                 <View key={idx} style={{ width: SCREEN_WIDTH - Spacing.lg * 2, height: 260 }}>
                   <Image
-                    source={{ uri: getListingImage(imgUri) || '' }}
+                    source={{ uri: resolveImageUrl(imgUri) || imgUri }}
                     style={styles.galleryImage}
                     contentFit="cover"
                   />
@@ -251,10 +246,32 @@ export default function SingleListingDetailScreen() {
               ))}
             </ScrollView>
           ) : (
-            <View style={styles.placeholderGallery}>
-              <Ionicons name="cube-outline" size={54} color="#94A3B8" />
-              <Text style={styles.placeholderText}>No Media Uploaded</Text>
-            </View>
+            <TouchableOpacity
+              style={styles.placeholderGallery}
+              onPress={() =>
+                router.push({
+                  pathname: '/vendor/listings/create' as any,
+                  params: { editId: listingId },
+                } as any)
+              }>
+              <View style={styles.emptyGalleryIconBox}>
+                <Ionicons
+                  name={isService ? 'construct-outline' : 'image-outline'}
+                  size={36}
+                  color={GOLD}
+                />
+              </View>
+              <Text style={styles.placeholderTitle}>
+                {isService ? 'No Cover Photo Attached' : 'No Media Uploaded'}
+              </Text>
+              <Text style={styles.placeholderSub}>
+                Add a cover photo or gallery image to build buyer trust & boost inquiries
+              </Text>
+              <View style={styles.addMediaBtn}>
+                <Ionicons name="cloud-upload-outline" size={14} color={ESPRESSO} />
+                <Text style={styles.addMediaBtnText}>+ Upload Cover Photo / Gallery</Text>
+              </View>
+            </TouchableOpacity>
           )}
 
           {/* Dots Indicator */}
@@ -690,16 +707,50 @@ const styles = StyleSheet.create({
   },
   placeholderGallery: {
     width: '100%',
-    height: 200,
+    height: 240,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#241B15',
+    padding: Spacing.lg,
   },
-  placeholderText: {
-    marginTop: Spacing.xs,
+  emptyGalleryIconBox: {
+    width: 64,
+    height: 64,
+    borderRadius: Radius.full,
+    backgroundColor: 'rgba(217, 154, 61, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(217, 154, 61, 0.3)',
+    marginBottom: Spacing.xs,
+  },
+  placeholderTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: '#FFFFFF',
+    marginTop: 4,
+  },
+  placeholderSub: {
+    fontSize: 11,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: Spacing.md,
+    maxWidth: 260,
+  },
+  addMediaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: GOLD,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs + 2,
+    borderRadius: Radius.md,
+  },
+  addMediaBtnText: {
     fontSize: FontSize.xs,
-    color: TEXT_MUTED,
-    fontWeight: FontWeight.medium,
+    fontWeight: FontWeight.black,
+    color: ESPRESSO,
   },
   dotsRow: {
     flexDirection: 'row',

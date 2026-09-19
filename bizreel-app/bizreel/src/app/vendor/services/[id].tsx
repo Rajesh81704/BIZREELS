@@ -29,7 +29,7 @@ import {
   useListingDetails,
   useUpdateVendorListing,
 } from '@/features/vendor-listings/queries';
-import { getListingImage } from '@/utils/image';
+import { getAllListingImages, getListingImage, resolveImageUrl } from '@/utils/image';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -70,12 +70,7 @@ export default function SingleServiceDetailScreen() {
   const service: any = serviceData || {};
   const liveStats = analyticsData || {};
 
-  const images: string[] =
-    Array.isArray(service.images) && service.images.length > 0
-      ? service.images
-      : service.image
-      ? [service.image]
-      : [];
+  const images: string[] = getAllListingImages(service);
 
   const price = service.price || 0;
   const pricingType = service.pricingType || service.pricingModel || 'Fixed Price';
@@ -197,7 +192,7 @@ export default function SingleServiceDetailScreen() {
               {images.map((imgUri, idx) => (
                 <View key={idx} style={{ width: SCREEN_WIDTH - Spacing.lg * 2, height: 240 }}>
                   <Image
-                    source={{ uri: getListingImage(imgUri) || '' }}
+                    source={{ uri: resolveImageUrl(imgUri) || imgUri }}
                     style={styles.galleryImage}
                     contentFit="cover"
                   />
@@ -205,10 +200,26 @@ export default function SingleServiceDetailScreen() {
               ))}
             </ScrollView>
           ) : (
-            <View style={styles.galleryPlaceholder}>
-              <Ionicons name="construct-outline" size={54} color="#94A3B8" />
-              <Text style={styles.placeholderText}>Service Visual / Work Samples</Text>
-            </View>
+            <TouchableOpacity
+              style={styles.galleryPlaceholder}
+              onPress={() =>
+                router.push({
+                  pathname: '/vendor/listings/create' as any,
+                  params: { editId: serviceId },
+                } as any)
+              }>
+              <View style={styles.emptyGalleryIconBox}>
+                <Ionicons name="construct-outline" size={36} color={GOLD} />
+              </View>
+              <Text style={styles.placeholderTitle}>No Cover Photo Attached</Text>
+              <Text style={styles.placeholderSub}>
+                Upload a cover photo or service sample image to attract local buyers
+              </Text>
+              <View style={styles.addMediaBtn}>
+                <Ionicons name="cloud-upload-outline" size={14} color={ESPRESSO} />
+                <Text style={styles.addMediaBtnText}>+ Upload Cover Photo / Gallery</Text>
+              </View>
+            </TouchableOpacity>
           )}
 
           <View style={styles.modeBadge}>
@@ -451,15 +462,50 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   galleryPlaceholder: {
-    height: 180,
-    backgroundColor: '#F1F5F9',
+    height: 240,
+    backgroundColor: '#241B15',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: Spacing.lg,
   },
-  placeholderText: {
-    fontSize: FontSize.xs,
-    color: TEXT_MUTED,
+  emptyGalleryIconBox: {
+    width: 64,
+    height: 64,
+    borderRadius: Radius.full,
+    backgroundColor: 'rgba(217, 154, 61, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(217, 154, 61, 0.3)',
+    marginBottom: Spacing.xs,
+  },
+  placeholderTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: '#FFFFFF',
     marginTop: 4,
+  },
+  placeholderSub: {
+    fontSize: 11,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: Spacing.md,
+    maxWidth: 260,
+  },
+  addMediaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: GOLD,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs + 2,
+    borderRadius: Radius.md,
+  },
+  addMediaBtnText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.black,
+    color: ESPRESSO,
   },
   modeBadge: {
     position: 'absolute',

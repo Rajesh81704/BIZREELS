@@ -40,14 +40,21 @@ export function resolveImageUrl(urlCandidate: any): string | null {
  */
 export function getListingImage(item: any): string | null {
   if (!item) return null;
+  if (typeof item === 'string') return resolveImageUrl(item);
 
   // 1. Direct single image properties
   const directImage =
+    resolveImageUrl(item.coverImage) ||
+    resolveImageUrl(item.cover_image) ||
+    resolveImageUrl(item.coverPhoto) ||
+    resolveImageUrl(item.cover_photo) ||
     resolveImageUrl(item.image) ||
     resolveImageUrl(item.imageUrl) ||
-    resolveImageUrl(item.coverImage) ||
     resolveImageUrl(item.thumbnailUrl) ||
-    resolveImageUrl(item.serviceDetails?.coverImage);
+    resolveImageUrl(item.thumbnail) ||
+    resolveImageUrl(item.serviceDetails?.coverImage) ||
+    resolveImageUrl(item.serviceDetails?.cover_image) ||
+    resolveImageUrl(item.serviceDetails?.coverPhoto);
 
   if (directImage) return directImage;
 
@@ -59,9 +66,16 @@ export function getListingImage(item: any): string | null {
     }
   }
 
-  // 3. Media URLs array
+  // 3. Media URLs / Gallery array
   if (Array.isArray(item.mediaUrls) && item.mediaUrls.length > 0) {
     for (const img of item.mediaUrls) {
+      const resolved = resolveImageUrl(img);
+      if (resolved) return resolved;
+    }
+  }
+
+  if (Array.isArray(item.gallery) && item.gallery.length > 0) {
+    for (const img of item.gallery) {
       const resolved = resolveImageUrl(img);
       if (resolved) return resolved;
     }
@@ -79,6 +93,17 @@ export function getListingImage(item: any): string | null {
     }
   }
 
+  if (
+    item.serviceDetails?.portfolioGallery &&
+    Array.isArray(item.serviceDetails.portfolioGallery) &&
+    item.serviceDetails.portfolioGallery.length > 0
+  ) {
+    for (const img of item.serviceDetails.portfolioGallery) {
+      const resolved = resolveImageUrl(img);
+      if (resolved) return resolved;
+    }
+  }
+
   // 5. Variant image
   if (Array.isArray(item.variants) && item.variants.length > 0) {
     for (const v of item.variants) {
@@ -88,4 +113,47 @@ export function getListingImage(item: any): string | null {
   }
 
   return null;
+}
+
+/**
+ * Extracts ALL unique valid image URLs from a product or service listing item.
+ */
+export function getAllListingImages(item: any): string[] {
+  if (!item) return [];
+
+  const list: string[] = [];
+
+  const addCand = (cand: any) => {
+    if (!cand) return;
+    if (Array.isArray(cand)) {
+      cand.forEach((c) => addCand(c));
+      return;
+    }
+    const resolved = resolveImageUrl(cand);
+    if (resolved && !list.includes(resolved)) {
+      list.push(resolved);
+    }
+  };
+
+  addCand(item.coverImage);
+  addCand(item.cover_image);
+  addCand(item.coverPhoto);
+  addCand(item.cover_photo);
+  addCand(item.serviceDetails?.coverImage);
+  addCand(item.serviceDetails?.cover_image);
+  addCand(item.serviceDetails?.coverPhoto);
+  addCand(item.serviceDetails?.cover_photo);
+  addCand(item.images);
+  addCand(item.image);
+  addCand(item.imageUrl);
+  addCand(item.thumbnailUrl);
+  addCand(item.thumbnail);
+  addCand(item.gallery);
+  addCand(item.media);
+  addCand(item.mediaUrls);
+  addCand(item.serviceDetails?.portfolioGallery);
+  addCand(item.serviceDetails?.portfolio);
+  addCand(item.serviceDetails?.gallery);
+
+  return list;
 }
