@@ -1,6 +1,7 @@
 /**
- * Vendor Product & Service Catalog Dashboard — Mobile Application
+ * Vendor Product, Service & Dynamic Offers Catalog Dashboard — Mobile Application
  * Implements full catalog management with Light Theme & Warm Gold Editorial Bento Grid system.
+ * Includes Dynamic Offers Tab with 19-Type Offer Engine Parity!
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -22,9 +23,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { FontSize, FontWeight, Radius, Shadows, Spacing } from '@/constants/theme';
+import { OFFER_CATEGORIES } from '@/constants/offerCategories';
+import { FontSize, Shadows, Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/context';
 import { useDeleteVendorListing, useVendorListings } from '@/features/vendor-listings/queries';
+import {
+  useDeleteVendorOffer,
+  useDuplicateVendorOffer,
+  useToggleVendorOfferStatus,
+  useVendorOffers,
+} from '@/features/vendor-offers/queries';
 import { api } from '@/lib/api';
 import { getListingImage } from '@/utils/image';
 
@@ -55,11 +63,16 @@ export default function VendorCatalogScreen() {
     (user as any)?.is_verified === true ||
     (user as any)?.vendorProfile?.verificationStatus === 'approved';
 
-  const { data: listings = [], isLoading, isRefetching, refetch } = useVendorListings();
-  const deleteMutation = useDeleteVendorListing();
+  const { data: listings = [], isLoading: listingsLoading, isRefetching: listingsRefetching, refetch: refetchListings } = useVendorListings();
+  const { data: offers = [], isLoading: offersLoading, isRefetching: offersRefetching, refetch: refetchOffers } = useVendorOffers();
 
-  // Active Catalog Tab: 'products' | 'services'
-  const [activeTab, setActiveTab] = useState<'products' | 'services'>('products');
+  const deleteListingMutation = useDeleteVendorListing();
+  const toggleOfferStatusMutation = useToggleVendorOfferStatus();
+  const duplicateOfferMutation = useDuplicateVendorOffer();
+  const deleteOfferMutation = useDeleteVendorOffer();
+
+  // Active Catalog Tab: 'products' | 'services' | 'offers'
+  const [activeTab, setActiveTab] = useState<'products' | 'services' | 'offers'>('products');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<'latest' | 'price_low' | 'price_high'>('latest');
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
@@ -68,6 +81,12 @@ export default function VendorCatalogScreen() {
   const [updatingStock, setUpdatingStock] = useState(false);
 
   function handleAddItem() {
+    if (activeTab === 'offers') {
+      router.push('/vendor/offers/create' as any);
+      return;
+    }
+
+    const targetType = activeTab === 'services' ? 'service' : 'product';
     if (!isVerified) {
       Alert.alert(
         'Business Verification Required ⚠️',
@@ -76,7 +95,11 @@ export default function VendorCatalogScreen() {
           {
             text: 'Proceed Anyway',
             style: 'cancel',
-            onPress: () => router.push('/vendor/listings/create' as any),
+            onPress: () =>
+              router.push({
+                pathname: '/vendor/listings/create' as any,
+                params: { initialType: targetType },
+              } as any),
           },
           {
             text: 'Verify Now',
@@ -86,7 +109,10 @@ export default function VendorCatalogScreen() {
         ]
       );
     } else {
-      router.push('/vendor/listings/create' as any);
+      router.push({
+        pathname: '/vendor/listings/create' as any,
+        params: { initialType: targetType },
+      } as any);
     }
   }
 
@@ -100,23 +126,50 @@ export default function VendorCatalogScreen() {
 
   const productsList = userListings.filter((item) => (item.type || (item as any).category_type) !== 'service');
   const servicesList = userListings.filter((item) => (item.type || (item as any).category_type) === 'service');
+  const offersList = offers || [];
 
-  const currentTabList = activeTab === 'products' ? productsList : servicesList;
-
-  const filteredListings = currentTabList
+  const filteredProducts = productsList
     .filter((item) => {
-      const matchSearch = searchQuery
-        ? item.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item._id?.includes(searchQuery)
-        : true;
-      return matchSearch;
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        item.title?.toLowerCase().includes(q) ||
+        item.category?.toLowerCase().includes(q) ||
+        item._id?.includes(q)
+      );
     })
     .sort((a, b) => {
       if (sortOption === 'price_low') return (a.price || 0) - (b.price || 0);
       if (sortOption === 'price_high') return (b.price || 0) - (a.price || 0);
       return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });
+
+  const filteredServices = servicesList
+    .filter((item) => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        item.title?.toLowerCase().includes(q) ||
+        item.category?.toLowerCase().includes(q) ||
+        item._id?.includes(q)
+      );
+    })
+    .sort((a, b) => {
+      if (sortOption === 'price_low') return (a.price || 0) - (b.price || 0);
+      if (sortOption === 'price_high') return (b.price || 0) - (a.price || 0);
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+
+  const filteredOffers = offersList.filter((item: any) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      item.title?.toLowerCase().includes(q) ||
+      item.code?.toLowerCase().includes(q) ||
+      item.couponCode?.toLowerCase().includes(q) ||
+      item.category?.toLowerCase().includes(q)
+    );
+  });
 
   function toggleVisibility(id: string, title: string) {
     setHiddenIds((prev) => {
@@ -129,7 +182,7 @@ export default function VendorCatalogScreen() {
     });
   }
 
-  function handleDuplicate(item: any) {
+  function handleDuplicateListing(item: any) {
     api.post('/listings', {
       title: `${item.title} (Copy)`,
       price: item.price,
@@ -141,11 +194,11 @@ export default function VendorCatalogScreen() {
     })
       .then(() => {
         Alert.alert('Listing Duplicated!', `Created a copy of "${item.title}".`);
-        refetch();
+        refetchListings();
       })
       .catch(() => {
         Alert.alert('Duplicated!', `Created a copy of "${item.title}".`);
-        refetch();
+        refetchListings();
       });
   }
 
@@ -157,12 +210,12 @@ export default function VendorCatalogScreen() {
     try {
       await api.patch(`/listings/${lid}`, { stock: num });
       Alert.alert('Stock Updated', `Inventory quantity updated to ${num}.`);
-      refetch();
+      refetchListings();
       if (selectedAnalyticsItem) {
         setSelectedAnalyticsItem((prev: any) => (prev ? { ...prev, stock: num } : null));
       }
       setStockInput('');
-    } catch (err) {
+    } catch {
       Alert.alert('Update Failed', 'Failed to update stock count.');
     } finally {
       setUpdatingStock(false);
@@ -172,33 +225,72 @@ export default function VendorCatalogScreen() {
   function handleShare(item: any) {
     const targetId = item._id || item.id;
     const shareUrl = `https://bizreels.in/customer/search?id=${targetId}`;
-    import('react-native').then(({ Share }) => {
-      Share.share({
-        title: item.title,
-        message: `Check out "${item.title}" on BizReels! 👉 ${shareUrl}`,
-        url: shareUrl,
-      }).catch(() => {
+    import('react-native')
+      .then(({ Share }) => {
+        Share.share({
+          title: item.title,
+          message: `Check out "${item.title}" on BizReels! 👉 ${shareUrl}`,
+          url: shareUrl,
+        }).catch(() => {
+          Alert.alert('Share Listing', `Listing URL: ${shareUrl}`);
+        });
+      })
+      .catch(() => {
         Alert.alert('Share Listing', `Listing URL: ${shareUrl}`);
       });
-    }).catch(() => {
-      Alert.alert('Share Listing', `Listing URL: ${shareUrl}`);
-    });
   }
 
-  function handleDelete(id: string, title: string) {
+  function handleDeleteListing(id: string, title: string) {
     Alert.alert('Delete Listing', `Are you sure you want to remove "${title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
         onPress: () => {
-          deleteMutation.mutate(id, {
+          deleteListingMutation.mutate(id, {
             onSuccess: () => Alert.alert('Deleted', 'Listing removed successfully.'),
           });
         },
       },
     ]);
   }
+
+  // Offer Actions
+  function handleToggleOfferStatus(offerId: string) {
+    toggleOfferStatusMutation.mutate(offerId, {
+      onSuccess: () => refetchOffers(),
+    });
+  }
+
+  function handleDuplicateOffer(offerId: string, title: string) {
+    duplicateOfferMutation.mutate(offerId, {
+      onSuccess: () => {
+        Alert.alert('Offer Duplicated', `Created a copy of "${title}".`);
+        refetchOffers();
+      },
+    });
+  }
+
+  function handleDeleteOffer(offerId: string, title: string) {
+    Alert.alert('Delete Dynamic Offer', `Are you sure you want to delete "${title}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () =>
+          deleteOfferMutation.mutate(offerId, {
+            onSuccess: () => refetchOffers(),
+          }),
+      },
+    ]);
+  }
+
+  const isLoading = listingsLoading || offersLoading;
+  const isRefetching = listingsRefetching || offersRefetching;
+  const handleRefetch = () => {
+    refetchListings();
+    refetchOffers();
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -207,16 +299,16 @@ export default function VendorCatalogScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Store Catalog Management</Text>
-        <TouchableOpacity
-          style={styles.addHeaderBtn}
-          onPress={handleAddItem}>
+        <Text style={styles.headerTitle}>Store Catalog & Offers</Text>
+        <TouchableOpacity style={styles.addHeaderBtn} onPress={handleAddItem}>
           <Ionicons name="add" size={18} color="#0F172A" />
-          <Text style={styles.addHeaderBtnText}>ADD ITEM</Text>
+          <Text style={styles.addHeaderBtnText}>
+            {activeTab === 'offers' ? '+ OFFER' : '+ ITEM'}
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {/* ── Verification Banner (if unverified) ── */}
+      {/* Verification Banner */}
       {!isVerified && (
         <View style={styles.verifyBanner}>
           <View style={styles.verifyBannerLeft}>
@@ -233,7 +325,7 @@ export default function VendorCatalogScreen() {
         </View>
       )}
 
-      {/* ── Sub-Tabs Header Bar ── */}
+      {/* Sub-Tabs Header Bar (Products | Services | Dynamic Offers) */}
       <View style={styles.tabsContainer}>
         <TouchableOpacity
           style={[styles.tabPill, activeTab === 'products' && styles.tabPillActive]}
@@ -247,20 +339,33 @@ export default function VendorCatalogScreen() {
         <TouchableOpacity
           style={[styles.tabPill, activeTab === 'services' && styles.tabPillActive]}
           onPress={() => setActiveTab('services')}>
-          <Ionicons name="key-outline" size={16} color={activeTab === 'services' ? GOLD : TEXT_MUTED} />
+          <Ionicons name="construct-outline" size={16} color={activeTab === 'services' ? GOLD : TEXT_MUTED} />
           <Text style={[styles.tabPillText, activeTab === 'services' && styles.tabPillTextActive]}>
             Services ({servicesList.length})
           </Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tabPill, activeTab === 'offers' && styles.tabPillActive]}
+          onPress={() => setActiveTab('offers')}>
+          <Ionicons name="pricetag-outline" size={16} color={activeTab === 'offers' ? GOLD : TEXT_MUTED} />
+          <Text style={[styles.tabPillText, activeTab === 'offers' && styles.tabPillTextActive]}>
+            Offers ({offersList.length})
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      {/* ── Search & Filter Controls ── */}
+      {/* Search & Filter Controls */}
       <View style={styles.filterControlRow}>
         <View style={styles.searchBox}>
           <Ionicons name="search" size={16} color={TEXT_MUTED} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search items by name, category..."
+            placeholder={
+              activeTab === 'offers'
+                ? 'Search coupons, codes, offer titles...'
+                : 'Search catalog by title, category...'
+            }
             placeholderTextColor={TEXT_MUTED}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -272,33 +377,169 @@ export default function VendorCatalogScreen() {
           )}
         </View>
 
-        <TouchableOpacity
-          style={styles.sortBtn}
-          onPress={() => {
-            setSortOption((prev) =>
-              prev === 'latest' ? 'price_low' : prev === 'price_low' ? 'price_high' : 'latest'
-            );
-          }}>
-          <Ionicons name="filter-outline" size={14} color={TEXT_MAIN} />
-          <Text style={styles.sortBtnText}>
-            {sortOption === 'latest' ? 'Latest' : sortOption === 'price_low' ? 'Price ↑' : 'Price ↓'}
-          </Text>
-        </TouchableOpacity>
+        {activeTab !== 'offers' && (
+          <TouchableOpacity
+            style={styles.sortBtn}
+            onPress={() => {
+              setSortOption((prev) =>
+                prev === 'latest' ? 'price_low' : prev === 'price_low' ? 'price_high' : 'latest'
+              );
+            }}>
+            <Ionicons name="filter-outline" size={14} color={TEXT_MAIN} />
+            <Text style={styles.sortBtnText}>
+              {sortOption === 'latest' ? 'Latest' : sortOption === 'price_low' ? 'Price ↑' : 'Price ↓'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {isLoading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={GOLD} />
         </View>
-      ) : (
+      ) : activeTab === 'offers' ? (
+        /* DYNAMIC OFFERS TAB RENDERER */
         <FlatList
-          data={filteredListings}
+          data={filteredOffers}
+          keyExtractor={(item: any) => item._id || item.id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={handleRefetch}
+              tintColor={GOLD}
+              colors={[GOLD]}
+            />
+          }
+          ListHeaderComponent={
+            <View style={styles.offerHeaderBanner}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="flash-outline" size={18} color={GOLD} />
+                  <Text style={styles.offerHeaderTitle}>19-Type Dynamic Offers Engine</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.createOfferBannerBtn}
+                  onPress={() => router.push('/vendor/offers/create' as any)}>
+                  <Ionicons name="add-circle" size={14} color="#0F172A" />
+                  <Text style={styles.createOfferBannerBtnText}>+ CREATE OFFER</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.offerHeaderSub}>
+                Boost store conversions with Coupons, BOGO Deals, Free Gifts, Tiered Discounts & Referral Rewards!
+              </Text>
+            </View>
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="pricetags-outline" size={48} color={GOLD} />
+              <Text style={styles.emptyTitle}>No Active Dynamic Offers</Text>
+              <Text style={styles.emptyDesc}>
+                Create promotional coupons and rewards to turn window shoppers into loyal buyers!
+              </Text>
+              <TouchableOpacity
+                style={styles.createListingBtn}
+                onPress={() => router.push('/vendor/offers/create' as any)}>
+                <Ionicons name="add-circle" size={18} color="#0F172A" />
+                <Text style={styles.createListingBtnText}>+ CREATE DYNAMIC OFFER</Text>
+              </TouchableOpacity>
+            </View>
+          }
+          renderItem={({ item }: { item: any }) => {
+            const offerId = item._id || item.id;
+            const code = item.code || item.couponCode || 'BIZOFFER';
+            const catKey = item.category || 'discount';
+            const meta = OFFER_CATEGORIES[catKey] || OFFER_CATEGORIES.discount;
+            const isActive = (item.status || 'Active').toLowerCase() === 'active';
+            const redemptions = item.usesCount || item.redemptions || 0;
+
+            return (
+              <View style={[styles.offerCard, !isActive && styles.cardHidden]}>
+                <View style={styles.offerCardHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                    <View style={styles.categoryIconBadge}>
+                      <Text style={{ fontSize: 16 }}>{meta.icon || '🏷️'}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.offerCardTitle} numberOfLines={1}>
+                        {item.title || item.offerName || 'Special Vendor Offer'}
+                      </Text>
+                      <Text style={styles.offerCardSub}>{meta.label} • {meta.group}</Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.codeBadge, !isActive && styles.codeBadgeInactive]}>
+                    <Text style={[styles.codeBadgeText, !isActive && styles.codeBadgeTextInactive]}>
+                      {code}
+                    </Text>
+                  </View>
+                </View>
+
+                {item.description ? (
+                  <Text style={styles.offerCardDesc} numberOfLines={2}>
+                    {item.description}
+                  </Text>
+                ) : null}
+
+                <View style={styles.offerMetaRow}>
+                  <View style={styles.metaItem}>
+                    <Ionicons name="calendar-outline" size={12} color={TEXT_MUTED} />
+                    <Text style={styles.metaItemText}>
+                      Till {formatDate(item.validTill || item.endTime)}
+                    </Text>
+                  </View>
+
+                  <View style={styles.metaItem}>
+                    <Ionicons name="ticket-outline" size={12} color={GOLD} />
+                    <Text style={styles.metaItemText}>{redemptions} Redemptions</Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.statusToggleBtn, isActive ? styles.statusActive : styles.statusDisabled]}
+                    onPress={() => handleToggleOfferStatus(offerId)}>
+                    <Text style={[styles.statusToggleText, isActive ? styles.statusTextActive : styles.statusTextDisabled]}>
+                      {isActive ? 'ACTIVE' : 'DISABLED'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Offer Action Buttons */}
+                <View style={styles.offerActionsFooter}>
+                  <TouchableOpacity
+                    style={styles.offerActionBtn}
+                    onPress={() => router.push(`/vendor/offers/${offerId}` as any)}>
+                    <Ionicons name="play-circle-outline" size={14} color={GOLD} />
+                    <Text style={styles.offerActionBtnText}>SIMULATOR</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.offerActionBtn}
+                    onPress={() => handleDuplicateOffer(offerId, item.title)}>
+                    <Ionicons name="copy-outline" size={14} color="#2563EB" />
+                    <Text style={[styles.offerActionBtnText, { color: '#2563EB' }]}>DUPLICATE</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.offerActionBtn}
+                    onPress={() => handleDeleteOffer(offerId, item.title)}>
+                    <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                    <Text style={[styles.offerActionBtnText, { color: '#EF4444' }]}>DELETE</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          }}
+        />
+      ) : (
+        /* PRODUCTS & SERVICES TABS RENDERER */
+        <FlatList
+          data={activeTab === 'products' ? filteredProducts : filteredServices}
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
-              onRefresh={refetch}
+              onRefresh={handleRefetch}
               tintColor={GOLD}
               colors={[GOLD]}
             />
@@ -313,14 +554,14 @@ export default function VendorCatalogScreen() {
               </View>
 
               <Text style={styles.subBannerDesc}>
-                List your products so customers can easily search, discover, and connect with you. The Free Plan allows you to list a limited number of products, which are searchable by customers.
+                List your {activeTab} so customers can easily search, discover, and connect with you on BizReels!
               </Text>
 
               <View style={styles.checkGridRow}>
-                <Text style={styles.checkGridItem}>✓ List more products</Text>
-                <Text style={styles.checkGridItem}>✓ Increase search limit</Text>
-                <Text style={styles.checkGridItem}>✓ Product boost features</Text>
-                <Text style={styles.checkGridItem}>✓ Reach more customers</Text>
+                <Text style={styles.checkGridItem}>✓ Unlimited catalog items</Text>
+                <Text style={styles.checkGridItem}>✓ Real-time search discovery</Text>
+                <Text style={styles.checkGridItem}>✓ Buyer lead capture</Text>
+                <Text style={styles.checkGridItem}>✓ Direct customer chats</Text>
               </View>
 
               <TouchableOpacity
@@ -333,16 +574,22 @@ export default function VendorCatalogScreen() {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="cube-outline" size={48} color={GOLD} />
-              <Text style={styles.emptyTitle}>No Catalog Items Found</Text>
+              <Ionicons name={activeTab === 'services' ? 'construct-outline' : 'cube-outline'} size={48} color={GOLD} />
+              <Text style={styles.emptyTitle}>
+                No {activeTab === 'services' ? 'Services' : 'Products'} Found
+              </Text>
               <Text style={styles.emptyDesc}>
-                {searchQuery ? 'No items match your search term.' : 'Start adding items to your vendor store catalog.'}
+                {searchQuery
+                  ? 'No items match your search term.'
+                  : `Start adding ${activeTab} to your store catalog.`}
               </Text>
               <TouchableOpacity
                 style={styles.createListingBtn}
-                onPress={() => router.push('/vendor/listings/create' as any)}>
+                onPress={handleAddItem}>
                 <Ionicons name="add-circle" size={18} color="#0F172A" />
-                <Text style={styles.createListingBtnText}>+ CREATE NEW ITEM</Text>
+                <Text style={styles.createListingBtnText}>
+                  + CREATE NEW {activeTab.toUpperCase().slice(0, -1)}
+                </Text>
               </TouchableOpacity>
             </View>
           }
@@ -355,14 +602,12 @@ export default function VendorCatalogScreen() {
 
             return (
               <View style={[styles.card, isHidden && styles.cardHidden]}>
-                {/* Top Item Row — Clickable to detail page */}
                 <TouchableOpacity
                   style={styles.cardMainRow}
                   activeOpacity={0.7}
                   onPress={() =>
                     router.push(`/vendor/listings/${item._id || (item as any).id}` as any)
                   }>
-                  {/* Thumbnail Image */}
                   {image ? (
                     <Image source={{ uri: image }} style={styles.cardImage} contentFit="cover" />
                   ) : (
@@ -371,7 +616,6 @@ export default function VendorCatalogScreen() {
                     </View>
                   )}
 
-                  {/* Info Details */}
                   <View style={styles.cardInfo}>
                     <Text style={styles.cardTitle} numberOfLines={1}>
                       {item.title}
@@ -400,8 +644,6 @@ export default function VendorCatalogScreen() {
                   </View>
                 </TouchableOpacity>
 
-
-                {/* Bottom Stats & Actions Footer */}
                 <View style={styles.cardFooter}>
                   <View style={styles.metricsRow}>
                     <View style={styles.metricItem}>
@@ -415,7 +657,6 @@ export default function VendorCatalogScreen() {
                     <Text style={styles.dateText}>{formatDate(item.createdAt)}</Text>
                   </View>
 
-                  {/* Action Buttons */}
                   <View style={styles.actionsRow}>
                     <TouchableOpacity
                       style={styles.actionIconBtn}
@@ -436,7 +677,7 @@ export default function VendorCatalogScreen() {
 
                     <TouchableOpacity
                       style={styles.actionIconBtn}
-                      onPress={() => handleDuplicate(item)}>
+                      onPress={() => handleDuplicateListing(item)}>
                       <Ionicons name="copy-outline" size={15} color="#2563EB" />
                     </TouchableOpacity>
 
@@ -458,7 +699,7 @@ export default function VendorCatalogScreen() {
 
                     <TouchableOpacity
                       style={styles.actionIconBtn}
-                      onPress={() => handleDelete(item._id, item.title)}>
+                      onPress={() => handleDeleteListing(item._id, item.title)}>
                       <Ionicons name="trash-outline" size={15} color="#EF4444" />
                     </TouchableOpacity>
                   </View>
@@ -469,7 +710,7 @@ export default function VendorCatalogScreen() {
         />
       )}
 
-      {/* ── PARTICULAR LISTING DETAILS & LIVE ANALYTICS MODAL ── */}
+      {/* ANALYTICS MODAL */}
       <Modal
         visible={Boolean(selectedAnalyticsItem)}
         animationType="slide"
@@ -485,19 +726,15 @@ export default function VendorCatalogScreen() {
             const uniqueVisitors = item.uniqueVisitors || Math.floor(views * 0.7);
             const likes = item.likes || item.likesCount || 0;
             const saves = item.saves_count || item.saves || 0;
-            const shares = item.shares || 0;
             const orders = item.orders_count || item.deals || 0;
-            const revenue = item.revenue || (orders * price);
-            const rating = item.rating || 0;
+            const revenue = item.revenue || orders * price;
             const stock = item.stock ?? (item.quantity ?? 7);
             const threshold = item.lowStockThreshold ?? 5;
             const conversionRate = views > 0 ? ((orders / views) * 100).toFixed(1) : '0.0';
-            const ctr = views > 0 ? ((likes / views) * 100).toFixed(1) : '0.0';
             const isService = item.type === 'service';
 
             return (
               <View style={styles.modalContent}>
-                {/* Modal Header */}
                 <View style={styles.modalHeader}>
                   <View style={styles.modalTitleRow}>
                     <Ionicons name="analytics" size={18} color={GOLD} />
@@ -509,7 +746,6 @@ export default function VendorCatalogScreen() {
                 </View>
 
                 <ScrollView style={{ padding: 16 }} showsVerticalScrollIndicator={false}>
-                  {/* Summary Card */}
                   <View style={styles.itemSummaryCard}>
                     {(() => {
                       const modalItemImg = getListingImage(item);
@@ -531,7 +767,6 @@ export default function VendorCatalogScreen() {
                     </View>
                   </View>
 
-                  {/* Analytics Overview Grid */}
                   <Text style={styles.sectionHeaderTitle}>PERFORMANCE & IMPACT</Text>
                   <View style={styles.metricsGrid}>
                     <View style={styles.metricCard}>
@@ -571,7 +806,6 @@ export default function VendorCatalogScreen() {
                     </View>
                   </View>
 
-                  {/* Inventory Management Section */}
                   {!isService && (
                     <>
                       <Text style={styles.sectionHeaderTitle}>STOCK & INVENTORY CONTROL</Text>
@@ -616,7 +850,6 @@ export default function VendorCatalogScreen() {
                     </>
                   )}
 
-                  {/* Action Links */}
                   <View style={styles.modalActionRow}>
                     <TouchableOpacity
                       style={styles.modalEditBtn}
@@ -682,8 +915,39 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: '900',
   },
-
-  /* Sub Tabs */
+  verifyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFBEB',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FCD34D',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  verifyBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  verifyText: {
+    color: '#78350F',
+    fontSize: 10,
+    fontWeight: '700',
+    flex: 1,
+  },
+  verifyBtn: {
+    backgroundColor: GOLD,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  verifyBtnText: {
+    color: '#0F172A',
+    fontSize: 10,
+    fontWeight: '900',
+  },
   tabsContainer: {
     flexDirection: 'row',
     paddingHorizontal: Spacing.four,
@@ -695,10 +959,12 @@ const styles = StyleSheet.create({
     ...Shadows.sm,
   },
   tabPill: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     paddingVertical: 9,
     borderRadius: 9999,
     backgroundColor: '#F1F5F9',
@@ -718,8 +984,6 @@ const styles = StyleSheet.create({
     color: GOLD,
     fontWeight: '900',
   },
-
-  /* Controls */
   filterControlRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -762,8 +1026,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: '800',
   },
-
-  /* List & Cards */
   listContent: {
     paddingHorizontal: Spacing.four,
     paddingBottom: 40,
@@ -774,8 +1036,98 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  /* Card */
+  subBannerCard: {
+    backgroundColor: CARD_BG,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    padding: 14,
+    gap: 8,
+    marginBottom: 8,
+  },
+  subBannerTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  freeBadge: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  freeBadgeText: {
+    color: '#15803D',
+    fontSize: 9,
+    fontWeight: '900',
+  },
+  realtimeSyncText: {
+    color: TEXT_MUTED,
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  subBannerDesc: {
+    color: TEXT_MAIN,
+    fontSize: 10,
+    lineHeight: 14,
+  },
+  checkGridRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  checkGridItem: {
+    color: '#059669',
+    fontSize: 9.5,
+    fontWeight: '700',
+  },
+  showSubBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: ESPRESSO,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginTop: 4,
+  },
+  showSubBtnText: {
+    color: GOLD,
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 8,
+  },
+  emptyTitle: {
+    color: TEXT_MAIN,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  emptyDesc: {
+    color: TEXT_MUTED,
+    fontSize: 11,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  createListingBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: GOLD,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 9999,
+    marginTop: 6,
+  },
+  createListingBtnText: {
+    color: '#0F172A',
+    fontSize: 11,
+    fontWeight: '900',
+  },
   card: {
     backgroundColor: CARD_BG,
     borderRadius: 16,
@@ -807,97 +1159,90 @@ const styles = StyleSheet.create({
   },
   cardInfo: {
     flex: 1,
-    justifyContent: 'space-between',
+    gap: 4,
   },
   cardTitle: {
     color: TEXT_MAIN,
-    fontSize: FontSize.sm,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '900',
   },
   categorySubText: {
     color: TEXT_MUTED,
-    fontSize: 11,
-    marginTop: 2,
+    fontSize: 10,
   },
   metaBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 6,
-    flexWrap: 'wrap',
+    marginTop: 4,
   },
   priceText: {
     color: GOLD,
-    fontSize: FontSize.sm,
+    fontSize: 13,
     fontWeight: '900',
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 9999,
-    backgroundColor: '#ECFDF5',
-    borderWidth: 1,
-    borderColor: '#059669',
-  },
-  statusBadgeText: {
-    color: '#059669',
-    fontSize: 9,
-    fontWeight: '900',
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   statusBadgeDraft: {
     backgroundColor: '#F1F5F9',
-    borderColor: BORDER_COLOR,
+  },
+  statusBadgeText: {
+    color: '#166534',
+    fontSize: 8,
+    fontWeight: '900',
   },
   statusBadgeTextDraft: {
-    color: TEXT_MUTED,
+    color: '#64748B',
   },
   stockPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 9999,
-    backgroundColor: '#EFF6FF',
-  },
-  stockPillText: {
-    color: '#2563EB',
-    fontSize: 9,
-    fontWeight: '800',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   stockPillLow: {
     backgroundColor: '#FEF2F2',
   },
-  stockPillTextLow: {
-    color: '#EF4444',
+  stockPillText: {
+    color: '#334155',
+    fontSize: 8,
+    fontWeight: '800',
   },
-
-  /* Card Footer */
+  stockPillTextLow: {
+    color: '#991B1B',
+  },
   cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#F8FAFC',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
     borderTopWidth: 1,
     borderTopColor: BORDER_COLOR,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   metricsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
   metricItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
   },
   metricValue: {
     color: TEXT_MAIN,
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 10,
+    fontWeight: '700',
   },
   dateText: {
     color: TEXT_MUTED,
-    fontSize: 10,
+    fontSize: 9,
   },
   actionsRow: {
     flexDirection: 'row',
@@ -905,151 +1250,176 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionIconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: CARD_BG,
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: BORDER_COLOR,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Shadows.sm,
   },
-
-  /* Empty State */
-  emptyContainer: {
-    paddingVertical: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
+  /* Offer Card Styles */
+  offerHeaderBanner: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+    padding: 14,
+    gap: 6,
+    marginBottom: 8,
   },
-  emptyTitle: {
-    color: TEXT_MAIN,
-    fontSize: FontSize.md,
+  offerHeaderTitle: {
+    color: '#78350F',
+    fontSize: 12,
     fontWeight: '900',
   },
-  emptyDesc: {
-    color: TEXT_MUTED,
-    fontSize: FontSize.xs,
-    textAlign: 'center',
-    paddingHorizontal: 30,
+  offerHeaderSub: {
+    color: '#92400E',
+    fontSize: 10,
+    lineHeight: 14,
   },
-  createListingBtn: {
+  createOfferBannerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: ESPRESSO,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 9999,
-    marginTop: 10,
+    gap: 4,
+    backgroundColor: GOLD,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
-  createListingBtnText: {
-    color: GOLD,
-    fontSize: FontSize.xs,
+  createOfferBannerBtnText: {
+    color: '#0F172A',
+    fontSize: 9.5,
     fontWeight: '900',
   },
-  verifyBanner: {
+  offerCard: {
+    backgroundColor: CARD_BG,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    padding: 14,
+    gap: 10,
+    ...Shadows.sm,
+  },
+  offerCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFBEB',
-    borderWidth: 1.5,
-    borderColor: GOLD,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: 12,
-    borderRadius: 14,
-    gap: 10,
-    marginHorizontal: Spacing.four,
-    marginTop: 10,
-    ...Shadows.sm,
-  },
-  verifyBannerLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 8,
   },
-  verifyText: {
+  categoryIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  offerCardTitle: {
     color: TEXT_MAIN,
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '900',
   },
-  verifyBtn: {
-    backgroundColor: ESPRESSO,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 9999,
+  offerCardSub: {
+    color: TEXT_MUTED,
+    fontSize: 9.5,
   },
-  verifyBtnText: {
+  codeBadge: {
+    backgroundColor: '#241B15',
+    borderWidth: 1,
+    borderColor: GOLD,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  codeBadgeInactive: {
+    backgroundColor: '#F1F5F9',
+    borderColor: BORDER_COLOR,
+  },
+  codeBadgeText: {
     color: GOLD,
     fontSize: 10,
     fontWeight: '900',
+    letterSpacing: 0.5,
   },
-  subBannerCard: {
-    backgroundColor: CARD_BG,
-    borderWidth: 1,
-    borderColor: BORDER_COLOR,
-    padding: 16,
-    borderRadius: 16,
-    gap: 10,
-    marginBottom: 12,
-    ...Shadows.sm,
+  codeBadgeTextInactive: {
+    color: TEXT_MUTED,
   },
-  subBannerTopRow: {
+  offerCardDesc: {
+    color: '#475569',
+    fontSize: 10.5,
+    lineHeight: 15,
+  },
+  offerMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    padding: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
   },
-  freeBadge: {
-    backgroundColor: ESPRESSO,
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaItemText: {
+    color: TEXT_MAIN,
+    fontSize: 9.5,
+    fontWeight: '700',
+  },
+  statusToggleBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  statusActive: {
+    backgroundColor: '#DCFCE7',
+  },
+  statusDisabled: {
+    backgroundColor: '#FEF2F2',
+  },
+  statusToggleText: {
+    fontSize: 8.5,
+    fontWeight: '900',
+  },
+  statusTextActive: {
+    color: '#15803D',
+  },
+  statusTextDisabled: {
+    color: '#991B1B',
+  },
+  offerActionsFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: BORDER_COLOR,
+    paddingTop: 8,
+  },
+  offerActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 9999,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
-  freeBadgeText: {
+  offerActionBtnText: {
     color: GOLD,
     fontSize: 9,
     fontWeight: '900',
   },
-  realtimeSyncText: {
-    color: TEXT_MUTED,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  subBannerDesc: {
-    color: TEXT_MUTED,
-    fontSize: 11,
-    lineHeight: 16,
-  },
-  checkGridRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  checkGridItem: {
-    color: GOLD,
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  showSubBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: ESPRESSO,
-    paddingVertical: 10,
-    borderRadius: 9999,
-    marginTop: 4,
-  },
-  showSubBtnText: {
-    color: GOLD,
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
 
-  /* Item Analytics Modal Styles */
+  /* Modal */
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.6)',
@@ -1062,10 +1432,9 @@ const styles = StyleSheet.create({
     backgroundColor: CARD_BG,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+    maxHeight: '85%',
     borderWidth: 1,
     borderColor: BORDER_COLOR,
-    maxHeight: '85%',
-    ...Shadows.lg,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1083,32 +1452,36 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     color: TEXT_MAIN,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
   closeBtn: {
-    padding: 4,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   itemSummaryCard: {
     flexDirection: 'row',
+    gap: 12,
     backgroundColor: '#F8FAFC',
+    padding: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: BORDER_COLOR,
-    borderRadius: 14,
-    padding: 12,
-    gap: 12,
     marginBottom: 16,
   },
   itemSummaryImage: {
     width: 60,
     height: 60,
-    borderRadius: 10,
+    borderRadius: 8,
   },
   itemSummaryFallback: {
     width: 60,
     height: 60,
-    borderRadius: 10,
+    borderRadius: 8,
     backgroundColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1116,145 +1489,106 @@ const styles = StyleSheet.create({
   itemSummaryInfo: {
     flex: 1,
     justifyContent: 'center',
+    gap: 2,
   },
   itemSummaryTitle: {
     color: TEXT_MAIN,
-    fontSize: 13,
-    fontWeight: '800',
-    marginBottom: 2,
+    fontSize: 12,
+    fontWeight: '900',
   },
   itemSummarySub: {
     color: TEXT_MUTED,
-    fontSize: 10,
-    fontWeight: '600',
-    marginBottom: 6,
+    fontSize: 9.5,
   },
   itemSummaryPriceRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 8,
+    marginTop: 2,
   },
   itemSummaryPrice: {
     color: GOLD,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '900',
   },
   sectionHeaderTitle: {
-    color: ESPRESSO,
+    color: TEXT_MAIN,
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 0.8,
-    marginBottom: 10,
+    marginBottom: 8,
+    marginTop: 4,
   },
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
     marginBottom: 16,
   },
   metricCard: {
-    width: '48.5%',
+    width: '48%',
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: BORDER_COLOR,
-    padding: 12,
     borderRadius: 12,
+    padding: 10,
+    gap: 2,
   },
   metricCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
+    gap: 4,
   },
   metricCardLabel: {
     color: TEXT_MUTED,
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 0.5,
+    fontSize: 8.5,
+    fontWeight: '800',
   },
   metricCardVal: {
     color: TEXT_MAIN,
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '900',
-    marginBottom: 2,
   },
   metricCardSub: {
     color: TEXT_MUTED,
-    fontSize: 9,
-    fontWeight: '600',
+    fontSize: 8.5,
   },
-
-  modalActionRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
-  },
-  modalEditBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: ESPRESSO,
-    paddingVertical: 12,
-    borderRadius: 9999,
-  },
-  modalEditBtnText: {
-    color: GOLD,
-    fontSize: 11,
-    fontWeight: '900',
-  },
-
   inventorySectionBox: {
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: BORDER_COLOR,
-    padding: 14,
-    borderRadius: 14,
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
     marginBottom: 16,
   },
   inventoryStatusRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    alignItems: 'center',
   },
   inventoryStockNum: {
     color: TEXT_MAIN,
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '900',
   },
   inventoryStockLabel: {
     color: TEXT_MUTED,
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
     marginLeft: 6,
   },
   inventoryBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 9999,
-    borderWidth: 1,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
-  invBadgeGreen: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#059669',
-  },
-  invBadgeAmber: {
-    backgroundColor: '#FFFBEB',
-    borderColor: GOLD,
-  },
-  invBadgeRed: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#EF4444',
-  },
-  inventoryBadgeText: {
-    fontSize: 9,
-    fontWeight: '900',
-  },
-  invTextGreen: { color: '#059669' },
-  invTextAmber: { color: GOLD },
-  invTextRed: { color: '#EF4444' },
+  invBadgeGreen: { backgroundColor: '#DCFCE7' },
+  invBadgeAmber: { backgroundColor: '#FEF3C7' },
+  invBadgeRed: { backgroundColor: '#FEF2F2' },
+  inventoryBadgeText: { fontSize: 8.5, fontWeight: '900' },
+  invTextGreen: { color: '#166534' },
+  invTextAmber: { color: '#92400E' },
+  invTextRed: { color: '#991B1B' },
   stockUpdateRow: {
     flexDirection: 'row',
     gap: 8,
@@ -1264,21 +1598,40 @@ const styles = StyleSheet.create({
     backgroundColor: CARD_BG,
     borderWidth: 1,
     borderColor: BORDER_COLOR,
-    color: TEXT_MAIN,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 36,
     fontSize: 11,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+    color: TEXT_MAIN,
   },
   stockUpdateBtn: {
     backgroundColor: ESPRESSO,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 9999,
+    paddingHorizontal: 12,
+    height: 36,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stockUpdateBtnText: {
+    color: GOLD,
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  modalActionRow: {
+    marginBottom: 30,
+  },
+  modalEditBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: ESPRESSO,
+    borderWidth: 1,
+    borderColor: GOLD,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  modalEditBtnText: {
     color: GOLD,
     fontSize: 11,
     fontWeight: '900',
