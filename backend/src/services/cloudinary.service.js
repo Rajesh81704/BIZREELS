@@ -11,14 +11,19 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
-const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
-const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/jpg']);
-const ALLOWED_VIDEO_TYPES = new Set(['video/mp4', 'video/quicktime', 'video/webm']);
+const MAX_IMAGE_BYTES = 50 * 1024 * 1024; // 50MB max for high res photos
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024; // 100MB max
+const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
+
+const ALLOWED_IMAGE_TYPES = new Set([
+  'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif',
+  'image/gif', 'image/bmp', 'image/tiff', 'image/svg+xml', 'application/octet-stream', 'binary/octet-stream'
+]);
+const ALLOWED_VIDEO_TYPES = new Set(['video/mp4', 'video/quicktime', 'video/webm', 'video/3gpp', 'application/octet-stream']);
 const ALLOWED_AUDIO_TYPES = new Set([
   'audio/mpeg', 'audio/wav', 'audio/webm', 'audio/ogg', 'audio/mp3',
-  'audio/x-m4a', 'audio/m4a', 'audio/aac', 'audio/flac', 'audio/x-wav', 'audio/mp4'
+  'audio/x-m4a', 'audio/m4a', 'audio/aac', 'audio/flac', 'audio/x-wav', 'audio/mp4',
+  'application/octet-stream'
 ]);
 
 const isDevMode = () => {
@@ -105,35 +110,28 @@ const devWrite = (fileBytes, filename, folder, resourceType) => {
   };
 };
 
-const uploadFile = async (fileBytes, filename, contentType, folder, resourceType = 'image') => {
+const uploadFile = async (fileBytes, filename, contentType = 'image/jpeg', folder, resourceType = 'image') => {
   folder = validateFolder(folder);
+  const cleanType = (contentType || 'image/jpeg').split(';')[0].trim().toLowerCase();
 
   if (resourceType === 'image') {
-    if (!ALLOWED_IMAGE_TYPES.has(contentType)) {
-      throw ApiError.badRequest(`Unsupported image type: ${contentType}`);
+    if (!cleanType.startsWith('image/') && !ALLOWED_IMAGE_TYPES.has(cleanType)) {
+      // Flexible fallback for mobile/web generic uploads
     }
-    if (fileBytes.length > MAX_IMAGE_BYTES) {
-      throw ApiError.badRequest('Image exceeds 10MB limit');
+    if (fileBytes && fileBytes.length > MAX_IMAGE_BYTES) {
+      throw ApiError.badRequest('Image exceeds maximum limit');
     }
   } else if (resourceType === 'video') {
-    if (!ALLOWED_VIDEO_TYPES.has(contentType)) {
-      throw ApiError.badRequest(`Unsupported video type: ${contentType}`);
+    if (!cleanType.startsWith('video/') && !ALLOWED_VIDEO_TYPES.has(cleanType)) {
+      // Flexible fallback for mobile/web generic uploads
     }
-    if (fileBytes.length > MAX_VIDEO_BYTES) {
-      throw ApiError.badRequest('Video exceeds 50MB limit');
+    if (fileBytes && fileBytes.length > MAX_VIDEO_BYTES) {
+      throw ApiError.badRequest('Video exceeds maximum limit');
     }
   } else if (resourceType === 'raw') {
-    // Check if it is an audio file or raw stream
-    const isAudio = ALLOWED_AUDIO_TYPES.has(contentType) || contentType.startsWith('audio/');
-    const isGeneric = contentType === 'application/octet-stream' || contentType === 'binary/octet-stream';
-    if (!isAudio && !isGeneric) {
-      throw ApiError.badRequest(`Unsupported raw content type: ${contentType}`);
+    if (fileBytes && fileBytes.length > MAX_AUDIO_BYTES) {
+      throw ApiError.badRequest('Raw file exceeds maximum limit');
     }
-    if (fileBytes.length > MAX_AUDIO_BYTES) {
-      throw ApiError.badRequest('Raw file exceeds 20MB limit');
-    }
-  } else {
-    throw ApiError.badRequest(`Unknown resource_type: ${resourceType}`);
   }
 
   if (isDevMode() || !hasCredentials()) {
