@@ -124,7 +124,8 @@ class ReelService {
 
     // 1. AI Safety Contact Details Check
     const audienceText = typeof targeting?.audience === 'string' ? targeting.audience : Array.isArray(targeting?.audience) ? targeting.audience.join(' ') : '';
-    const fullTextScan = `${caption || ''} ${(tags || []).join(' ')} ${audienceText}`;
+    const tagsText = Array.isArray(tags) ? tags.join(' ') : typeof tags === 'string' ? tags : '';
+    const fullTextScan = `${caption || ''} ${tagsText} ${audienceText}`;
     const scan = detectForbiddenContactDetails(fullTextScan);
     if (scan.hasViolation) {
       throw ApiError.badRequest(

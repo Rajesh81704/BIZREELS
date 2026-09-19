@@ -183,13 +183,25 @@ export async function createReel(payload: {
     if (payload.subcategory) formData.append('subcategory', payload.subcategory);
     if (payload.mediaType) formData.append('mediaType', payload.mediaType);
 
-    if (payload.hashtags && Array.isArray(payload.hashtags)) {
-      formData.append('tags', payload.hashtags.join(','));
-      formData.append('hashtags', JSON.stringify(payload.hashtags));
+    const hashtagsList = Array.isArray(payload.hashtags)
+      ? payload.hashtags
+      : typeof payload.hashtags === 'string'
+      ? (payload.hashtags as string).split(' ').filter(Boolean)
+      : [];
+
+    const audiencesList = Array.isArray(payload.targetAudiences)
+      ? payload.targetAudiences
+      : typeof payload.targetAudiences === 'string'
+      ? [(payload.targetAudiences as string)]
+      : [];
+
+    if (hashtagsList.length > 0) {
+      formData.append('tags', hashtagsList.join(','));
+      formData.append('hashtags', JSON.stringify(hashtagsList));
     }
-    if (payload.targetAudiences && Array.isArray(payload.targetAudiences)) {
-      formData.append('targetAudiences', JSON.stringify(payload.targetAudiences));
-      formData.append('targeting', JSON.stringify({ audience: payload.targetAudiences, radius: payload.promotionArea }));
+    if (audiencesList.length > 0) {
+      formData.append('targetAudiences', JSON.stringify(audiencesList));
+      formData.append('targeting', JSON.stringify({ audience: audiencesList, radius: payload.promotionArea }));
     }
 
     const { data } = await api.post('/reels', formData, {
@@ -197,6 +209,12 @@ export async function createReel(payload: {
     });
     return data.data || data;
   }
+
+  const hashtagsList = Array.isArray(payload.hashtags)
+    ? payload.hashtags
+    : typeof payload.hashtags === 'string'
+    ? (payload.hashtags as string).split(' ').filter(Boolean)
+    : [];
 
   const body = {
     ...payload,
@@ -208,7 +226,7 @@ export async function createReel(payload: {
     postType: payload.postType || 'product',
     postPurpose: payload.postPurpose || 'General Promotion',
     title: payload.caption,
-    tags: payload.hashtags ? payload.hashtags.join(',') : undefined,
+    tags: hashtagsList.length > 0 ? hashtagsList.join(',') : undefined,
     targeting: {
       audience: payload.targetAudiences,
       radius: payload.promotionArea,
