@@ -83,7 +83,7 @@ interface ReelItemData {
 export default function PublicVendorProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ id?: string; vendorId?: string }>();
+  const params = useLocalSearchParams<{ id?: string; vendorId?: string; tab?: string; initialTab?: string }>();
   const vendorId = params.id || params.vendorId;
 
   const [vendor, setVendor] = useState<VendorDetails | null>(null);
@@ -91,8 +91,25 @@ export default function PublicVendorProfileScreen() {
   const [reels, setReels] = useState<ReelItemData[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'products' | 'reels' | 'about'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'services' | 'reels' | 'about'>(() => {
+    const t = (params.tab || params.initialTab || '').toLowerCase();
+    if (t === 'services' || t === 'service') return 'services';
+    if (t === 'reels' || t === 'reel') return 'reels';
+    if (t === 'about') return 'about';
+    return 'products';
+  });
   const [isFollowing, setIsFollowing] = useState(false);
+
+  useEffect(() => {
+    const t = (params.tab || params.initialTab || '').toLowerCase();
+    if (t === 'services' || t === 'service') {
+      setActiveTab('services');
+    } else if (t === 'reels' || t === 'reel') {
+      setActiveTab('reels');
+    } else if (t === 'products' || t === 'product') {
+      setActiveTab('products');
+    }
+  }, [params.tab, params.initialTab]);
 
   const addToCartMutation = useAddToCart();
   const followMutation = useFollowUser();
@@ -269,6 +286,9 @@ export default function PublicVendorProfileScreen() {
     (vendor as any)?.vendorProfile?.verificationStatus === 'verified_vendor'
   );
 
+  const productsList = products.filter((item: any) => (item.type || item.category_type) !== 'service');
+  const servicesList = products.filter((item: any) => (item.type || item.category_type) === 'service');
+
   return (
     <View style={styles.container}>
       {/* Sticky Header Bar */}
@@ -407,18 +427,18 @@ export default function PublicVendorProfileScreen() {
           {/* Metrics Grid */}
           <View style={styles.metricsRow}>
             <View style={styles.metricChip}>
-              <Text style={styles.metricVal}>{vendor.stats?.products ?? products.length}</Text>
+              <Text style={styles.metricVal}>{vendor.stats?.products ?? productsList.length}</Text>
               <Text style={styles.metricLabel}>Products</Text>
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metricChip}>
-              <Text style={styles.metricVal}>{vendor.stats?.posts ?? reels.length}</Text>
-              <Text style={styles.metricLabel}>Video Reels</Text>
+              <Text style={styles.metricVal}>{vendor.stats?.services ?? servicesList.length}</Text>
+              <Text style={styles.metricLabel}>Services</Text>
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metricChip}>
-              <Text style={styles.metricVal}>{vendor.stats?.followers ?? (isFollowing ? 1 : 0)}</Text>
-              <Text style={styles.metricLabel}>Followers</Text>
+              <Text style={styles.metricVal}>{vendor.stats?.posts ?? reels.length}</Text>
+              <Text style={styles.metricLabel}>Reels</Text>
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metricChip}>
@@ -439,7 +459,20 @@ export default function PublicVendorProfileScreen() {
               color={activeTab === 'products' ? YELLOW : 'rgba(255,255,255,0.6)'}
             />
             <Text style={[styles.tabBtnText, activeTab === 'products' && styles.tabBtnTextActive]}>
-              Products ({products.length})
+              Products ({productsList.length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === 'services' && styles.tabBtnActive]}
+            onPress={() => setActiveTab('services')}>
+            <Ionicons
+              name="construct-outline"
+              size={16}
+              color={activeTab === 'services' ? YELLOW : 'rgba(255,255,255,0.6)'}
+            />
+            <Text style={[styles.tabBtnText, activeTab === 'services' && styles.tabBtnTextActive]}>
+              Services ({servicesList.length})
             </Text>
           </TouchableOpacity>
 
@@ -473,9 +506,9 @@ export default function PublicVendorProfileScreen() {
         {/* TAB CONTENTS */}
         {activeTab === 'products' && (
           <View style={styles.tabContent}>
-            {products.length > 0 ? (
+            {productsList.length > 0 ? (
               <View style={styles.productGrid}>
-                {products.map((item) => {
+                {productsList.map((item) => {
                   const imgUri =
                     resolveImageUrl(item.images?.[0] || item.thumbnailUrl) ||
                     'https://via.placeholder.com/300';
@@ -513,6 +546,55 @@ export default function PublicVendorProfileScreen() {
                 <Ionicons name="basket-outline" size={36} color="rgba(255,255,255,0.3)" />
                 <Text style={styles.emptyTitle}>No Products Cataloged</Text>
                 <Text style={styles.emptySub}>This vendor has not published catalog products yet.</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {activeTab === 'services' && (
+          <View style={styles.tabContent}>
+            {servicesList.length > 0 ? (
+              <View style={styles.productGrid}>
+                {servicesList.map((service: any) => {
+                  const imgUri =
+                    resolveImageUrl(service.images?.[0] || service.thumbnailUrl) ||
+                    'https://via.placeholder.com/300';
+                  const price = service.salePrice || service.price || 0;
+                  const sd = service.serviceDetails || {};
+
+                  return (
+                    <TouchableOpacity
+                      key={service._id || service.id}
+                      style={styles.productCard}
+                      onPress={() => router.push(`/listing/${service._id || service.id}`)}>
+                      <Image source={{ uri: imgUri }} style={styles.productImage} contentFit="cover" />
+                      <View style={styles.productInfo}>
+                        <Text style={styles.productTitle} numberOfLines={2}>
+                          {service.title}
+                        </Text>
+                        <Text style={{ color: YELLOW, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', marginTop: 2 }}>
+                          {sd.serviceMode || service.serviceMode || 'On-site'} • {sd.durationText || service.duration || '1 Hour'}
+                        </Text>
+                        <View style={styles.productPriceRow}>
+                          <Text style={styles.productPrice}>₹{price}</Text>
+                          {!hideCustomerActions && (
+                            <TouchableOpacity
+                              style={styles.addCartSmallBtn}
+                              onPress={() => handleChat()}>
+                              <Ionicons name="chatbubble-ellipses-outline" size={14} color={BLACK} />
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.emptyCard}>
+                <Ionicons name="construct-outline" size={36} color="rgba(255,255,255,0.3)" />
+                <Text style={styles.emptyTitle}>No Services Listed</Text>
+                <Text style={styles.emptySub}>This vendor has not published service offerings yet.</Text>
               </View>
             )}
           </View>

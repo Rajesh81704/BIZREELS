@@ -6,7 +6,7 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -71,8 +71,26 @@ export default function VendorCatalogScreen() {
   const duplicateOfferMutation = useDuplicateVendorOffer();
   const deleteOfferMutation = useDeleteVendorOffer();
 
+  const params = useLocalSearchParams<{ tab?: string; initialTab?: string }>();
+
   // Active Catalog Tab: 'products' | 'services' | 'offers'
-  const [activeTab, setActiveTab] = useState<'products' | 'services' | 'offers'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'services' | 'offers'>(() => {
+    const t = (params.tab || params.initialTab || '').toLowerCase();
+    if (t === 'services' || t === 'service') return 'services';
+    if (t === 'offers' || t === 'offer') return 'offers';
+    return 'products';
+  });
+
+  React.useEffect(() => {
+    const t = (params.tab || params.initialTab || '').toLowerCase();
+    if (t === 'services' || t === 'service') {
+      setActiveTab('services');
+    } else if (t === 'offers' || t === 'offer') {
+      setActiveTab('offers');
+    } else if (t === 'products' || t === 'product') {
+      setActiveTab('products');
+    }
+  }, [params.tab, params.initialTab]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<'latest' | 'price_low' | 'price_high'>('latest');
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);

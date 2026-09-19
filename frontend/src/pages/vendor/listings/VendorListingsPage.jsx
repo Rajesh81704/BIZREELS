@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   FiShoppingBag, FiTool, FiPercent, FiCheck, FiPlus
@@ -82,8 +82,26 @@ export default function VendorListingsPage() {
   // Geolocation
   const [vendorCoords, setVendorCoords] = useState(null);
 
+  const [searchParams] = useSearchParams();
+
   // States
-  const [activeTab, setActiveTab] = useState('products');
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabParam = (searchParams.get('tab') || '').toLowerCase();
+    if (tabParam === 'services' || tabParam === 'service') return 'services';
+    if (tabParam === 'offers' || tabParam === 'offer') return 'offers';
+    return 'products';
+  });
+
+  useEffect(() => {
+    const tabParam = (searchParams.get('tab') || '').toLowerCase();
+    if (tabParam === 'services' || tabParam === 'service') {
+      setActiveTab('services');
+    } else if (tabParam === 'offers' || tabParam === 'offer') {
+      setActiveTab('offers');
+    } else if (tabParam === 'products' || tabParam === 'product') {
+      setActiveTab('products');
+    }
+  }, [searchParams]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');

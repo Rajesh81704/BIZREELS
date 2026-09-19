@@ -146,14 +146,14 @@ export default function VendorDashboardScreen() {
   const isKycApproved = (user as any)?.kyc_status === 'approved';
 
   const bentoStats = [
-    { label: 'TOTAL PRODUCTS', value: metrics.totalProducts, icon: 'cube-outline', color: '#2563EB' },
-    { label: 'TOTAL SERVICES', value: metrics.totalServices, icon: 'key-outline', color: '#7C3AED' },
-    { label: 'TOTAL REELS', value: metrics.totalReels, icon: 'videocam-outline', color: '#DB2777' },
-    { label: 'TOTAL VIEWS', value: metrics.totalViews.toLocaleString('en-IN'), icon: 'eye-outline', color: '#D99A3D' },
-    { label: 'FOLLOWERS', value: metrics.followers.toLocaleString('en-IN'), icon: 'people-outline', color: '#059669' },
-    { label: 'ENQUIRIES', value: metrics.leadEnquiries, icon: 'mail-outline', color: '#0891B2' },
-    { label: 'ORDER REQUESTS', value: metrics.totalOrders, icon: 'cart-outline', color: '#4F46E5' },
-    { label: 'REVENUE (GROSS)', value: `₹${metrics.totalSales.toLocaleString('en-IN')}`, icon: 'cash-outline', color: '#059669' },
+    { label: 'TOTAL PRODUCTS', value: metrics.totalProducts, icon: 'cube-outline', color: '#2563EB', route: '/vendor/listings', params: { tab: 'products' } },
+    { label: 'TOTAL SERVICES', value: metrics.totalServices, icon: 'key-outline', color: '#7C3AED', route: '/vendor/listings', params: { tab: 'services' } },
+    { label: 'TOTAL REELS', value: metrics.totalReels, icon: 'videocam-outline', color: '#DB2777', route: '/vendor/reels' },
+    { label: 'TOTAL VIEWS', value: metrics.totalViews.toLocaleString('en-IN'), icon: 'eye-outline', color: '#D99A3D', route: '/vendor/analytics' },
+    { label: 'FOLLOWERS', value: metrics.followers.toLocaleString('en-IN'), icon: 'people-outline', color: '#059669', route: '/vendor/followers' },
+    { label: 'ENQUIRIES', value: metrics.leadEnquiries, icon: 'mail-outline', color: '#0891B2', route: '/inquiries' },
+    { label: 'ORDER REQUESTS', value: metrics.totalOrders, icon: 'cart-outline', color: '#4F46E5', route: '/vendor/orders' },
+    { label: 'REVENUE (GROSS)', value: `₹${metrics.totalSales.toLocaleString('en-IN')}`, icon: 'cash-outline', color: '#059669', route: '/vendor/analytics' },
   ];
 
   return (
@@ -316,7 +316,17 @@ export default function VendorDashboardScreen() {
 
           <View style={styles.bentoGrid}>
             {bentoStats.map((stat, idx) => (
-              <View key={idx} style={styles.bentoCard}>
+              <TouchableOpacity
+                key={idx}
+                style={styles.bentoCard}
+                onPress={() => {
+                  if (stat.route) {
+                    router.push({
+                      pathname: stat.route as any,
+                      params: stat.params,
+                    } as any);
+                  }
+                }}>
                 <View style={styles.bentoHeaderRow}>
                   <Text style={styles.bentoLabel} numberOfLines={1}>
                     {stat.label}
@@ -326,7 +336,7 @@ export default function VendorDashboardScreen() {
                   </View>
                 </View>
                 <Text style={styles.bentoValue}>{stat.value}</Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
 

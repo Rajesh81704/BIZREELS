@@ -131,14 +131,14 @@ export default function VendorDashboardPage() {
   };
 
   const stats = [
-    { label: bi('Total Products', 'कुल उत्पाद (Total Products)'), value: metrics.totalProducts ?? metrics.activeListings ?? 0, icon: FiPackage, color: 'purple', trend: metrics.trends?.totalProducts ?? 0 },
-    { label: bi('Total Services', 'कुल सेवाएं (Total Services)'), value: metrics.totalServices ?? 0, icon: FiTool, color: 'blue', trend: metrics.trends?.totalServices ?? 0 },
-    { label: bi('Total Reels', 'कुल रील्स (Total Reels)'), value: realTimeReelsCount, icon: FiVideo, color: 'violet', trend: metrics.trends?.totalReels ?? 0 },
-    { label: bi('Total Views', 'कुल देखा गया (Total Views)'), value: realTimeViewsCount.toLocaleString(), icon: FiEye, color: 'amber', trend: metrics.trends?.totalViews ?? 0 },
-    { label: bi('Followers', 'फॉलोअर्स (Followers)'), value: (metrics.followers || 0).toLocaleString(), icon: FiUsers, color: 'green', trend: metrics.trends?.followers ?? 0 },
-    { label: bi('Enquiries', 'प्राप्त लीड्स (Enquiries)'), value: metrics.leadEnquiries ?? 0, icon: FiInbox, color: 'cyan', trend: metrics.trends?.leadEnquiries ?? 0 },
-    { label: bi('Order Requests', 'ऑर्डर अनुरोध (Order Requests)'), value: metrics.totalOrders ?? 0, icon: FiShoppingCart, color: 'indigo', trend: metrics.trends?.totalOrders ?? 0 },
-    { label: bi('Revenue', 'कुल आय (Revenue)'), value: `₹${(metrics.totalSales || 0).toLocaleString()}`, icon: FiDollarSign, color: 'teal', trend: metrics.trends?.totalSales ?? 0 },
+    { label: bi('Total Products', 'कुल उत्पाद (Total Products)'), value: metrics.totalProducts ?? metrics.activeListings ?? 0, icon: FiPackage, color: 'purple', trend: metrics.trends?.totalProducts ?? 0, link: '/vendor/listings?tab=products' },
+    { label: bi('Total Services', 'कुल सेवाएं (Total Services)'), value: metrics.totalServices ?? 0, icon: FiTool, color: 'blue', trend: metrics.trends?.totalServices ?? 0, link: '/vendor/listings?tab=services' },
+    { label: bi('Total Reels', 'कुल रील्स (Total Reels)'), value: realTimeReelsCount, icon: FiVideo, color: 'violet', trend: metrics.trends?.totalReels ?? 0, link: '/vendor/reels' },
+    { label: bi('Total Views', 'कुल देखा गया (Total Views)'), value: realTimeViewsCount.toLocaleString(), icon: FiEye, color: 'amber', trend: metrics.trends?.totalViews ?? 0, link: '/vendor/analytics' },
+    { label: bi('Followers', 'फॉलोअर्स (Followers)'), value: (metrics.followers || 0).toLocaleString(), icon: FiUsers, color: 'green', trend: metrics.trends?.followers ?? 0, link: '/vendor/followers' },
+    { label: bi('Enquiries', 'प्राप्त लीड्स (Enquiries)'), value: metrics.leadEnquiries ?? 0, icon: FiInbox, color: 'cyan', trend: metrics.trends?.leadEnquiries ?? 0, link: '/vendor/leads' },
+    { label: bi('Order Requests', 'ऑर्डर अनुरोध (Order Requests)'), value: metrics.totalOrders ?? 0, icon: FiShoppingCart, color: 'indigo', trend: metrics.trends?.totalOrders ?? 0, link: '/vendor/orders' },
+    { label: bi('Revenue', 'कुल आय (Revenue)'), value: `₹${(metrics.totalSales || 0).toLocaleString()}`, icon: FiDollarSign, color: 'teal', trend: metrics.trends?.totalSales ?? 0, link: '/vendor/analytics' },
   ];
 
   const currentUser = useSelector(selectCurrentUser);
@@ -321,9 +321,10 @@ export default function VendorDashboardPage() {
       {/* ── 3. OVERVIEW BENTO STAT CARDS ── */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {stats.map((stat, idx) => (
-          <div
+          <Link
             key={idx}
-            className="bg-white rounded-xl p-4 border border-[#e3dccb] shadow-2xs hover:shadow-sm transition-all space-y-2 relative overflow-hidden group"
+            to={stat.link}
+            className="bg-white rounded-xl p-4 border border-[#e3dccb] shadow-2xs hover:shadow-sm transition-all space-y-2 relative overflow-hidden group block text-left"
           >
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{stat.label}</span>
@@ -342,7 +343,7 @@ export default function VendorDashboardPage() {
                 </span>
               )}
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
