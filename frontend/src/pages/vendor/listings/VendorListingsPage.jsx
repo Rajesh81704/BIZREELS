@@ -30,6 +30,7 @@ import ListingHeader from './ListingHeader';
 import ListingFilters from './ListingFilters';
 import ListingTable from './ListingTable';
 import OffersTab from './OffersTab';
+import ServicesTab from './ServicesTab';
 import ReferralOfferStatsCard from './offers/ReferralOfferStatsCard';
 import ProductFormModal from './ProductFormModal';
 import ServiceFormModal from './ServiceFormModal';
@@ -628,6 +629,17 @@ export default function VendorListingsPage() {
             onDeleteOffer={handleDeleteOffer}
           />
         </div>
+      ) : activeTab === 'services' ? (
+        <ServicesTab
+          services={allListings.filter(item => item.type === 'service')}
+          loading={listingsFetching}
+          onCreateService={() => { setEditListingData(null); setShowServiceModal(true); }}
+          onEditService={handleEditRow}
+          onViewDetails={(row) => { setSelectedListingDetails(row); setShowDetailDrawer(true); }}
+          onToggleVisibility={handleToggleRowVisibility}
+          onDeleteService={handleDeleteRow}
+          onDuplicateService={handleDuplicateRow}
+        />
       ) : (
         <ListingTable
           listings={sortedListings}
