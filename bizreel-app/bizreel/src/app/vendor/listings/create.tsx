@@ -1,12 +1,21 @@
 /**
  * Vendor Add/Edit Listing Screen — Mobile Application
- * 100% Visual & Functional Parity with Web Frontend ProductFormModal.jsx
- * Matches Screenshot Layout:
+ * 100% Visual & Functional Parity with Web Frontend ProductFormModal.jsx, ProductPricingInventorySection.jsx & ServiceFormModal.jsx
+ * Matches Web Frontend:
+ * - Listing Type Switcher (Product vs Service)
  * - Category & Classification (Filtered by Vendor Onboarded Categories)
- * - Basic Product Details with AI Description Generator Banner (Voice & Text)
- * - Gemini Multimodal Media Scan ("Upload Product Media for AI Auto-Fill")
+ * - Basic Listing Details with AI Description Generator Banner (Voice & Text)
+ * - Gemini Multimodal Media Scan ("Upload Product/Service Media for AI Auto-Fill")
  * - Voice Input 🎙️ for AI prompt, Title, Short Description, Full Description, Tags
- * - Pricing & Inventory, Shipping & Delivery, Variants, Media Gallery
+ * - Pricing & Inventory with live MRP/Discount Breakdown
+ * - Shipping Specifications: Package Weight, Dimensions (L×W×H), Weight/Dimension Units
+ * - Payment Acceptance Type: Both COD & Prepaid / Prepaid Only / COD Only
+ * - Free Shipping Toggle & SLA Delivery Days Selector
+ * - Return / Replacement Policy Builder: Yes/No Switch, Return Window (3, 7, 10, 15, 30 Days),
+ *   Multi-Select Eligible Return Conditions chips, Custom Condition input, & Live Policy Preview
+ * - Specifications & Variants Builder
+ * - Full Media Gallery (Main Cover, Multi-Photo Upload, Direct URL, Video link)
+ * - Service Details Section (Service Type, Price Type, Duration, Area, Home Visit, 24x7, Advance Booking)
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -35,23 +44,54 @@ import { api } from '@/lib/api';
 import { resolveImageUrl } from '@/utils/image';
 
 const YELLOW = '#D99A3D';
-const GOLD = '#D99A3D';
-const ESPRESSO = '#241B15';
 const DARK_BG = '#F8FAFC';
-const DARK_CARD = '#FFFFFF';
 const BORDER = '#E2E8F0';
 const PURPLE_ACCENT = '#9333EA';
 const PURPLE_BG = '#F3E8FF';
 const PURPLE_BORDER = '#D8B4FE';
-const TEXT_MUTED = '#64748B';
+
+const STANDARD_UNITS = [
+  { value: 'piece', label: 'Piece (Pcs)' },
+  { value: 'kg', label: 'Kilogram (kg)' },
+  { value: 'g', label: 'Gram (g)' },
+  { value: 'litre', label: 'Litre (L)' },
+  { value: 'ml', label: 'Millilitre (ml)' },
+  { value: 'meter', label: 'Meter (m)' },
+  { value: 'cm', label: 'Centimeter (cm)' },
+  { value: 'box', label: 'Box' },
+  { value: 'pack', label: 'Pack' },
+  { value: 'set', label: 'Set' },
+  { value: 'pair', label: 'Pair' },
+  { value: 'dozen', label: 'Dozen' },
+  { value: 'bundle', label: 'Bundle' },
+  { value: 'bag', label: 'Bag' },
+  { value: 'carton', label: 'Carton' },
+  { value: 'roll', label: 'Roll' },
+  { value: 'sqft', label: 'Square Feet (sq. ft)' },
+  { value: 'quintal', label: 'Quintal (q)' },
+  { value: 'tonne', label: 'Tonne (t)' },
+  { value: 'bottle', label: 'Bottle' },
+  { value: 'plate', label: 'Plate' },
+  { value: 'other', label: 'Other (Custom Unit)...' },
+];
+
+const STANDARD_CONDITIONS = [
+  'Defective or Damaged items only',
+  'Wrong item received',
+  'Unopened & in original packaging with tags',
+  'Size / Fit issue (Exchange only)',
+  'Missing accessories or parts',
+  'All reasons accepted with unboxing proof',
+  'Other / Custom condition',
+];
 
 export default function CreateListingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { editId } = useLocalSearchParams<{ editId?: string }>();
+  const { editId, initialType } = useLocalSearchParams<{ editId?: string; initialType?: string }>();
   const isEdit = Boolean(editId);
 
-  const [type, setType] = useState<'product' | 'service'>('product');
+  const [type, setType] = useState<'product' | 'service'>(initialType === 'service' ? 'service' : 'product');
   const [loadingEdit, setLoadingEdit] = useState(false);
 
   // Category & Subcategory
@@ -84,7 +124,6 @@ export default function CreateListingScreen() {
   const [voiceSetter, setVoiceSetter] = useState<any>(null);
   const [voiceText, setVoiceText] = useState('');
   const [isListeningVoice, setIsListeningVoice] = useState(false);
-  const [voiceListeningField, setVoiceListeningField] = useState<string | null>(null);
 
   // Pricing & Inventory
   const [actualPrice, setActualPrice] = useState('');
@@ -92,9 +131,19 @@ export default function CreateListingScreen() {
   const [stock, setStock] = useState('10');
   const [minOrderQty, setMinOrderQty] = useState('1');
   const [unit, setUnit] = useState('piece');
+  const [customUnit, setCustomUnit] = useState('');
   const [warranty, setWarranty] = useState('1 Year Warranty');
-  const [returnPolicy, setReturnPolicy] = useState('7 Days Replacement');
   const [gst, setGst] = useState('18%');
+
+  // Return & Replacement Policy Builder
+  const [hasReturnPolicy, setHasReturnPolicy] = useState(true);
+  const [returnDays, setReturnDays] = useState('7 Days');
+  const [selectedReturnConditions, setSelectedReturnConditions] = useState<string[]>([
+    'Defective or Damaged items only',
+    'Wrong item received',
+  ]);
+  const [customConditionText, setCustomConditionText] = useState('');
+  const [returnPolicy, setReturnPolicy] = useState('7 Days Return / Replacement: Defective or Damaged items only, Wrong item received');
 
   // Shipping Details
   const [shippingWeight, setShippingWeight] = useState('');
@@ -102,7 +151,8 @@ export default function CreateListingScreen() {
   const [shippingLength, setShippingLength] = useState('');
   const [shippingWidth, setShippingWidth] = useState('');
   const [shippingHeight, setShippingHeight] = useState('');
-  const [shippingType, setShippingType] = useState<'self' | 'delivery' | 'both'>('both');
+  const [shippingDimensionUnit, setShippingDimensionUnit] = useState('cm');
+  const [shippingType, setShippingType] = useState<'self' | 'delivery' | 'both' | 'prepaid' | 'cod'>('both');
   const [freeShipping, setFreeShipping] = useState(false);
   const [estimatedDays, setEstimatedDays] = useState('5');
 
@@ -119,7 +169,7 @@ export default function CreateListingScreen() {
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [videoUrl, setVideoUrl] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
-  
+
   // Service Details
   const [serviceType, setServiceType] = useState('At Home');
   const [priceType, setPriceType] = useState('Fixed Price');
@@ -137,6 +187,46 @@ export default function CreateListingScreen() {
 
   const createMutation = useCreateVendorListing();
   const updateMutation = useUpdateVendorListing();
+
+  // Helper to sync return policy string with backend
+  const updatePolicyString = (isAvailable: boolean, days: string, conditions: string[], customText: string) => {
+    if (!isAvailable) {
+      setReturnPolicy('No Returns Applicable (Final Sale)');
+      return;
+    }
+    const filtered = conditions.filter((c) => c !== 'Other / Custom condition');
+    if (customText.trim()) {
+      filtered.push(customText.trim());
+    }
+    const condStr = filtered.length > 0 ? filtered.join(', ') : 'Standard terms apply';
+    setReturnPolicy(`${days} Return / Replacement: ${condStr}`);
+  };
+
+  const handleToggleReturnPolicy = (val: boolean) => {
+    setHasReturnPolicy(val);
+    updatePolicyString(val, returnDays, selectedReturnConditions, customConditionText);
+  };
+
+  const handleReturnDaysChange = (days: string) => {
+    setReturnDays(days);
+    updatePolicyString(hasReturnPolicy, days, selectedReturnConditions, customConditionText);
+  };
+
+  const toggleReturnCondition = (cond: string) => {
+    let updated: string[];
+    if (selectedReturnConditions.includes(cond)) {
+      updated = selectedReturnConditions.filter((c) => c !== cond);
+    } else {
+      updated = [...selectedReturnConditions, cond];
+    }
+    setSelectedReturnConditions(updated);
+    updatePolicyString(hasReturnPolicy, returnDays, updated, customConditionText);
+  };
+
+  const handleCustomConditionChange = (text: string) => {
+    setCustomConditionText(text);
+    updatePolicyString(hasReturnPolicy, returnDays, selectedReturnConditions, text);
+  };
 
   // Load existing data for Edit mode
   useEffect(() => {
@@ -168,9 +258,27 @@ export default function CreateListingScreen() {
             if (sellingVal) setSellingPrice(String(sellingVal));
             if (item.stock !== undefined || prod.stock !== undefined) setStock(String(item.stock ?? prod.stock ?? 10));
             if (item.minOrderQty || prod.minOrderQty) setMinOrderQty(String(item.minOrderQty || prod.minOrderQty || 1));
-            if (item.unit || prod.unit) setUnit(item.unit || prod.unit || 'piece');
+            
+            const rawUnit = item.unit || prod.unit || 'piece';
+            if (STANDARD_UNITS.some((u) => u.value === rawUnit)) {
+              setUnit(rawUnit);
+            } else {
+              setUnit('other');
+              setCustomUnit(rawUnit);
+            }
+
             if (item.warranty || prod.warranty) setWarranty(item.warranty || prod.warranty || '');
-            if (item.returnPolicy || prod.returnPolicy) setReturnPolicy(item.returnPolicy || prod.returnPolicy || '');
+            
+            const pol = item.returnPolicy || prod.returnPolicy || '';
+            if (pol) {
+              setReturnPolicy(pol);
+              if (pol.toLowerCase().includes('no return') || pol.toLowerCase().includes('final sale')) {
+                setHasReturnPolicy(false);
+              } else {
+                setHasReturnPolicy(true);
+              }
+            }
+
             if (item.gst || prod.gst) setGst(item.gst || prod.gst || '18%');
             if (Array.isArray(item.tags)) setTags(item.tags);
             if (Array.isArray(item.labels)) setLabels(item.labels);
@@ -182,11 +290,12 @@ export default function CreateListingScreen() {
             if (ship.length) setShippingLength(String(ship.length));
             if (ship.width) setShippingWidth(String(ship.width));
             if (ship.height) setShippingHeight(String(ship.height));
+            if (ship.dimensionUnit) setShippingDimensionUnit(ship.dimensionUnit);
             if (ship.shippingType) setShippingType(ship.shippingType);
             if (ship.freeShipping !== undefined) setFreeShipping(Boolean(ship.freeShipping));
             if (ship.estimatedDays) setEstimatedDays(String(ship.estimatedDays));
 
-            // Populate Service Details
+            // Service details
             if (sd) {
               if (sd.serviceHighlights) setServiceHighlights(sd.serviceHighlights);
               if (sd.termsAndConditions) setTermsAndConditions(sd.termsAndConditions);
@@ -203,9 +312,8 @@ export default function CreateListingScreen() {
               if (sd.bookingAvailability) setBookingAvailability(sd.bookingAvailability);
             }
 
-            // Populate All Previous Main Cover & Gallery Images
+            // Populate cover and gallery images
             const collectedImages: string[] = [];
-
             const addImageCandidate = (candidate: any) => {
               if (!candidate) return;
               if (Array.isArray(candidate)) {
@@ -218,45 +326,27 @@ export default function CreateListingScreen() {
               }
             };
 
-            // Root listing image properties
             addImageCandidate(item.image);
             addImageCandidate(item.imageUrl);
             addImageCandidate(item.coverImage);
             addImageCandidate(item.thumbnailUrl);
-            addImageCandidate(item.thumbnail);
             addImageCandidate(item.images);
             addImageCandidate(item.media);
             addImageCandidate(item.mediaUrls);
             addImageCandidate(item.photos);
             addImageCandidate(item.gallery);
 
-            // Nested productDetails fields
             if (item.productDetails) {
               addImageCandidate(item.productDetails.image);
               addImageCandidate(item.productDetails.imageUrl);
-              addImageCandidate(item.productDetails.coverImage);
               addImageCandidate(item.productDetails.images);
-              addImageCandidate(item.productDetails.media);
-              addImageCandidate(item.productDetails.mediaUrls);
-              addImageCandidate(item.productDetails.photos);
               addImageCandidate(item.productDetails.gallery);
             }
-
-            // Nested serviceDetails fields
             if (item.serviceDetails) {
               addImageCandidate(item.serviceDetails.image);
               addImageCandidate(item.serviceDetails.coverImage);
               addImageCandidate(item.serviceDetails.images);
               addImageCandidate(item.serviceDetails.galleryImages);
-              addImageCandidate(item.serviceDetails.portfolio);
-            }
-
-            // Variant images
-            if (Array.isArray(item.variants)) {
-              item.variants.forEach((v: any) => {
-                addImageCandidate(v?.image);
-                addImageCandidate(v?.imageUrl);
-              });
             }
 
             setGalleryImages(collectedImages);
@@ -288,7 +378,6 @@ export default function CreateListingScreen() {
   const { user } = useAuth();
   const vendorProfile = user?.vendorProfile || (user as any)?.profileData || {};
 
-  // Extract onboarded Categories from vendor profile / user profile
   const onboardedCategories = React.useMemo(() => {
     let cats: string[] = [];
     const authUser = user as any;
@@ -308,7 +397,6 @@ export default function CreateListingScreen() {
     return cats.filter(Boolean);
   }, [user, vendorProfile]);
 
-  // Extract onboarded Subcategories
   const onboardedSubcategories = React.useMemo(() => {
     let subs: string[] = [];
     const authUser = user as any;
@@ -326,7 +414,6 @@ export default function CreateListingScreen() {
     return subs.filter(Boolean);
   }, [user, vendorProfile]);
 
-  // Master parent categories filtered STRICTLY by vendor's onboarded categories
   const parentCategories = React.useMemo(() => {
     let list: any[] = [];
     if (onboardedCategories.length > 0) {
@@ -351,7 +438,6 @@ export default function CreateListingScreen() {
     return list;
   }, [categoriesList, onboardedCategories, category]);
 
-  // Master subcategories filtered STRICTLY by active parent category AND vendor's onboarded subcategories
   const childSubcategories = React.useMemo(() => {
     const activeParent = parentCategories.find((c: any) => c.name?.toLowerCase() === category?.toLowerCase());
     const parentId = activeParent?.id || (activeParent as any)?._id;
@@ -378,7 +464,6 @@ export default function CreateListingScreen() {
     return list;
   }, [categoriesList, parentCategories, category, onboardedSubcategories, subcategory]);
 
-  // Sync selected category with vendor's available categories (only in Create mode)
   useEffect(() => {
     if (parentCategories.length > 0 && !isEdit) {
       const exists = parentCategories.some((c: any) => c.name?.toLowerCase() === category?.toLowerCase());
@@ -388,7 +473,6 @@ export default function CreateListingScreen() {
     }
   }, [parentCategories, category, isEdit]);
 
-  // Sync selected subcategory with available subcategories (only in Create mode)
   useEffect(() => {
     if (childSubcategories.length > 0 && !isEdit) {
       const exists = childSubcategories.some((s: any) => (s.name || s)?.toLowerCase() === subcategory?.toLowerCase());
@@ -399,7 +483,6 @@ export default function CreateListingScreen() {
     }
   }, [childSubcategories, subcategory, isEdit]);
 
-  // Auto-Gen SKU
   function generateSKU() {
     const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
     const ts = Date.now().toString().slice(-4);
@@ -408,7 +491,6 @@ export default function CreateListingScreen() {
     Alert.alert('SKU Code Auto-Generated', `Assigned Code: ${code}`);
   }
 
-  // Tags Handlers
   const handleAddTag = () => {
     const cleanTag = newTag.trim().replace(/^#/, '');
     if (!cleanTag) return;
@@ -424,7 +506,6 @@ export default function CreateListingScreen() {
     setTags(tags.filter((_, i) => i !== idx));
   };
 
-  // Specifications / Key-Value Attributes Handlers
   const handleAddLabel = () => {
     if (!newLabelKey.trim() || !newLabelVal.trim()) {
       Alert.alert('Missing Attribute', 'Enter both attribute key and value (e.g. Color: Matte Black)');
@@ -439,7 +520,6 @@ export default function CreateListingScreen() {
     setLabels(labels.filter((_, i) => i !== idx));
   };
 
-  // Product Variants Handlers
   const handleAddVariant = () => {
     if (!variantLabel.trim() || !variantValue.trim()) {
       Alert.alert('Missing Variant Data', 'Please enter variant type and value (e.g. Size: XL)');
@@ -465,7 +545,6 @@ export default function CreateListingScreen() {
     setVariants(variants.filter((_, i) => i !== idx));
   };
 
-  // Voice Input Speech-to-Text Dictation Handler 🎙️
   const toggleVoiceInput = (
     targetSetter: React.Dispatch<React.SetStateAction<string>>,
     fieldName: string
@@ -485,7 +564,6 @@ export default function CreateListingScreen() {
 
         recognition.onstart = () => {
           setIsListeningVoice(true);
-          setVoiceListeningField(fieldName);
         };
 
         recognition.onresult = (event: any) => {
@@ -494,28 +572,23 @@ export default function CreateListingScreen() {
             setVoiceText((prev) => (prev ? `${prev} ${transcript}` : transcript));
           }
           setIsListeningVoice(false);
-          setVoiceListeningField(null);
         };
 
         recognition.onerror = () => {
           setIsListeningVoice(false);
-          setVoiceListeningField(null);
         };
 
         recognition.onend = () => {
           setIsListeningVoice(false);
-          setVoiceListeningField(null);
         };
 
         recognition.start();
       } catch {
         setIsListeningVoice(false);
-        setVoiceListeningField(null);
       }
     }
   };
 
-  // Image Upload Handlers
   async function pickImageFile(target: 'main' | 'gallery' | 'variant' | 'aiMedia') {
     if (target === 'aiMedia') setAnalyzingMedia(true);
     else setUploadingImage(true);
@@ -546,31 +619,30 @@ export default function CreateListingScreen() {
         if (target === 'main') {
           setImageUrl(uploadedUrl);
           if (!galleryImages.includes(uploadedUrl)) setGalleryImages([uploadedUrl, ...galleryImages]);
-          Alert.alert('Image Uploaded!', 'Product main cover photo attached successfully.');
+          Alert.alert('Image Uploaded!', 'Cover photo attached successfully.');
         } else if (target === 'gallery') {
           setGalleryImages([...galleryImages, uploadedUrl]);
-          Alert.alert('Gallery Photo Uploaded!', 'Photo added to product gallery.');
+          Alert.alert('Gallery Photo Uploaded!', 'Photo added to listing gallery.');
         } else if (target === 'variant') {
           setVariantImageUrl(uploadedUrl);
         } else if (target === 'aiMedia') {
           setImageUrl(uploadedUrl);
           if (!galleryImages.includes(uploadedUrl)) setGalleryImages([uploadedUrl, ...galleryImages]);
-          // AI media scan auto-fill description & fields (Parity with Web ProductFormModal & ServiceFormModal)
           setGeneratingAiCopy(true);
           try {
             let resultData: any = null;
             try {
-              const formData = new FormData();
-              formData.append('file', {
+              const formDataAi = new FormData();
+              formDataAi.append('file', {
                 uri: asset.uri,
                 name: asset.fileName || 'media-sample.jpg',
                 type: asset.mimeType || 'image/jpeg',
               } as any);
-              const aiRes = await api.post('/ai/multimodal-analyze', formData, {
+              const aiRes = await api.post('/ai/multimodal-analyze', formDataAi, {
                 headers: { 'Content-Type': 'multipart/form-data' },
               });
               resultData = aiRes.data?.data || aiRes.data;
-            } catch (e1) {
+            } catch {
               const aiRes = await api.post('/ai/generate-description', {
                 prompt: aiPrompt.trim() || title || category,
                 type,
@@ -591,13 +663,9 @@ export default function CreateListingScreen() {
               }
               if (resultData.serviceHighlights && type === 'service') {
                 setServiceHighlights(resultData.serviceHighlights);
-              } else if (resultData.highlights && type === 'service') {
-                setServiceHighlights(resultData.highlights);
               }
               if (Array.isArray(resultData.tags) && resultData.tags.length > 0) {
                 setTags((prev) => Array.from(new Set([...prev, ...resultData.tags])));
-              } else if (Array.isArray(resultData.aiLabels) && resultData.aiLabels.length > 0) {
-                setTags((prev) => Array.from(new Set([...prev, ...resultData.aiLabels])));
               }
               Alert.alert('✨ Gemini AI Scan Complete!', 'Listing details auto-filled from sample media.');
             }
@@ -616,7 +684,6 @@ export default function CreateListingScreen() {
     }
   }
 
-  // AI Description Generator (100% Parity with Web Frontend ProductFormModal.jsx & ServiceFormModal.jsx)
   const handleGenerateAiCopy = async () => {
     const promptText = aiPrompt.trim() || title.trim() || `${category} ${type}`;
     setGeneratingAiCopy(true);
@@ -650,8 +717,6 @@ export default function CreateListingScreen() {
         }
         if (Array.isArray(copyData.tags) && copyData.tags.length > 0) {
           setTags((prev) => Array.from(new Set([...prev, ...copyData.tags])));
-        } else if (Array.isArray(copyData.aiLabels) && copyData.aiLabels.length > 0) {
-          setTags((prev) => Array.from(new Set([...prev, ...copyData.aiLabels])));
         }
         Alert.alert('✨ Gemini AI Description Generated!', 'Listing details synthesized successfully.');
       } else {
@@ -672,10 +737,11 @@ export default function CreateListingScreen() {
       ? Math.round(((actual - selling) / actual) * 100)
       : 0;
 
-  // Submit Listing Form
+  const finalUnit = unit === 'other' ? (customUnit.trim() || 'piece') : unit;
+
   function handleSubmit() {
     if (!title.trim()) {
-      Alert.alert('Title Required', 'Please enter product title.');
+      Alert.alert('Title Required', `Please enter ${type} title.`);
       return;
     }
 
@@ -707,7 +773,7 @@ export default function CreateListingScreen() {
       discount: discountPercent,
       stock: type === 'product' ? parseInt(stock || '10', 10) : undefined,
       minOrderQty: parseInt(minOrderQty || '1', 10),
-      unit,
+      unit: finalUnit,
       warranty: warranty.trim() || undefined,
       returnPolicy: returnPolicy.trim() || undefined,
       gst: gst.trim() || undefined,
@@ -741,13 +807,18 @@ export default function CreateListingScreen() {
         reelVideo: videoUrl.trim() || undefined,
       };
     } else {
+      const dimL = shippingLength ? parseFloat(shippingLength) : undefined;
+      const dimW = shippingWidth ? parseFloat(shippingWidth) : undefined;
+      const dimH = shippingHeight ? parseFloat(shippingHeight) : undefined;
+
       payload.shippingDetails = {
         weight: shippingWeight ? parseFloat(shippingWeight) : undefined,
         weightUnit: shippingWeightUnit,
-        length: shippingLength ? parseFloat(shippingLength) : undefined,
-        width: shippingWidth ? parseFloat(shippingWidth) : undefined,
-        height: shippingHeight ? parseFloat(shippingHeight) : undefined,
-        dimensionUnit: 'cm',
+        length: dimL,
+        width: dimW,
+        height: dimH,
+        dimensionUnit: shippingDimensionUnit,
+        dimensions: (dimL && dimW && dimH) ? `${dimL} × ${dimW} × ${dimH} ${shippingDimensionUnit}` : undefined,
         shippingType,
         freeShipping,
         estimatedDays: parseInt(estimatedDays || '5', 10),
@@ -756,7 +827,7 @@ export default function CreateListingScreen() {
         brand: brand.trim() || undefined,
         sku: sku.trim() || undefined,
         minOrderQty: parseInt(minOrderQty || '1', 10),
-        unit,
+        unit: finalUnit,
         warranty: warranty.trim() || undefined,
         returnPolicy: returnPolicy.trim() || undefined,
         gst: gst.trim() || undefined,
@@ -779,7 +850,7 @@ export default function CreateListingScreen() {
     } else {
       createMutation.mutate(payload, {
         onSuccess: () => {
-          Alert.alert('🎉 Listing Created!', `"${title}" has been published to your store catalog!`);
+          Alert.alert('🎉 Listing Published!', `"${title}" has been added to your store catalog!`);
           router.back();
         },
         onError: (err: any) =>
@@ -796,7 +867,7 @@ export default function CreateListingScreen() {
           <Ionicons name="arrow-back" size={18} color={YELLOW} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
-          {isEdit ? 'Edit Product Listing' : 'Add New Product Listing'}
+          {isEdit ? `Edit ${type === 'service' ? 'Service' : 'Product'} Listing` : `Add New ${type === 'service' ? 'Service' : 'Product'} Listing`}
         </Text>
         <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
           <Ionicons name="close" size={18} color="#fff" />
@@ -810,6 +881,31 @@ export default function CreateListingScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          
+          {/* LISTING TYPE SWITCHER (Product vs Service) */}
+          <View style={styles.typeSwitchCard}>
+            <Text style={styles.fieldLabel}>SELECT LISTING TYPE</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+              <TouchableOpacity
+                style={[styles.typeBtn, type === 'product' && styles.typeBtnActive]}
+                onPress={() => setType('product')}>
+                <Ionicons name="cube-outline" size={16} color={type === 'product' ? '#241B15' : '#64748B'} />
+                <Text style={[styles.typeBtnText, type === 'product' && styles.typeBtnTextActive]}>
+                  📦 Physical Product
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.typeBtn, type === 'service' && styles.typeBtnActive]}
+                onPress={() => setType('service')}>
+                <Ionicons name="construct-outline" size={16} color={type === 'service' ? '#241B15' : '#64748B'} />
+                <Text style={[styles.typeBtnText, type === 'service' && styles.typeBtnTextActive]}>
+                  🛠️ Professional Service
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* SECTION 1: CATEGORY & CLASSIFICATION */}
           <View style={styles.sectionCard}>
             <Text style={styles.sectionHeaderTitle}>CATEGORY & CLASSIFICATION</Text>
@@ -824,7 +920,7 @@ export default function CreateListingScreen() {
                   <Text style={[styles.dropdownChipText, category === catItem.name && styles.dropdownChipTextActive]}>
                     {catItem.name}
                   </Text>
-                  <Ionicons name="chevron-down" size={14} color={category === catItem.name ? '#0F0F12' : '#888'} />
+                  <Ionicons name="chevron-down" size={14} color={category === catItem.name ? YELLOW : '#64748B'} />
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -841,17 +937,17 @@ export default function CreateListingScreen() {
                     <Text style={[styles.dropdownChipText, subcategory === subName && styles.dropdownChipTextActive]}>
                       {subName}
                     </Text>
-                    <Ionicons name="chevron-down" size={14} color={subcategory === subName ? '#0F0F12' : '#888'} />
+                    <Ionicons name="chevron-down" size={14} color={subcategory === subName ? YELLOW : '#64748B'} />
                   </TouchableOpacity>
                 );
               })}
             </ScrollView>
           </View>
 
-          {/* SECTION 2: BASIC PRODUCT DETAILS */}
+          {/* SECTION 2: BASIC DETAILS & AI GENERATOR */}
           <View style={styles.sectionCard}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={styles.sectionHeaderTitle}>BASIC PRODUCT DETAILS</Text>
+              <Text style={styles.sectionHeaderTitle}>BASIC {type.toUpperCase()} DETAILS</Text>
               <View style={styles.aiBadge}>
                 <Ionicons name="sparkles" size={12} color={PURPLE_ACCENT} />
                 <Text style={styles.aiBadgeText}>AI Assisted</Text>
@@ -873,8 +969,8 @@ export default function CreateListingScreen() {
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
                 <TextInput
                   style={styles.aiPromptInput}
-                  placeholder="Tell AI about product features or speak via mic..."
-                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  placeholder="Tell AI about features or speak via mic..."
+                  placeholderTextColor="#94A3B8"
                   value={aiPrompt}
                   onChangeText={setAiPrompt}
                 />
@@ -894,7 +990,7 @@ export default function CreateListingScreen() {
               </View>
 
               <View style={{ marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(168,85,247,0.2)' }}>
-                <Text style={styles.subLabelText}>OR UPLOAD PRODUCT MEDIA FOR AI AUTO-FILL</Text>
+                <Text style={styles.subLabelText}>OR UPLOAD MEDIA FOR AI AUTO-FILL</Text>
                 <TouchableOpacity
                   style={styles.filePickerBtn}
                   onPress={() => pickImageFile('aiMedia')}
@@ -906,15 +1002,15 @@ export default function CreateListingScreen() {
                   )}
                 </TouchableOpacity>
                 <Text style={styles.helperText}>
-                  Gemini will scan your sample photo/video to extract highlights & descriptions.
+                  Gemini will scan your sample photo/video to extract highlights & details.
                 </Text>
               </View>
             </View>
 
-            {/* Product Title */}
+            {/* Title */}
             <View style={styles.fieldGroup}>
               <View style={styles.labelVoiceRow}>
-                <Text style={styles.fieldLabel}>Product Title *</Text>
+                <Text style={styles.fieldLabel}>{type === 'service' ? 'Service Title *' : 'Product Title *'}</Text>
                 <TouchableOpacity
                   style={styles.voiceSmallBtn}
                   onPress={() => toggleVoiceInput(setTitle, 'Title')}>
@@ -924,8 +1020,8 @@ export default function CreateListingScreen() {
               </View>
               <TextInput
                 style={styles.whiteInput}
-                placeholder="e.g. Wireless Noise-Cancelling Headphones"
-                placeholderTextColor="rgba(255,255,255,0.35)"
+                placeholder={type === 'service' ? 'e.g. Full AC Servicing & Cleaning' : 'e.g. Wireless Noise-Cancelling Headphones'}
+                placeholderTextColor="#94A3B8"
                 value={title}
                 onChangeText={setTitle}
               />
@@ -945,7 +1041,7 @@ export default function CreateListingScreen() {
               <TextInput
                 style={styles.whiteInput}
                 placeholder="Brief 1-line summary..."
-                placeholderTextColor="rgba(255,255,255,0.35)"
+                placeholderTextColor="#94A3B8"
                 value={shortDescription}
                 onChangeText={setShortDescription}
               />
@@ -966,43 +1062,45 @@ export default function CreateListingScreen() {
               </View>
               <TextInput
                 style={[styles.whiteInput, { height: 80, textAlignVertical: 'top' }]}
-                placeholder="Comprehensive product details..."
-                placeholderTextColor="rgba(255,255,255,0.35)"
+                placeholder="Comprehensive details..."
+                placeholderTextColor="#94A3B8"
                 value={description}
                 onChangeText={setDescription}
                 multiline
               />
             </View>
 
-            {/* Brand & SKU */}
-            <View style={styles.row}>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Brand</Text>
-                <TextInput
-                  style={styles.whiteInput}
-                  placeholder="e.g. Sony"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  value={brand}
-                  onChangeText={setBrand}
-                />
-              </View>
-
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={styles.fieldLabel}>SKU Code</Text>
-                  <TouchableOpacity onPress={generateSKU}>
-                    <Text style={{ color: YELLOW, fontSize: 9, fontWeight: '900' }}>⚡ Auto-Generate</Text>
-                  </TouchableOpacity>
+            {/* Brand & SKU (For Products) */}
+            {type === 'product' && (
+              <View style={styles.row}>
+                <View style={[styles.fieldGroup, { flex: 1 }]}>
+                  <Text style={styles.fieldLabel}>Brand</Text>
+                  <TextInput
+                    style={styles.whiteInput}
+                    placeholder="e.g. Sony"
+                    placeholderTextColor="#94A3B8"
+                    value={brand}
+                    onChangeText={setBrand}
+                  />
                 </View>
-                <TextInput
-                  style={styles.whiteInput}
-                  placeholder="SKU-XXX-000"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  value={sku}
-                  onChangeText={setSku}
-                />
+
+                <View style={[styles.fieldGroup, { flex: 1 }]}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={styles.fieldLabel}>SKU Code</Text>
+                    <TouchableOpacity onPress={generateSKU}>
+                      <Text style={{ color: YELLOW, fontSize: 9, fontWeight: '900' }}>⚡ Auto-Generate</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <TextInput
+                    style={styles.whiteInput}
+                    placeholder="SKU-XXX-000"
+                    placeholderTextColor="#94A3B8"
+                    value={sku}
+                    onChangeText={setSku}
+                  />
+                </View>
               </View>
-            </View>
+            )}
 
             {/* Tags & Keywords */}
             <View style={styles.fieldGroup}>
@@ -1018,8 +1116,8 @@ export default function CreateListingScreen() {
               <View style={{ flexDirection: 'row', gap: 6 }}>
                 <TextInput
                   style={[styles.whiteInput, { flex: 1 }]}
-                  placeholder="Type tag & press Add (e.g. bluetooth, wireless)"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  placeholder="Type tag & press Add..."
+                  placeholderTextColor="#94A3B8"
                   value={newTag}
                   onChangeText={setNewTag}
                   onSubmitEditing={handleAddTag}
@@ -1033,7 +1131,7 @@ export default function CreateListingScreen() {
                     justifyContent: 'center',
                   }}
                   onPress={handleAddTag}>
-                  <Text style={{ color: '#0F0F12', fontSize: 11, fontWeight: '900' }}>+ Add</Text>
+                  <Text style={{ color: '#241B15', fontSize: 11, fontWeight: '900' }}>+ Add</Text>
                 </TouchableOpacity>
               </View>
               {tags.length > 0 ? (
@@ -1045,7 +1143,7 @@ export default function CreateListingScreen() {
                         flexDirection: 'row',
                         alignItems: 'center',
                         gap: 4,
-                        backgroundColor: 'rgba(245,158,11,0.18)',
+                        backgroundColor: '#FFFBEB',
                         borderWidth: 1,
                         borderColor: YELLOW,
                         paddingHorizontal: 8,
@@ -1063,7 +1161,120 @@ export default function CreateListingScreen() {
             </View>
           </View>
 
-          {/* SECTION 3: PRICING, INVENTORY & SHIPPING CONFIGURATION */}
+          {/* SERVICE SPECIFIC FIELDS */}
+          {type === 'service' && (
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionHeaderTitle}>SERVICE SPECIFICATIONS</Text>
+
+              {/* Service Type & Price Type */}
+              <View style={styles.row}>
+                <View style={[styles.fieldGroup, { flex: 1 }]}>
+                  <Text style={styles.fieldLabel}>Service Delivery Mode</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+                    {['At Home', 'At Store / Shop', 'Online / Remote', 'On-Site'].map((stVal, idx) => (
+                      <TouchableOpacity
+                        key={idx}
+                        style={[styles.dropdownChip, serviceType === stVal && styles.dropdownChipActive]}
+                        onPress={() => setServiceType(stVal)}>
+                        <Text style={[styles.dropdownChipText, serviceType === stVal && styles.dropdownChipTextActive]}>
+                          {stVal}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+
+                <View style={[styles.fieldGroup, { flex: 1 }]}>
+                  <Text style={styles.fieldLabel}>Price Structure</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+                    {['Fixed Price', 'Starting From', 'Per Hour', 'Custom Quote'].map((ptVal, idx) => (
+                      <TouchableOpacity
+                        key={idx}
+                        style={[styles.dropdownChip, priceType === ptVal && styles.dropdownChipActive]}
+                        onPress={() => setPriceType(ptVal)}>
+                        <Text style={[styles.dropdownChipText, priceType === ptVal && styles.dropdownChipTextActive]}>
+                          {ptVal}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+
+              {/* Duration & Service Area */}
+              <View style={styles.row}>
+                <View style={[styles.fieldGroup, { flex: 1 }]}>
+                  <Text style={styles.fieldLabel}>Estimated Duration</Text>
+                  <TextInput
+                    style={styles.whiteInput}
+                    placeholder="e.g. 45 Mins, 2 Hours"
+                    placeholderTextColor="#94A3B8"
+                    value={duration}
+                    onChangeText={setDuration}
+                  />
+                </View>
+
+                <View style={[styles.fieldGroup, { flex: 1 }]}>
+                  <Text style={styles.fieldLabel}>Service Area / Radius</Text>
+                  <TextInput
+                    style={styles.whiteInput}
+                    placeholder="e.g. Within 15 KM, Citywide"
+                    placeholderTextColor="#94A3B8"
+                    value={serviceArea}
+                    onChangeText={setServiceArea}
+                  />
+                </View>
+              </View>
+
+              {/* Service Highlights */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Key Service Highlights / Inclusions</Text>
+                <TextInput
+                  style={[styles.whiteInput, { height: 60, textAlignVertical: 'top' }]}
+                  placeholder="e.g. Includes gas check, filter washing & 30-day warranty..."
+                  placeholderTextColor="#94A3B8"
+                  value={serviceHighlights}
+                  onChangeText={setServiceHighlights}
+                  multiline
+                />
+              </View>
+
+              {/* Toggles for Service */}
+              <View style={{ gap: 10, marginTop: 4 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={styles.fieldLabel}>Doorstep / Home Visit Available</Text>
+                  <Switch
+                    value={homeVisitAvailable}
+                    onValueChange={setHomeVisitAvailable}
+                    trackColor={{ false: '#CBD5E1', true: YELLOW }}
+                    thumbColor="#fff"
+                  />
+                </View>
+
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={styles.fieldLabel}>24×7 Emergency Service Available</Text>
+                  <Switch
+                    value={emergencyService24x7}
+                    onValueChange={setEmergencyService24x7}
+                    trackColor={{ false: '#CBD5E1', true: YELLOW }}
+                    thumbColor="#fff"
+                  />
+                </View>
+
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={styles.fieldLabel}>Advance Booking Required</Text>
+                  <Switch
+                    value={advanceBookingRequired}
+                    onValueChange={setAdvanceBookingRequired}
+                    trackColor={{ false: '#CBD5E1', true: YELLOW }}
+                    thumbColor="#fff"
+                  />
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* SECTION 3: PRICING & INVENTORY */}
           <View style={styles.sectionCard}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={styles.sectionHeaderTitle}>PRICING & INVENTORY</Text>
@@ -1081,7 +1292,7 @@ export default function CreateListingScreen() {
                 <TextInput
                   style={styles.whiteInput}
                   placeholder="3999"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  placeholderTextColor="#94A3B8"
                   value={actualPrice}
                   onChangeText={setActualPrice}
                   keyboardType="number-pad"
@@ -1091,15 +1302,25 @@ export default function CreateListingScreen() {
               <View style={[styles.fieldGroup, { flex: 1 }]}>
                 <Text style={styles.fieldLabel}>Selling Price (₹) *</Text>
                 <TextInput
-                  style={[styles.whiteInput, { borderColor: YELLOW }]}
+                  style={[styles.whiteInput, { borderColor: YELLOW, borderWidth: 1.5 }]}
                   placeholder="2588"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  placeholderTextColor="#94A3B8"
                   value={sellingPrice}
                   onChangeText={setSellingPrice}
                   keyboardType="number-pad"
                 />
               </View>
             </View>
+
+            {/* Pricing Summary Breakdown Banner */}
+            {(actual > 0 || selling > 0) && (
+              <View style={styles.pricingSummaryBanner}>
+                <Text style={styles.pricingSummaryText}>
+                  MRP: <Text style={{ fontWeight: '900', color: '#241B15' }}>₹{actual.toLocaleString()}</Text> • Selling: <Text style={{ fontWeight: '900', color: YELLOW }}>₹{selling.toLocaleString()}</Text>
+                  {discountPercent > 0 ? ` (${discountPercent}% OFF - Save ₹${(actual - selling).toLocaleString()})` : ''}
+                </Text>
+              </View>
+            )}
 
             {/* GST Rate (%) selector */}
             <View style={styles.fieldGroup}>
@@ -1122,92 +1343,84 @@ export default function CreateListingScreen() {
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>Unit / Quantity Type</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
-                {['piece', 'kg', 'g', 'litre', 'ml', 'meter', 'box', 'pack', 'set', 'pair', 'dozen', 'other'].map((uVal, idx) => (
+                {STANDARD_UNITS.map((uItem, idx) => (
                   <TouchableOpacity
                     key={idx}
-                    style={[styles.dropdownChip, unit === uVal && styles.dropdownChipActive]}
-                    onPress={() => setUnit(uVal)}>
-                    <Text style={[styles.dropdownChipText, unit === uVal && styles.dropdownChipTextActive]}>
-                      {uVal.toUpperCase()}
+                    style={[styles.dropdownChip, unit === uItem.value && styles.dropdownChipActive]}
+                    onPress={() => setUnit(uItem.value)}>
+                    <Text style={[styles.dropdownChipText, unit === uItem.value && styles.dropdownChipTextActive]}>
+                      {uItem.label}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
-              {unit === 'other' ? (
+              {unit === 'other' && (
                 <TextInput
-                  style={[styles.whiteInput, { marginTop: 6 }]}
-                  placeholder="Enter custom unit (e.g. Bottle, Sheet)..."
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  onChangeText={(val) => setUnit(val || 'other')}
+                  style={[styles.whiteInput, { marginTop: 6, borderColor: PURPLE_ACCENT }]}
+                  placeholder="Enter custom unit (e.g. Bottle, Sheet, Drum)..."
+                  placeholderTextColor="#94A3B8"
+                  value={customUnit}
+                  onChangeText={setCustomUnit}
                 />
-              ) : null}
+              )}
             </View>
 
-            {/* Stock, Min Order Qty & Warranty */}
-            <View style={styles.row}>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Stock Quantity</Text>
-                <TextInput
-                  style={styles.whiteInput}
-                  placeholder="10"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  value={stock}
-                  onChangeText={setStock}
-                  keyboardType="number-pad"
-                />
-              </View>
+            {/* Stock, Min Order Qty & Warranty (For Products) */}
+            {type === 'product' && (
+              <>
+                <View style={styles.row}>
+                  <View style={[styles.fieldGroup, { flex: 1 }]}>
+                    <Text style={styles.fieldLabel}>Stock Quantity *</Text>
+                    <TextInput
+                      style={styles.whiteInput}
+                      placeholder="10"
+                      placeholderTextColor="#94A3B8"
+                      value={stock}
+                      onChangeText={setStock}
+                      keyboardType="number-pad"
+                    />
+                  </View>
 
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Min Order Qty</Text>
-                <TextInput
-                  style={styles.whiteInput}
-                  placeholder="1"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  value={minOrderQty}
-                  onChangeText={setMinOrderQty}
-                  keyboardType="number-pad"
-                />
-              </View>
-            </View>
+                  <View style={[styles.fieldGroup, { flex: 1 }]}>
+                    <Text style={styles.fieldLabel}>Min Order Qty</Text>
+                    <TextInput
+                      style={styles.whiteInput}
+                      placeholder="1"
+                      placeholderTextColor="#94A3B8"
+                      value={minOrderQty}
+                      onChangeText={setMinOrderQty}
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                </View>
 
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Warranty Details</Text>
-              <TextInput
-                style={styles.whiteInput}
-                placeholder="e.g. 1 Year Brand Warranty"
-                placeholderTextColor="rgba(255,255,255,0.35)"
-                value={warranty}
-                onChangeText={setWarranty}
-              />
-            </View>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>Warranty Details</Text>
+                  <TextInput
+                    style={styles.whiteInput}
+                    placeholder="e.g. 1 Year Brand Warranty"
+                    placeholderTextColor="#94A3B8"
+                    value={warranty}
+                    onChangeText={setWarranty}
+                  />
+                </View>
+              </>
+            )}
+          </View>
 
-            {/* Return Policy Switch & Days */}
-            <View style={[styles.fieldGroup, { paddingTop: 6, borderTopWidth: 1, borderTopColor: BORDER }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={styles.fieldLabel}>Return & Replacement Policy</Text>
-                <Switch
-                  value={!returnPolicy.toLowerCase().includes('no return')}
-                  onValueChange={(val) =>
-                    setReturnPolicy(val ? '7 Days Replacement Policy' : 'No Returns Applicable (Final Sale)')
-                  }
-                  trackColor={{ false: '#333', true: YELLOW }}
-                  thumbColor="#fff"
-                />
-              </View>
-              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10 }}>{returnPolicy}</Text>
-            </View>
+          {/* SECTION 4: SHIPPING & PAYMENT ACCEPTANCE (For Products) */}
+          {type === 'product' && (
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionHeaderTitle}>SHIPPING & PACKAGE SPECIFICATIONS</Text>
 
-            {/* Shipping Details */}
-            <View style={[styles.fieldGroup, { paddingTop: 6, borderTopWidth: 1, borderTopColor: BORDER }]}>
-              <Text style={styles.sectionHeaderTitle}>SHIPPING & DELIVERY DETAILS</Text>
-              
+              {/* Package Weight */}
               <View style={styles.row}>
                 <View style={[styles.fieldGroup, { flex: 1 }]}>
-                  <Text style={styles.fieldLabel}>Package Weight ({shippingWeightUnit})</Text>
+                  <Text style={styles.fieldLabel}>Package Weight</Text>
                   <TextInput
                     style={styles.whiteInput}
                     placeholder="0.5"
-                    placeholderTextColor="rgba(255,255,255,0.35)"
+                    placeholderTextColor="#94A3B8"
                     value={shippingWeight}
                     onChangeText={setShippingWeight}
                     keyboardType="numeric"
@@ -1231,56 +1444,229 @@ export default function CreateListingScreen() {
                 </View>
               </View>
 
-              <Text style={[styles.fieldLabel, { marginTop: 4 }]}>Dimensions L × W × H (cm)</Text>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                <TextInput
-                  style={[styles.whiteInput, { flex: 1 }]}
-                  placeholder="L"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  value={shippingLength}
-                  onChangeText={setShippingLength}
-                  keyboardType="numeric"
-                />
-                <TextInput
-                  style={[styles.whiteInput, { flex: 1 }]}
-                  placeholder="W"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  value={shippingWidth}
-                  onChangeText={setShippingWidth}
-                  keyboardType="numeric"
-                />
-                <TextInput
-                  style={[styles.whiteInput, { flex: 1 }]}
-                  placeholder="H"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  value={shippingHeight}
-                  onChangeText={setShippingHeight}
-                  keyboardType="numeric"
-                />
+              {/* Dimensions L x W x H */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Dimensions L × W × H ({shippingDimensionUnit})</Text>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  <TextInput
+                    style={[styles.whiteInput, { flex: 1 }]}
+                    placeholder="Length"
+                    placeholderTextColor="#94A3B8"
+                    value={shippingLength}
+                    onChangeText={setShippingLength}
+                    keyboardType="numeric"
+                  />
+                  <TextInput
+                    style={[styles.whiteInput, { flex: 1 }]}
+                    placeholder="Width"
+                    placeholderTextColor="#94A3B8"
+                    value={shippingWidth}
+                    onChangeText={setShippingWidth}
+                    keyboardType="numeric"
+                  />
+                  <TextInput
+                    style={[styles.whiteInput, { flex: 1 }]}
+                    placeholder="Height"
+                    placeholderTextColor="#94A3B8"
+                    value={shippingHeight}
+                    onChangeText={setShippingHeight}
+                    keyboardType="numeric"
+                  />
+                </View>
               </View>
 
+              {/* Shipping & Payment Acceptance Type Selector */}
+              <View style={[styles.fieldGroup, { marginTop: 6 }]}>
+                <Text style={styles.fieldLabel}>SHIPPING & PAYMENT ACCEPTANCE TYPE *</Text>
+                <View style={{ gap: 8, marginTop: 4 }}>
+                  {/* Both COD & Prepaid */}
+                  <TouchableOpacity
+                    style={[
+                      styles.paymentOptionCard,
+                      shippingType === 'both' && styles.paymentOptionCardActive,
+                    ]}
+                    onPress={() => setShippingType('both')}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.paymentOptionTitle, shippingType === 'both' && { color: YELLOW }]}>
+                        🔄 Both COD & Prepaid
+                      </Text>
+                      <Text style={styles.paymentOptionSub}>Accept Online Payment & Cash on Delivery</Text>
+                    </View>
+                    {shippingType === 'both' && <Ionicons name="checkmark-circle" size={18} color={YELLOW} />}
+                  </TouchableOpacity>
+
+                  {/* Prepaid Only */}
+                  <TouchableOpacity
+                    style={[
+                      styles.paymentOptionCard,
+                      shippingType === 'prepaid' && styles.paymentOptionCardActive,
+                    ]}
+                    onPress={() => setShippingType('prepaid')}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.paymentOptionTitle, shippingType === 'prepaid' && { color: YELLOW }]}>
+                        💳 Prepaid Only
+                      </Text>
+                      <Text style={styles.paymentOptionSub}>Online Payment Only (UPI, Card, NetBanking)</Text>
+                    </View>
+                    {shippingType === 'prepaid' && <Ionicons name="checkmark-circle" size={18} color={YELLOW} />}
+                  </TouchableOpacity>
+
+                  {/* COD Only */}
+                  <TouchableOpacity
+                    style={[
+                      styles.paymentOptionCard,
+                      shippingType === 'cod' && styles.paymentOptionCardActive,
+                    ]}
+                    onPress={() => setShippingType('cod')}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.paymentOptionTitle, shippingType === 'cod' && { color: YELLOW }]}>
+                        💵 COD Only
+                      </Text>
+                      <Text style={styles.paymentOptionSub}>Cash on Delivery on arrival</Text>
+                    </View>
+                    {shippingType === 'cod' && <Ionicons name="checkmark-circle" size={18} color={YELLOW} />}
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Free Shipping & Delivery SLA */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-                <Text style={styles.fieldLabel}>Free Shipping Available</Text>
+                <Text style={styles.fieldLabel}>Free Shipping Available (No Delivery Fee)</Text>
                 <Switch
                   value={freeShipping}
                   onValueChange={setFreeShipping}
-                  trackColor={{ false: '#333', true: YELLOW }}
+                  trackColor={{ false: '#CBD5E1', true: YELLOW }}
                   thumbColor="#fff"
                 />
               </View>
-            </View>
-          </View>
 
-          {/* SECTION 4: PRODUCT MEDIA & GALLERY */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Estimated Delivery SLA</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+                  {[
+                    { days: '1', label: '1 Day (Express)' },
+                    { days: '3', label: '2-3 Business Days' },
+                    { days: '5', label: '4-5 Business Days (Standard)' },
+                    { days: '7', label: '6-7 Business Days' },
+                    { days: '10', label: '8-10 Business Days' },
+                  ].map((sla, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      style={[styles.dropdownChip, estimatedDays === sla.days && styles.dropdownChipActive]}
+                      onPress={() => setEstimatedDays(sla.days)}>
+                      <Text style={[styles.dropdownChipText, estimatedDays === sla.days && styles.dropdownChipTextActive]}>
+                        {sla.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          )}
+
+          {/* SECTION 5: RETURN & REPLACEMENT POLICY BUILDER */}
+          {type === 'product' && (
+            <View style={styles.sectionCard}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View>
+                  <Text style={styles.sectionHeaderTitle}>RETURN / REPLACEMENT POLICY</Text>
+                  <Text style={styles.helperText}>Specify customer return conditions & replacement rules</Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 6, backgroundColor: '#F1F5F9', padding: 2, borderRadius: 10 }}>
+                  <TouchableOpacity
+                    style={[styles.yesNoBtn, hasReturnPolicy && styles.yesNoBtnActive]}
+                    onPress={() => handleToggleReturnPolicy(true)}>
+                    <Text style={[styles.yesNoText, hasReturnPolicy && styles.yesNoTextActive]}>✓ Yes</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.yesNoBtn, !hasReturnPolicy && styles.noBtnActive]}
+                    onPress={() => handleToggleReturnPolicy(false)}>
+                    <Text style={[styles.yesNoText, !hasReturnPolicy && styles.yesNoTextActive]}>✕ No</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {!hasReturnPolicy ? (
+                <View style={styles.noReturnAlertCard}>
+                  <Ionicons name="alert-circle-outline" size={16} color="#EF4444" />
+                  <Text style={styles.noReturnAlertText}>
+                    <Text style={{ fontWeight: '900' }}>Final Sale:</Text> No returns or replacements will be accepted for this product.
+                  </Text>
+                </View>
+              ) : (
+                <View style={{ gap: 10, marginTop: 4 }}>
+                  {/* Return Window */}
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>Return / Replacement Window *</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+                      {['3 Days', '7 Days', '10 Days', '15 Days', '30 Days'].map((win, idx) => (
+                        <TouchableOpacity
+                          key={idx}
+                          style={[styles.dropdownChip, returnDays === win && styles.dropdownChipActive]}
+                          onPress={() => handleReturnDaysChange(win)}>
+                          <Text style={[styles.dropdownChipText, returnDays === win && styles.dropdownChipTextActive]}>
+                            {win}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+
+                  {/* Return Conditions Chips */}
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>Eligible Return Conditions (Multi-select) *</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                      {STANDARD_CONDITIONS.map((cond, idx) => {
+                        const isSel = selectedReturnConditions.includes(cond);
+                        return (
+                          <TouchableOpacity
+                            key={idx}
+                            style={[styles.conditionChip, isSel && styles.conditionChipActive]}
+                            onPress={() => toggleReturnCondition(cond)}>
+                            <Ionicons name={isSel ? 'checkmark-circle' : 'ellipse-outline'} size={12} color={isSel ? YELLOW : '#64748B'} />
+                            <Text style={[styles.conditionChipText, isSel && styles.conditionChipTextActive]}>
+                              {cond}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Custom Condition Text */}
+                  {selectedReturnConditions.includes('Other / Custom condition') && (
+                    <View style={styles.fieldGroup}>
+                      <Text style={styles.fieldLabel}>Custom Return Terms *</Text>
+                      <TextInput
+                        style={[styles.whiteInput, { borderColor: YELLOW }]}
+                        placeholder="e.g. Unboxing video proof required, original tags attached..."
+                        placeholderTextColor="#94A3B8"
+                        value={customConditionText}
+                        onChangeText={handleCustomConditionChange}
+                      />
+                    </View>
+                  )}
+
+                  {/* Dynamic Policy Preview Box */}
+                  <View style={styles.policyPreviewBox}>
+                    <Text style={styles.policyPreviewLabel}>Policy Preview:</Text>
+                    <Text style={styles.policyPreviewText}>{returnPolicy}</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* SECTION 6: PRODUCT MEDIA & GALLERY */}
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionHeaderTitle}>PRODUCT MEDIA & GALLERY</Text>
+            <Text style={styles.sectionHeaderTitle}>{type.toUpperCase()} MEDIA & GALLERY</Text>
 
             {/* Main Cover Photo Card */}
             {imageUrl ? (
               <View style={styles.imagePreviewContainer}>
                 <Image source={{ uri: imageUrl }} style={styles.imagePreview} />
                 <View style={{ position: 'absolute', top: 6, left: 6, backgroundColor: YELLOW, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
-                  <Text style={{ color: '#0F0F12', fontSize: 9, fontWeight: '900' }}>COVER PHOTO</Text>
+                  <Text style={{ color: '#241B15', fontSize: 9, fontWeight: '900' }}>COVER PHOTO</Text>
                 </View>
                 <TouchableOpacity
                   style={styles.removeImageBtn}
@@ -1327,7 +1713,7 @@ export default function CreateListingScreen() {
               <TextInput
                 style={[styles.whiteInput, { flex: 1 }]}
                 placeholder="Or paste direct image URL (https://...)"
-                placeholderTextColor="rgba(255,255,255,0.35)"
+                placeholderTextColor="#94A3B8"
                 value={imageUrlInput}
                 onChangeText={setImageUrlInput}
               />
@@ -1345,7 +1731,7 @@ export default function CreateListingScreen() {
                   if (!imageUrl) setImageUrl(cleanUrl);
                   if (!galleryImages.includes(cleanUrl)) setGalleryImages([...galleryImages, cleanUrl]);
                   setImageUrlInput('');
-                  Alert.alert('Photo Attached!', 'Image URL added to listing gallery.');
+                  Alert.alert('Photo Attached!', 'Image URL added to gallery.');
                 }}>
                 <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>+ Add URL</Text>
               </TouchableOpacity>
@@ -1364,7 +1750,7 @@ export default function CreateListingScreen() {
                         style={{ position: 'relative', width: 75, height: 75 }}
                         onPress={() => {
                           setImageUrl(gImg);
-                          Alert.alert('Main Cover Updated', 'Selected photo assigned as listing main cover.');
+                          Alert.alert('Main Cover Updated', 'Selected photo assigned as main cover.');
                         }}>
                         <Image
                           source={{ uri: gImg }}
@@ -1378,7 +1764,7 @@ export default function CreateListingScreen() {
                         />
                         {isCover && (
                           <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: YELLOW, paddingVertical: 1, borderBottomLeftRadius: 6, borderBottomRightRadius: 6 }}>
-                            <Text style={{ color: '#0F0F12', fontSize: 7, fontWeight: '900', textAlign: 'center' }}>COVER</Text>
+                            <Text style={{ color: '#241B15', fontSize: 7, fontWeight: '900', textAlign: 'center' }}>COVER</Text>
                           </View>
                         )}
                         <TouchableOpacity
@@ -1411,32 +1797,32 @@ export default function CreateListingScreen() {
 
             {/* Video Link Input */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Product Video URL (Optional)</Text>
+              <Text style={styles.fieldLabel}>Listing Video URL (Optional)</Text>
               <TextInput
                 style={styles.whiteInput}
                 placeholder="https://youtube.com/watch?v=... or MP4 link"
-                placeholderTextColor="rgba(255,255,255,0.35)"
+                placeholderTextColor="#94A3B8"
                 value={videoUrl}
                 onChangeText={setVideoUrl}
               />
             </View>
           </View>
 
-          {/* SECTION 5: SPECIFICATIONS & VARIANTS */}
+          {/* SECTION 7: SPECIFICATIONS & VARIANTS */}
           <View style={styles.sectionCard}>
             <Text style={styles.sectionHeaderTitle}>SPECIFICATIONS & ATTRIBUTES</Text>
             <View style={{ flexDirection: 'row', gap: 6 }}>
               <TextInput
                 style={[styles.whiteInput, { flex: 1 }]}
                 placeholder="Attribute (e.g. Color)"
-                placeholderTextColor="rgba(255,255,255,0.35)"
+                placeholderTextColor="#94A3B8"
                 value={newLabelKey}
                 onChangeText={setNewLabelKey}
               />
               <TextInput
                 style={[styles.whiteInput, { flex: 1 }]}
                 placeholder="Value (e.g. Matte Black)"
-                placeholderTextColor="rgba(255,255,255,0.35)"
+                placeholderTextColor="#94A3B8"
                 value={newLabelVal}
                 onChangeText={setNewLabelVal}
               />
@@ -1449,7 +1835,7 @@ export default function CreateListingScreen() {
                   justifyContent: 'center',
                 }}
                 onPress={handleAddLabel}>
-                <Text style={{ color: '#0F0F12', fontSize: 11, fontWeight: '900' }}>+ Add</Text>
+                <Text style={{ color: '#241B15', fontSize: 11, fontWeight: '900' }}>+ Add</Text>
               </TouchableOpacity>
             </View>
 
@@ -1462,7 +1848,7 @@ export default function CreateListingScreen() {
                       flexDirection: 'row',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      backgroundColor: '#0F0F12',
+                      backgroundColor: '#F8FAFC',
                       borderWidth: 1,
                       borderColor: BORDER,
                       paddingHorizontal: 12,
@@ -1470,7 +1856,7 @@ export default function CreateListingScreen() {
                       borderRadius: 10,
                     }}>
                     <Text style={{ color: YELLOW, fontSize: 11, fontWeight: '800' }}>
-                      {lbl.key}: <Text style={{ color: '#fff', fontWeight: '600' }}>{lbl.value}</Text>
+                      {lbl.key}: <Text style={{ color: '#0F172A', fontWeight: '600' }}>{lbl.value}</Text>
                     </Text>
                     <TouchableOpacity onPress={() => handleRemoveLabel(idx)}>
                       <Ionicons name="trash-outline" size={14} color="#EF4444" />
@@ -1480,78 +1866,82 @@ export default function CreateListingScreen() {
               </View>
             ) : null}
 
-            <Text style={[styles.sectionHeaderTitle, { marginTop: 10 }]}>PRODUCT VARIANTS (SIZES, COLORS)</Text>
-            <View style={{ gap: 8 }}>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                <TextInput
-                  style={[styles.whiteInput, { flex: 1 }]}
-                  placeholder="Type (e.g. Size)"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  value={variantLabel}
-                  onChangeText={setVariantLabel}
-                />
-                <TextInput
-                  style={[styles.whiteInput, { flex: 1 }]}
-                  placeholder="Value (e.g. XL)"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  value={variantValue}
-                  onChangeText={setVariantValue}
-                />
-              </View>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                <TextInput
-                  style={[styles.whiteInput, { flex: 1 }]}
-                  placeholder="Variant Price Adjustment (₹)"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  value={variantPriceAdj}
-                  onChangeText={setVariantPriceAdj}
-                  keyboardType="numeric"
-                />
-                <TouchableOpacity
-                  style={{
-                    backgroundColor: PURPLE_ACCENT,
-                    paddingHorizontal: 14,
-                    borderRadius: 10,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                  onPress={handleAddVariant}>
-                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>+ Add Variant</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {variants.length > 0 ? (
-              <View style={{ gap: 6, marginTop: 6 }}>
-                {variants.map((v, idx) => (
-                  <View
-                    key={idx}
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      backgroundColor: '#0F0F12',
-                      borderWidth: 1,
-                      borderColor: BORDER,
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      borderRadius: 10,
-                    }}>
-                    <View>
-                      <Text style={{ color: YELLOW, fontSize: 11, fontWeight: '900' }}>
-                        {v.label || v.type}: {v.value}
-                      </Text>
-                      <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10 }}>
-                        Price: ₹{v.price || sellingPrice} • SKU: {v.sku}
-                      </Text>
-                    </View>
-                    <TouchableOpacity onPress={() => handleRemoveVariant(idx)}>
-                      <Ionicons name="trash-outline" size={14} color="#EF4444" />
+            {type === 'product' && (
+              <>
+                <Text style={[styles.sectionHeaderTitle, { marginTop: 10 }]}>PRODUCT VARIANTS (SIZES, COLORS)</Text>
+                <View style={{ gap: 8 }}>
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <TextInput
+                      style={[styles.whiteInput, { flex: 1 }]}
+                      placeholder="Type (e.g. Size)"
+                      placeholderTextColor="#94A3B8"
+                      value={variantLabel}
+                      onChangeText={setVariantLabel}
+                    />
+                    <TextInput
+                      style={[styles.whiteInput, { flex: 1 }]}
+                      placeholder="Value (e.g. XL)"
+                      placeholderTextColor="#94A3B8"
+                      value={variantValue}
+                      onChangeText={setVariantValue}
+                    />
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <TextInput
+                      style={[styles.whiteInput, { flex: 1 }]}
+                      placeholder="Variant Price Adjustment (₹)"
+                      placeholderTextColor="#94A3B8"
+                      value={variantPriceAdj}
+                      onChangeText={setVariantPriceAdj}
+                      keyboardType="numeric"
+                    />
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: PURPLE_ACCENT,
+                        paddingHorizontal: 14,
+                        borderRadius: 10,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      onPress={handleAddVariant}>
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>+ Add Variant</Text>
                     </TouchableOpacity>
                   </View>
-                ))}
-              </View>
-            ) : null}
+                </View>
+
+                {variants.length > 0 ? (
+                  <View style={{ gap: 6, marginTop: 6 }}>
+                    {variants.map((v, idx) => (
+                      <View
+                        key={idx}
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          backgroundColor: '#F8FAFC',
+                          borderWidth: 1,
+                          borderColor: BORDER,
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: 10,
+                        }}>
+                        <View>
+                          <Text style={{ color: YELLOW, fontSize: 11, fontWeight: '900' }}>
+                            {v.label || v.type}: {v.value}
+                          </Text>
+                          <Text style={{ color: '#64748B', fontSize: 10 }}>
+                            Price: ₹{v.price || sellingPrice} • SKU: {v.sku}
+                          </Text>
+                        </View>
+                        <TouchableOpacity onPress={() => handleRemoveVariant(idx)}>
+                          <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+              </>
+            )}
           </View>
 
           {/* SUBMIT ACTION */}
@@ -1560,10 +1950,10 @@ export default function CreateListingScreen() {
             onPress={handleSubmit}
             disabled={createMutation.isPending || updateMutation.isPending || loadingEdit}>
             {createMutation.isPending || updateMutation.isPending || loadingEdit ? (
-              <ActivityIndicator color="#0F0F12" />
+              <ActivityIndicator color={YELLOW} />
             ) : (
               <Text style={styles.submitBtnText}>
-                {isEdit ? '💾 SAVE LISTING CHANGES' : '🚀 PUBLISH LISTING TO STORE'}
+                {isEdit ? `💾 SAVE ${type.toUpperCase()} LISTING CHANGES` : `🚀 PUBLISH ${type.toUpperCase()} LISTING TO STORE`}
               </Text>
             )}
           </TouchableOpacity>
@@ -1586,7 +1976,7 @@ export default function CreateListingScreen() {
                 <Text style={styles.modalTitle}>Voice Input: {voiceTargetField}</Text>
               </View>
               <TouchableOpacity onPress={() => setVoiceModalVisible(false)}>
-                <Ionicons name="close" size={20} color="#fff" />
+                <Ionicons name="close" size={20} color="#0F172A" />
               </TouchableOpacity>
             </View>
 
@@ -1599,7 +1989,7 @@ export default function CreateListingScreen() {
             <TextInput
               style={styles.modalInput}
               placeholder={`Dictate or type ${voiceTargetField}...`}
-              placeholderTextColor="rgba(255,255,255,0.4)"
+              placeholderTextColor="#94A3B8"
               value={voiceText}
               onChangeText={setVoiceText}
               multiline
@@ -1640,7 +2030,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
-    color: '#fff',
+    color: '#0F172A',
     fontSize: FontSize.xs,
     fontWeight: '700',
   },
@@ -1680,6 +2070,39 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     gap: 14,
   },
+  typeSwitchCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 14,
+    ...Shadows.sm,
+  },
+  typeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  typeBtnActive: {
+    backgroundColor: '#FFFBEB',
+    borderColor: YELLOW,
+  },
+  typeBtnText: {
+    color: '#64748B',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  typeBtnTextActive: {
+    color: '#241B15',
+    fontWeight: '900',
+  },
   sectionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -1709,7 +2132,7 @@ const styles = StyleSheet.create({
   },
   dropdownChipActive: {
     backgroundColor: '#241B15',
-    borderColor: '#D99A3D',
+    borderColor: YELLOW,
   },
   dropdownChipText: {
     color: '#0F172A',
@@ -1717,28 +2140,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   dropdownChipTextActive: {
-    color: '#D99A3D',
+    color: YELLOW,
     fontWeight: '900',
   },
   aiBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#F3E8FF',
+    backgroundColor: PURPLE_BG,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 9999,
   },
   aiBadgeText: {
-    color: '#9333EA',
+    color: PURPLE_ACCENT,
     fontSize: 10,
     fontWeight: '900',
   },
   aiBannerCard: {
-    backgroundColor: '#F3E8FF',
+    backgroundColor: PURPLE_BG,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#D8B4FE',
+    borderColor: PURPLE_BORDER,
     padding: 14,
   },
   aiBannerTitle: {
@@ -1750,7 +2173,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#9333EA',
+    backgroundColor: PURPLE_ACCENT,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 9999,
@@ -1766,7 +2189,7 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontSize: 11,
     borderWidth: 1,
-    borderColor: '#D8B4FE',
+    borderColor: PURPLE_BORDER,
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -1775,7 +2198,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#9333EA',
+    backgroundColor: PURPLE_ACCENT,
     paddingHorizontal: 12,
     borderRadius: 10,
     justifyContent: 'center',
@@ -1792,22 +2215,22 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   filePickerBtn: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#D8B4FE',
+    borderColor: PURPLE_BORDER,
     borderRadius: 10,
     padding: 10,
     alignItems: 'center',
   },
   filePickerBtnText: {
-    color: '#64748B',
+    color: PURPLE_ACCENT,
     fontSize: 10,
     fontWeight: '700',
   },
   helperText: {
     color: '#64748B',
     fontSize: 9,
-    marginTop: 4,
+    marginTop: 2,
     fontStyle: 'italic',
   },
   labelVoiceRow: {
@@ -1826,7 +2249,7 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   voiceSmallBtnText: {
-    color: '#D99A3D',
+    color: YELLOW,
     fontSize: 10,
     fontWeight: '900',
   },
@@ -1854,15 +2277,127 @@ const styles = StyleSheet.create({
   discountBadge: {
     backgroundColor: '#FFFBEB',
     borderWidth: 1,
-    borderColor: '#D99A3D',
+    borderColor: YELLOW,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 9999,
   },
   discountBadgeText: {
-    color: '#D99A3D',
+    color: YELLOW,
     fontSize: 9,
     fontWeight: '900',
+  },
+  pricingSummaryBanner: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+    borderRadius: 10,
+    padding: 10,
+  },
+  pricingSummaryText: {
+    color: '#78350F',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  paymentOptionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    padding: 12,
+  },
+  paymentOptionCardActive: {
+    backgroundColor: '#FFFBEB',
+    borderColor: YELLOW,
+  },
+  paymentOptionTitle: {
+    color: '#0F172A',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  paymentOptionSub: {
+    color: '#64748B',
+    fontSize: 9.5,
+    marginTop: 2,
+  },
+  yesNoBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  yesNoBtnActive: {
+    backgroundColor: '#10B981',
+  },
+  noBtnActive: {
+    backgroundColor: '#EF4444',
+  },
+  yesNoText: {
+    color: '#64748B',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  yesNoTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+  },
+  noReturnAlertCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    borderRadius: 10,
+    padding: 10,
+  },
+  noReturnAlertText: {
+    color: '#991B1B',
+    fontSize: 10,
+    flex: 1,
+  },
+  conditionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  conditionChipActive: {
+    backgroundColor: '#FFFBEB',
+    borderColor: YELLOW,
+  },
+  conditionChipText: {
+    color: '#64748B',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  conditionChipTextActive: {
+    color: '#241B15',
+    fontWeight: '800',
+  },
+  policyPreviewBox: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    padding: 10,
+    gap: 2,
+  },
+  policyPreviewLabel: {
+    color: '#0F172A',
+    fontSize: 9.5,
+    fontWeight: '900',
+  },
+  policyPreviewText: {
+    color: '#475569',
+    fontSize: 10,
+    fontStyle: 'italic',
   },
   uploadBtn: {
     flexDirection: 'row',
@@ -1876,7 +2411,7 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   uploadBtnText: {
-    color: '#D99A3D',
+    color: YELLOW,
     fontSize: 11,
     fontWeight: '800',
   },
@@ -1909,11 +2444,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: '#D99A3D',
+    borderColor: YELLOW,
     ...Shadows.md,
   },
   submitBtnText: {
-    color: '#D99A3D',
+    color: YELLOW,
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 0.5,
@@ -1928,7 +2463,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: '#D99A3D',
+    borderColor: YELLOW,
     padding: 16,
     gap: 12,
     ...Shadows.lg,
@@ -1988,7 +2523,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#241B15',
   },
   modalApplyText: {
-    color: '#D99A3D',
+    color: YELLOW,
     fontSize: 11,
     fontWeight: '900',
   },
