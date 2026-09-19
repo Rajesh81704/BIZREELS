@@ -5,8 +5,10 @@ const cloudinaryService = require('../services/cloudinary.service');
 const { catchAsync } = require('../utils/helpers');
 const ApiError = require('../utils/ApiError');
 
-const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
+});
 
 router.post('/sign', requireAuth, catchAsync(async (req, res) => {
   const { folder = 'listings/misc', resource_type = 'image' } = req.body;
