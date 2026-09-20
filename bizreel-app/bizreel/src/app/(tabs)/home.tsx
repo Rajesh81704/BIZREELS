@@ -262,8 +262,8 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Highlighted Search Bar (Customer & Vendor mode only) */}
-        {!isCreator && (
+        {/* Highlighted Search Bar (Customer mode only) */}
+        {!isCreator && !isVendor && (
           <TouchableOpacity
             style={styles.searchBarContainer}
             activeOpacity={0.92}

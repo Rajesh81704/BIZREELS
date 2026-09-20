@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
+import { selectCurrentUser } from '../../features/auth/authSlice';
 import {
   FiSearch, FiSliders, FiMapPin, FiTrendingUp,
   FiEye, FiHeart, FiShare2, FiBookmark, FiZap, FiX, FiCheck,
@@ -59,6 +61,9 @@ export default function HomeFeedSearchFilter({
   onTabChange
 }) {
   const { bi, t } = useLanguage();
+  const currentUser = useSelector(selectCurrentUser);
+  const activeRole = currentUser?.activeRole || currentUser?.role || 'customer';
+  const isVendor = activeRole === 'vendor';
   const feedTabs = getFeedTabs(bi);
   const [showDrawer, setShowDrawer] = useState(false);
 
@@ -117,30 +122,32 @@ export default function HomeFeedSearchFilter({
           )}
 
           {/* Vertical Separator */}
-          <div className="h-5 w-px bg-[#e3dccb] shrink-0 hidden sm:block" />
+          {!isVendor && <div className="h-5 w-px bg-[#e3dccb] shrink-0 hidden sm:block" />}
 
-          {/* 2. Main Search Input */}
-          <div className="relative flex-1 min-w-[160px] sm:min-w-[220px] flex items-center gap-1.5 bg-[#f8f4ec] rounded-lg border border-[#e3dccb] px-2.5 py-1 focus-within:border-[#d99a3d] focus-within:ring-1 focus-within:ring-[#d99a3d]/20 transition-all">
-            <FiSearch size={13} className="text-[#d99a3d] shrink-0" />
-            <input
-              type="text"
-              value={filters.searchQuery || ''}
-              onChange={(e) => onFilterChange({ ...filters, searchQuery: e.target.value })}
-              onKeyDown={(e) => e.key === 'Enter' && onSearch && onSearch()}
-              placeholder="Search reels, products & services..."
-              className="w-full bg-transparent text-xs text-[#1a1a1a] placeholder:text-slate-400 focus:outline-none font-medium truncate min-w-0"
-            />
-            {filters.searchQuery && (
-              <button
-                type="button"
-                onClick={handleClearSearch}
-                className="p-0.5 rounded-full text-slate-400 hover:text-slate-700 transition shrink-0 border-none bg-transparent cursor-pointer"
-                title="Clear search"
-              >
-                <FiX size={12} />
-              </button>
-            )}
-          </div>
+          {/* 2. Main Search Input (Hidden for Vendors) */}
+          {!isVendor && (
+            <div className="relative flex-1 min-w-[160px] sm:min-w-[220px] flex items-center gap-1.5 bg-[#f8f4ec] rounded-lg border border-[#e3dccb] px-2.5 py-1 focus-within:border-[#d99a3d] focus-within:ring-1 focus-within:ring-[#d99a3d]/20 transition-all">
+              <FiSearch size={13} className="text-[#d99a3d] shrink-0" />
+              <input
+                type="text"
+                value={filters.searchQuery || ''}
+                onChange={(e) => onFilterChange({ ...filters, searchQuery: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && onSearch && onSearch()}
+                placeholder="Search reels, products & services..."
+                className="w-full bg-transparent text-xs text-[#1a1a1a] placeholder:text-slate-400 focus:outline-none font-medium truncate min-w-0"
+              />
+              {filters.searchQuery && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="p-0.5 rounded-full text-slate-400 hover:text-slate-700 transition shrink-0 border-none bg-transparent cursor-pointer"
+                  title="Clear search"
+                >
+                  <FiX size={12} />
+                </button>
+              )}
+            </div>
+          )}
 
           {/* 3. Distance Selector */}
           {filters.nearby === 'near_me' && (
