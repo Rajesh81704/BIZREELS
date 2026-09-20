@@ -114,7 +114,9 @@ export default function CreatorVerificationScreen() {
 
   const [verifyingBank, setVerifyingBank] = useState(false);
   const [verifyingUpi, setVerifyingUpi] = useState(false);
-  const [sendingContactOtp, setSendingContactOtp] = useState(false);
+  const [sendingMobileOtp, setSendingMobileOtp] = useState(false);
+  const [sendingWhatsappOtp, setSendingWhatsappOtp] = useState(false);
+  const [sendingEmailOtp, setSendingEmailOtp] = useState(false);
   const [verifyingContactOtp, setVerifyingContactOtp] = useState(false);
 
   const fetchStatus = async () => {
@@ -340,12 +342,16 @@ export default function CreatorVerificationScreen() {
       Alert.alert('Required', `Please enter a valid ${type} address/number`);
       return;
     }
-    setSendingContactOtp(true);
+    if (type === 'mobile') setSendingMobileOtp(true);
+    if (type === 'whatsapp') setSendingWhatsappOtp(true);
+    if (type === 'email') setSendingEmailOtp(true);
+
     try {
+      const channel = type === 'whatsapp' ? 'whatsapp' : type === 'email' ? 'email' : 'sms';
       await api.post('/creator/me/send-contact-otp', {
         type,
         value: value.trim(),
-        channel: type === 'whatsapp' ? 'whatsapp' : 'sms',
+        channel,
       });
       setContactOtpModal({
         visible: true,
@@ -353,11 +359,13 @@ export default function CreatorVerificationScreen() {
         value: value.trim(),
         code: '',
       });
-      Alert.alert('OTP Sent 📲', `Verification code sent to ${type}: ${value}`);
+      Alert.alert('OTP Sent 📲', `Verification code sent to ${type.toUpperCase()}: ${value}`);
     } catch (err: any) {
       Alert.alert('OTP Failed', err.response?.data?.message || `Failed to send OTP to ${type}`);
     } finally {
-      setSendingContactOtp(false);
+      if (type === 'mobile') setSendingMobileOtp(false);
+      if (type === 'whatsapp') setSendingWhatsappOtp(false);
+      if (type === 'email') setSendingEmailOtp(false);
     }
   };
 
@@ -908,9 +916,9 @@ export default function CreatorVerificationScreen() {
                   <TouchableOpacity
                     style={styles.submitBtn}
                     onPress={() => handleSendContactOtp('mobile', mobileInput)}
-                    disabled={sendingContactOtp}
+                    disabled={sendingMobileOtp}
                     activeOpacity={0.88}>
-                    {sendingContactOtp ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>Send Mobile SMS OTP</Text>}
+                    {sendingMobileOtp ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>Send Mobile SMS OTP</Text>}
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -952,9 +960,9 @@ export default function CreatorVerificationScreen() {
                   <TouchableOpacity
                     style={styles.submitBtn}
                     onPress={() => handleSendContactOtp('whatsapp', whatsappInput)}
-                    disabled={sendingContactOtp}
+                    disabled={sendingWhatsappOtp}
                     activeOpacity={0.88}>
-                    {sendingContactOtp ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>Send WhatsApp OTP</Text>}
+                    {sendingWhatsappOtp ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>Send WhatsApp OTP</Text>}
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -997,9 +1005,9 @@ export default function CreatorVerificationScreen() {
                   <TouchableOpacity
                     style={styles.submitBtn}
                     onPress={() => handleSendContactOtp('email', emailInput)}
-                    disabled={sendingContactOtp}
+                    disabled={sendingEmailOtp}
                     activeOpacity={0.88}>
-                    {sendingContactOtp ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>Send Email Verification Code</Text>}
+                    {sendingEmailOtp ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>Send Email Verification Code</Text>}
                   </TouchableOpacity>
                 </View>
               ) : (
