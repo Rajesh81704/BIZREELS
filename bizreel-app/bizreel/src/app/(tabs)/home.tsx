@@ -522,11 +522,13 @@ export default function HomeScreen() {
                 contentContainerStyle={styles.catalogScrollContent}>
                 {vendorListings.map((item, idx) => {
                   const imgUri = getListingImage(item) || 'https://via.placeholder.com/300';
+                  const itemType = (item.type || (item as any).listing_type || 'product').toLowerCase();
+                  const targetTab = itemType === 'service' ? 'services' : 'products';
                   return (
                     <TouchableOpacity
                       key={item._id ? `${item._id}_v_${idx}` : `vcat_${idx}`}
                       style={styles.catalogCard}
-                      onPress={() => router.push('/vendor/listings' as any)}>
+                      onPress={() => router.push(`/vendor/listings?tab=${targetTab}` as any)}>
                       <Image source={{ uri: imgUri }} style={styles.catalogCardImage} contentFit="cover" />
                       
                       {/* Price Badge */}
@@ -537,7 +539,7 @@ export default function HomeScreen() {
                       {/* Category Badge */}
                       <View style={styles.catalogCategoryTag}>
                         <Text style={styles.catalogCategoryText}>
-                          {item.type === 'service' ? 'Service' : 'Product'}
+                          {itemType === 'service' ? 'Service' : 'Product'}
                         </Text>
                       </View>
 
@@ -554,7 +556,7 @@ export default function HomeScreen() {
 
                           <TouchableOpacity
                             style={styles.editCardBtn}
-                            onPress={() => router.push('/vendor/listings' as any)}>
+                            onPress={() => router.push(`/vendor/listings?tab=${targetTab}` as any)}>
                             <Ionicons name="create-outline" size={14} color={BrandColors.primary} />
                           </TouchableOpacity>
                         </View>
@@ -1405,6 +1407,7 @@ const styles = StyleSheet.create({
   // ── Bento Vendor Catalog ──
   vendorCatalogContainer: {
     paddingHorizontal: Spacing.four,
+    marginTop: Spacing.three,
     gap: Spacing.three,
   },
   vendorStoreCard: {
