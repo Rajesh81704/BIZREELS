@@ -917,7 +917,7 @@ export default function CreatorVerificationScreen() {
               {!contactVerified.mobile ? (
                 <View style={styles.formGroup}>
                   <Text style={styles.inputLabel}>
-                    {(user as any)?.phone || (user as any)?.creatorProfile?.mobileNumber ? 'REGISTERED MOBILE PHONE NUMBER (READ-ONLY)' : 'MOBILE PHONE NUMBER'}
+                    {(user as any)?.phone || (user as any)?.creatorProfile?.mobileNumber ? 'REGISTERED MOBILE PHONE NUMBER' : 'MOBILE PHONE NUMBER'}
                   </Text>
                   {(user as any)?.phone || (user as any)?.creatorProfile?.mobileNumber ? (
                     <View style={[styles.input, styles.readOnlyInput]}>
@@ -970,15 +970,25 @@ export default function CreatorVerificationScreen() {
 
               {!contactVerified.whatsapp ? (
                 <View style={styles.formGroup}>
-                  <Text style={styles.inputLabel}>WHATSAPP NUMBER</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter WhatsApp phone number"
-                    placeholderTextColor="#94A3B8"
-                    value={whatsappInput}
-                    onChangeText={setWhatsappInput}
-                    keyboardType="phone-pad"
-                  />
+                  <Text style={styles.inputLabel}>
+                    {(user as any)?.creatorProfile?.whatsappNumber || (user as any)?.phone || (user as any)?.creatorProfile?.mobileNumber ? 'REGISTERED WHATSAPP NUMBER' : 'WHATSAPP NUMBER'}
+                  </Text>
+                  {(user as any)?.creatorProfile?.whatsappNumber || (user as any)?.phone || (user as any)?.creatorProfile?.mobileNumber ? (
+                    <View style={[styles.input, styles.readOnlyInput]}>
+                      <Text style={styles.readOnlyInputText}>{whatsappInput || 'No WhatsApp Number Registered'}</Text>
+                      <Ionicons name="lock-closed" size={14} color="#94A3B8" />
+                    </View>
+                  ) : (
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter WhatsApp phone number"
+                      placeholderTextColor="#94A3B8"
+                      value={whatsappInput}
+                      onChangeText={setWhatsappInput}
+                      keyboardType="phone-pad"
+                      maxLength={14}
+                    />
+                  )}
                   <TouchableOpacity
                     style={styles.submitBtn}
                     onPress={() => handleSendContactOtp('whatsapp', whatsappInput)}
@@ -1015,7 +1025,7 @@ export default function CreatorVerificationScreen() {
               {!contactVerified.email ? (
                 <View style={styles.formGroup}>
                   <Text style={styles.inputLabel}>
-                    {user?.email || (user as any)?.creatorProfile?.email ? 'REGISTERED EMAIL ADDRESS (READ-ONLY)' : 'EMAIL ADDRESS'}
+                    {user?.email || (user as any)?.creatorProfile?.email ? 'REGISTERED EMAIL ADDRESS' : 'EMAIL ADDRESS'}
                   </Text>
                   {user?.email || (user as any)?.creatorProfile?.email ? (
                     <View style={[styles.input, styles.readOnlyInput]}>
