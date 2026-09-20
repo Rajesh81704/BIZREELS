@@ -139,9 +139,13 @@ export default function CreatorVerificationScreen() {
 
       // Pre-fill user contact defaults
       const creatorProf = (user as any)?.creatorProfile || {};
-      setMobileInput(creatorProf.mobileNumber || (user as any)?.phone || (user as any)?.mobileNumber || '');
-      setWhatsappInput(creatorProf.whatsappNumber || creatorProf.mobileNumber || (user as any)?.phone || (user as any)?.mobileNumber || '');
-      setEmailInput(user?.email || '');
+      const fetchedMobile = creatorProf.mobileNumber || (user as any)?.phone || (user as any)?.mobileNumber || '';
+      const fetchedWhatsapp = creatorProf.whatsappNumber || creatorProf.mobileNumber || (user as any)?.phone || (user as any)?.mobileNumber || '';
+      const fetchedEmail = creatorProf.email || user?.email || '';
+
+      if (fetchedMobile) setMobileInput(fetchedMobile);
+      if (fetchedWhatsapp) setWhatsappInput(fetchedWhatsapp);
+      if (fetchedEmail) setEmailInput(fetchedEmail);
     } catch (err) {
       console.warn('Failed to load creator verification status:', err);
     } finally {
@@ -338,8 +342,9 @@ export default function CreatorVerificationScreen() {
   // ── Contact Channels OTP Handlers ──
 
   const handleSendContactOtp = async (type: 'mobile' | 'whatsapp' | 'email', value: string) => {
-    if (!value.trim()) {
-      Alert.alert('Required', `Please enter a valid ${type} address/number`);
+    const cleanValue = (value || '').trim();
+    if (!cleanValue) {
+      Alert.alert('Required', `Please enter a valid ${type} ${type === 'email' ? 'address' : 'number'}`);
       return;
     }
     if (type === 'mobile') setSendingMobileOtp(true);
@@ -350,25 +355,25 @@ export default function CreatorVerificationScreen() {
       const channel = type === 'whatsapp' ? 'whatsapp' : type === 'email' ? 'email' : 'sms';
       const res = await api.post('/creator/me/send-contact-otp', {
         type,
-        value: value.trim(),
+        value: cleanValue,
         channel,
       });
 
-      const mockOtp = res.data?.otp || res.data?.data?.otp;
+      const data = res.data?.data || res.data || {};
+      const mockOtp = data.otp;
+
       setContactOtpModal({
         visible: true,
         type,
-        value: value.trim(),
+        value: cleanValue,
         code: mockOtp ? String(mockOtp) : '',
       });
 
-      if (mockOtp) {
-        Alert.alert('OTP Dispatched 📲', `Verification code sent to ${type.toUpperCase()}: ${value}\n\n(Dev OTP: ${mockOtp})`);
-      } else {
-        Alert.alert('OTP Dispatched 📲', `Verification code sent to ${type.toUpperCase()}: ${value}`);
-      }
+      const message = data.message || `Verification code sent to ${type.toUpperCase()}: ${cleanValue}`;
+      Alert.alert('OTP Dispatched 📲', `${message}${mockOtp ? `\n\n(Dev OTP: ${mockOtp})` : ''}`);
     } catch (err: any) {
-      Alert.alert('OTP Failed', err.response?.data?.message || `Failed to send OTP to ${type}`);
+      console.error(`Send ${type} OTP Error:`, err);
+      Alert.alert('OTP Failed', err.response?.data?.message || err.message || `Failed to send OTP to ${type}`);
     } finally {
       if (type === 'mobile') setSendingMobileOtp(false);
       if (type === 'whatsapp') setSendingWhatsappOtp(false);
@@ -911,15 +916,29 @@ export default function CreatorVerificationScreen() {
 
               {!contactVerified.mobile ? (
                 <View style={styles.formGroup}>
-                  <Text style={styles.inputLabel}>REGISTERED MOBILE PHONE NUMBER (READ-ONLY)</Text>
-                  <View style={[styles.input, styles.readOnlyInput]}>
-                    <Text style={styles.readOnlyInputText}>{mobileInput || 'No Phone Number Registered'}</Text>
-                    <Ionicons name="lock-closed" size={14} color="#94A3B8" />
-                  </View>
+                  <Text style={styles.inputLabel}>
+                    {(user as any)?.phone || (user as any)?.creatorProfile?.mobileNumber ? 'REGISTERED MOBILE PHONE NUMBER (READ-ONLY)' : 'MOBILE PHONE NUMBER'}
+                  </Text>
+                  {(user as any)?.phone || (user as any)?.creatorProfile?.mobileNumber ? (
+                    <View style={[styles.input, styles.readOnlyInput]}>
+                      <Text style={styles.readOnlyInputText}>{mobileInput || 'No Phone Number Registered'}</Text>
+                      <Ionicons name="lock-closed" size={14} color="#94A3B8" />
+                    </View>
+                  ) : (
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter 10-digit mobile phone number"
+                      placeholderTextColor="#94A3B8"
+                      value={mobileInput}
+                      onChangeText={setMobileInput}
+                      keyboardType="phone-pad"
+                      maxLength={14}
+                    />
+                  )}
                   <TouchableOpacity
                     style={styles.submitBtn}
                     onPress={() => handleSendContactOtp('mobile', mobileInput)}
-                    disabled={sendingMobileOtp || !mobileInput}
+                    disabled={sendingMobileOtp || !mobileInput.trim()}
                     activeOpacity={0.88}>
                     {sendingMobileOtp ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>Send Mobile SMS OTP</Text>}
                   </TouchableOpacity>
@@ -963,7 +982,7 @@ export default function CreatorVerificationScreen() {
                   <TouchableOpacity
                     style={styles.submitBtn}
                     onPress={() => handleSendContactOtp('whatsapp', whatsappInput)}
-                    disabled={sendingWhatsappOtp}
+                    disabled={sendingWhatsappOtp || !whatsappInput.trim()}
                     activeOpacity={0.88}>
                     {sendingWhatsappOtp ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>Send WhatsApp OTP</Text>}
                   </TouchableOpacity>
@@ -995,15 +1014,29 @@ export default function CreatorVerificationScreen() {
 
               {!contactVerified.email ? (
                 <View style={styles.formGroup}>
-                  <Text style={styles.inputLabel}>REGISTERED EMAIL ADDRESS (READ-ONLY)</Text>
-                  <View style={[styles.input, styles.readOnlyInput]}>
-                    <Text style={styles.readOnlyInputText}>{emailInput || 'No Email Address Registered'}</Text>
-                    <Ionicons name="lock-closed" size={14} color="#94A3B8" />
-                  </View>
+                  <Text style={styles.inputLabel}>
+                    {user?.email || (user as any)?.creatorProfile?.email ? 'REGISTERED EMAIL ADDRESS (READ-ONLY)' : 'EMAIL ADDRESS'}
+                  </Text>
+                  {user?.email || (user as any)?.creatorProfile?.email ? (
+                    <View style={[styles.input, styles.readOnlyInput]}>
+                      <Text style={styles.readOnlyInputText}>{emailInput || 'No Email Address Registered'}</Text>
+                      <Ionicons name="lock-closed" size={14} color="#94A3B8" />
+                    </View>
+                  ) : (
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter email address"
+                      placeholderTextColor="#94A3B8"
+                      value={emailInput}
+                      onChangeText={setEmailInput}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                  )}
                   <TouchableOpacity
                     style={styles.submitBtn}
                     onPress={() => handleSendContactOtp('email', emailInput)}
-                    disabled={sendingEmailOtp || !emailInput}
+                    disabled={sendingEmailOtp || !emailInput.trim()}
                     activeOpacity={0.88}>
                     {sendingEmailOtp ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>Send Email Verification Code</Text>}
                   </TouchableOpacity>

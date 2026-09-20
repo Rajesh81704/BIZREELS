@@ -209,7 +209,7 @@ const sendContactOtp = catchAsync(async (req, res) => {
 
     return res.json({
       success: true,
-      message: `Verification OTP sent via ${(type === 'whatsapp' || req.body.channel === 'whatsapp') ? 'WHATSAPP' : 'SMS'} to: +91${cleanPhone}`,
+      message: `Verification OTP sent via ${(type === 'whatsapp' || req.body.channel === 'whatsapp') ? 'WHATSAPP' : 'SMS'} to: ${cleanPhone}`,
       channel: (type === 'whatsapp' || req.body.channel === 'whatsapp') ? 'whatsapp' : 'sms',
       otp: (process.env.NODE_ENV === 'development' || dispatchResult?.provider === 'mock' || dispatchResult?.provider === 'mock_fallback') ? otpCode : undefined
     });
@@ -261,9 +261,19 @@ const verifyContact = catchAsync(async (req, res) => {
   if (otpRecord) await otpRecord.markUsed();
 
   currentContacts[type] = true;
-  if (type === 'mobile' && value) currentCp.mobileNumber = value;
-  if (type === 'whatsapp' && value) currentCp.whatsappNumber = value;
-  if (type === 'email' && value) currentCp.email = value;
+  if (type === 'mobile') {
+    if (value) currentCp.mobileNumber = value;
+    if (!user.phone && value) user.phone = value;
+    user.isPhoneVerified = true;
+  }
+  if (type === 'whatsapp' && value) {
+    currentCp.whatsappNumber = value;
+  }
+  if (type === 'email') {
+    if (value) currentCp.email = value;
+    if (!user.email && value) user.email = value;
+    user.isEmailVerified = true;
+  }
 
   currentCp.contactVerified = currentContacts;
   user.creatorProfile = currentCp;
