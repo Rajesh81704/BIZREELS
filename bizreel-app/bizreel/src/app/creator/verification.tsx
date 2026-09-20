@@ -1,9 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
+  Linking,
   Modal,
   RefreshControl,
   ScrollView,
@@ -72,18 +75,24 @@ export default function CreatorVerificationScreen() {
   const [activeTab, setActiveTab] = useState<'documents' | 'payment' | 'contacts'>('documents');
   const [status, setStatus] = useState<any>(null);
 
-  // Forms State
+  // Identity Documents State
   const [panNumber, setPanNumber] = useState('');
+  const [panFrontUrl, setPanFrontUrl] = useState('');
+  const [panBackUrl, setPanBackUrl] = useState('');
+
   const [aadhaarNumber, setAadhaarNumber] = useState('');
+  const [aadhaarFrontUrl, setAadhaarFrontUrl] = useState('');
+  const [aadhaarBackUrl, setAadhaarBackUrl] = useState('');
   const [aadhaarOtp, setAadhaarOtp] = useState('');
   const [aadhaarRefId, setAadhaarRefId] = useState('');
   const [showAadhaarOtpInput, setShowAadhaarOtpInput] = useState(false);
 
+  // Payout State
   const [accountNumber, setAccountNumber] = useState('');
   const [ifscCode, setIfscCode] = useState('');
   const [upiId, setUpiId] = useState('');
 
-  // Contact Channels Forms State
+  // Contact Channels State
   const [mobileInput, setMobileInput] = useState('');
   const [whatsappInput, setWhatsappInput] = useState('');
   const [emailInput, setEmailInput] = useState('');
@@ -98,7 +107,11 @@ export default function CreatorVerificationScreen() {
 
   // Action Spinners
   const [verifyingPan, setVerifyingPan] = useState(false);
+  const [submittingPanManual, setSubmittingPanManual] = useState(false);
   const [verifyingAadhaar, setVerifyingAadhaar] = useState(false);
+  const [submittingAadhaarManual, setSubmittingAadhaarManual] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
   const [verifyingBank, setVerifyingBank] = useState(false);
   const [verifyingUpi, setVerifyingUpi] = useState(false);
   const [sendingContactOtp, setSendingContactOtp] = useState(false);
@@ -109,6 +122,18 @@ export default function CreatorVerificationScreen() {
       const res = await api.get('/creator/me/verification-status');
       const data = res.data?.data || res.data || {};
       setStatus(data);
+
+      const docs = data.documents || {};
+      if (docs.pan) {
+        setPanNumber(docs.pan.docNumber || docs.pan.maskedNumber || '');
+        setPanFrontUrl(docs.pan.frontUrl || docs.pan.fileUrl || '');
+        setPanBackUrl(docs.pan.backUrl || '');
+      }
+      if (docs.aadhaar) {
+        setAadhaarNumber(docs.aadhaar.docNumber || docs.aadhaar.maskedNumber || '');
+        setAadhaarFrontUrl(docs.aadhaar.frontUrl || docs.aadhaar.fileUrl || '');
+        setAadhaarBackUrl(docs.aadhaar.backUrl || '');
+      }
 
       // Pre-fill user contact defaults
       const creatorProf = (user as any)?.creatorProfile || {};
@@ -132,16 +157,90 @@ export default function CreatorVerificationScreen() {
     fetchStatus();
   };
 
+  // ── Document Image Upload Helper ──
+  const handlePickDocumentImage = async (setUrlState: (url: string) => void) => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('Permission Required', 'Media library access is required to attach document photos.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        allowsEditing: true,
+      });
+      if (result.canceled || !result.assets || result.assets.length === 0) return;
+
+      const asset = result.assets[0];
+      setUploadingImage(true);
+
+      const formData = new FormData();
+      formData.append('image', {
+        uri: asset.uri,
+        type: asset.mimeType || 'image/jpeg',
+        name: asset.fileName || `doc_${Date.now()}.jpg`,
+      } as any);
+
+      const res = await api.post('/v1/upload/image', formData);
+      const uploadedUrl = res.data?.url || res.data?.data?.url || res.data?.secure_url;
+      if (uploadedUrl) {
+        setUrlState(uploadedUrl);
+        Alert.alert('Attached ✓', 'Document photo uploaded successfully!');
+      } else {
+        setUrlState(asset.uri);
+        Alert.alert('Attached ✓', 'Document image attached.');
+      }
+    } catch (err: any) {
+      console.error('Document upload error:', err);
+      Alert.alert('Upload Error', err?.response?.data?.message || err?.message || 'Failed to upload document image.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // ── Manual Admin Submission Handler ──
+  const handleManualSubmitDocument = async (docType: 'pan' | 'aadhaar', docNumber: string, frontUrl: string, backUrl: string) => {
+    if (!docNumber.trim() && !frontUrl && !backUrl) {
+      Alert.alert('Required', 'Please enter a document number or attach document images for Admin review.');
+      return;
+    }
+    if (docType === 'pan') setSubmittingPanManual(true);
+    if (docType === 'aadhaar') setSubmittingAadhaarManual(true);
+
+    try {
+      await api.post('/v1/creator/me/verify-document', {
+        docType,
+        docNumber: docNumber.trim(),
+        frontUrl,
+        backUrl,
+        manualSubmission: true,
+      });
+      Alert.alert('Submitted! 📩', `${docType.toUpperCase()} submitted successfully for Admin Review!`);
+      fetchStatus();
+    } catch (err: any) {
+      Alert.alert('Submission Failed', err.response?.data?.message || 'Failed to submit document for review');
+    } finally {
+      setSubmittingPanManual(false);
+      setSubmittingAadhaarManual(false);
+    }
+  };
+
   // ── Verification Handlers ──
 
   const handleVerifyPan = async () => {
-    if (!panNumber.trim() || panNumber.trim().length !== 10) {
+    const cleanPan = panNumber.trim().toUpperCase();
+    if (!cleanPan || cleanPan.length !== 10) {
       Alert.alert('Required', 'Please enter a valid 10-character PAN number (e.g. ABCDE1234F)');
       return;
     }
     setVerifyingPan(true);
     try {
-      await api.post('/creator/me/verification/pan', { panNumber: panNumber.trim().toUpperCase() });
+      await api.post('/creator/me/verification/pan', {
+        panNumber: cleanPan,
+        frontUrl: panFrontUrl,
+        backUrl: panBackUrl,
+      });
       Alert.alert('Success ✓', 'PAN Card verified successfully!');
       fetchStatus();
     } catch (err: any) {
@@ -152,14 +251,18 @@ export default function CreatorVerificationScreen() {
   };
 
   const handleInitiateAadhaar = async () => {
-    if (!aadhaarNumber.trim() || aadhaarNumber.trim().length !== 12) {
+    const cleanAadhaar = aadhaarNumber.replace(/\D/g, '');
+    if (!cleanAadhaar || cleanAadhaar.length !== 12) {
       Alert.alert('Required', 'Please enter a valid 12-digit Aadhaar number');
       return;
     }
     setVerifyingAadhaar(true);
     try {
-      const res = await api.post('/creator/me/verification/aadhaar/initiate', { aadhaarNumber: aadhaarNumber.trim() });
-      const refId = res.data?.refId || res.data?.data?.refId || 'REF_MOCK_123';
+      const res = await api.post('/creator/me/verification/aadhaar/initiate', {
+        aadhaarNumber: cleanAadhaar,
+        reverify: true,
+      });
+      const refId = res.data?.referenceId || res.data?.refId || res.data?.data?.refId || 'REF_MOCK_123';
       setAadhaarRefId(refId);
       setShowAadhaarOtpInput(true);
       Alert.alert('OTP Sent 📲', 'An OTP has been sent to your Aadhaar-registered mobile number.');
@@ -178,8 +281,10 @@ export default function CreatorVerificationScreen() {
     setVerifyingAadhaar(true);
     try {
       await api.post('/creator/me/verification/aadhaar/verify-otp', {
-        refId: aadhaarRefId,
+        referenceId: aadhaarRefId,
         otp: aadhaarOtp.trim(),
+        frontUrl: aadhaarFrontUrl,
+        backUrl: aadhaarBackUrl,
       });
       Alert.alert('Verified! 🎉', 'Aadhaar identity verified successfully!');
       setShowAadhaarOtpInput(false);
@@ -398,130 +503,123 @@ export default function CreatorVerificationScreen() {
         {/* TAB 1: IDENTITY DOCUMENTS */}
         {activeTab === 'documents' && (
           <View style={styles.tabContentSection}>
-            {/* PAN Card Verification */}
-            {(() => {
-              const panDoc = documents.pan || {};
-              const isApproved = panDoc.status === 'approved' || status?.panVerified;
-              const isPending = panDoc.status === 'pending';
-              const isRejected = panDoc.status === 'rejected' || panDoc.status === 'failed';
-              const reason = panDoc.rejectionReason || panDoc.failureReason;
-
-              return (
-                <View style={styles.card}>
-                  <View style={styles.cardHeaderRow}>
-                    <View style={styles.cardHeaderLeft}>
-                      <Ionicons name="card" size={20} color={GOLD} />
-                      <Text style={styles.cardTitle}>1. PAN Card Verification</Text>
-                    </View>
-                    {isApproved ? (
-                      <View style={styles.approvedBadge}><Text style={styles.approvedBadgeText}>APPROVED ✓</Text></View>
-                    ) : isPending ? (
-                      <View style={[styles.approvedBadge, { backgroundColor: '#F59E0B' }]}><Text style={styles.approvedBadgeText}>PENDING REVIEW</Text></View>
-                    ) : isRejected ? (
-                      <View style={[styles.approvedBadge, { backgroundColor: '#EF4444' }]}><Text style={styles.approvedBadgeText}>REJECTED ❌</Text></View>
-                    ) : null}
-                  </View>
-
-                  {isRejected && (
-                    <View style={styles.rejectedAlertBox}>
-                      <Text style={styles.rejectedAlertTitle}>❌ Verification Rejected by Compliance</Text>
-                      <Text style={styles.rejectedAlertDesc}>{reason || 'Uploaded PAN details did not match government registry records.'}</Text>
-                    </View>
-                  )}
-
-                  {isPending && (
-                    <View style={styles.pendingAlertBox}>
-                      <Text style={styles.pendingAlertTitle}>⏳ Verification Under Compliance Review</Text>
-                      <Text style={styles.pendingAlertDesc}>Submitted document is undergoing automatic verification inspection.</Text>
-                    </View>
-                  )}
-
-                  {!isApproved ? (
-                    <View style={styles.formGroup}>
-                      <Text style={styles.inputLabel}>10-Character Permanent Account Number (PAN)</Text>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="e.g. ABCDE1234F"
-                        placeholderTextColor="#94A3B8"
-                        value={panNumber}
-                        onChangeText={setPanNumber}
-                        autoCapitalize="characters"
-                        maxLength={10}
-                      />
-                      <TouchableOpacity style={styles.submitBtn} onPress={handleVerifyPan} disabled={verifyingPan} activeOpacity={0.88}>
-                        {verifyingPan ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>{isRejected ? 'Re-Submit PAN Card' : 'Verify PAN Card'}</Text>}
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <View style={styles.successBox}>
-                      <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-                      <Text style={styles.successText}>PAN verification completed & verified in government registry.</Text>
-                    </View>
-                  )}
-                </View>
-              );
-            })()}
-
-            {/* Aadhaar Card Verification */}
+            {/* 1. Aadhaar Card Verification */}
             {(() => {
               const aadhaarDoc = documents.aadhaar || {};
               const isApproved = aadhaarDoc.status === 'approved' || status?.aadhaarVerified;
               const isPending = aadhaarDoc.status === 'pending';
               const isRejected = aadhaarDoc.status === 'rejected' || aadhaarDoc.status === 'failed';
               const reason = aadhaarDoc.rejectionReason || aadhaarDoc.failureReason;
+              const proofUrl = aadhaarDoc.frontUrl || aadhaarDoc.fileUrl;
 
               return (
                 <View style={styles.card}>
                   <View style={styles.cardHeaderRow}>
                     <View style={styles.cardHeaderLeft}>
                       <Ionicons name="finger-print" size={20} color={GOLD} />
-                      <Text style={styles.cardTitle}>2. Aadhaar Identity Verification</Text>
+                      <View>
+                        <Text style={styles.cardTitle}>1. AADHAAR CARD VERIFICATION</Text>
+                        <Text style={styles.cardSub}>UIDAI e-KYC OTP or manual front/back document upload for Admin review</Text>
+                      </View>
                     </View>
                     {isApproved ? (
                       <View style={styles.approvedBadge}><Text style={styles.approvedBadgeText}>APPROVED ✓</Text></View>
                     ) : isPending ? (
-                      <View style={[styles.approvedBadge, { backgroundColor: '#F59E0B' }]}><Text style={styles.approvedBadgeText}>PENDING REVIEW</Text></View>
+                      <View style={[styles.approvedBadge, { backgroundColor: '#FEF3C7', borderColor: '#FCD34D' }]}><Text style={[styles.approvedBadgeText, { color: '#92400E' }]}>Pending Admin Review ⏳</Text></View>
                     ) : isRejected ? (
-                      <View style={[styles.approvedBadge, { backgroundColor: '#EF4444' }]}><Text style={styles.approvedBadgeText}>REJECTED ❌</Text></View>
-                    ) : null}
+                      <View style={[styles.approvedBadge, { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' }]}><Text style={[styles.approvedBadgeText, { color: '#991B1B' }]}>REJECTED ❌</Text></View>
+                    ) : (
+                      <View style={[styles.approvedBadge, { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1' }]}><Text style={[styles.approvedBadgeText, { color: '#475569' }]}>Not Submitted</Text></View>
+                    )}
                   </View>
 
                   {isRejected && (
                     <View style={styles.rejectedAlertBox}>
-                      <Text style={styles.rejectedAlertTitle}>❌ Aadhaar Identity Rejected</Text>
-                      <Text style={styles.rejectedAlertDesc}>{reason || 'Aadhaar identity proof did not pass review.'}</Text>
+                      <Text style={styles.rejectedAlertTitle}>❌ Aadhaar Identity Rejected by Compliance</Text>
+                      <Text style={styles.rejectedAlertDesc}>{reason || 'Uploaded document could not be verified. Please upload clear front & back photos.'}</Text>
                     </View>
                   )}
 
                   {isPending && (
                     <View style={styles.pendingAlertBox}>
-                      <Text style={styles.pendingAlertTitle}>⏳ Verification Pending Review</Text>
-                      <Text style={styles.pendingAlertDesc}>Aadhaar details submitted and undergoing compliance review.</Text>
+                      <Text style={styles.pendingAlertTitle}>⏳ Verification Submitted & Pending Admin Approval</Text>
+                      <Text style={styles.pendingAlertDesc}>Your Aadhaar document has been submitted and is currently under review by compliance officers.</Text>
+                      {proofUrl && (
+                        <TouchableOpacity style={styles.viewProofBtn} onPress={() => Linking.openURL(proofUrl).catch(() => {})}>
+                          <Ionicons name="open-outline" size={13} color={GOLD} />
+                          <Text style={styles.viewProofText}>View Uploaded Document ↗</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   )}
 
                   {!isApproved ? (
                     !showAadhaarOtpInput ? (
                       <View style={styles.formGroup}>
-                        <Text style={styles.inputLabel}>12-Digit Aadhaar Card Number</Text>
-                        <TextInput
-                          style={styles.input}
-                          placeholder="e.g. 1234 5678 9012"
-                          placeholderTextColor="#94A3B8"
-                          value={aadhaarNumber}
-                          onChangeText={setAadhaarNumber}
-                          keyboardType="number-pad"
-                          maxLength={12}
-                        />
-                        <TouchableOpacity style={styles.submitBtn} onPress={handleInitiateAadhaar} disabled={verifyingAadhaar} activeOpacity={0.88}>
-                          {verifyingAadhaar ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>{isRejected ? 'Re-Request Aadhaar OTP' : 'Get Aadhaar OTP'}</Text>}
+                        <Text style={styles.inputLabel}>ENTER 12-DIGIT AADHAAR NUMBER</Text>
+                        <View style={styles.inputActionRow}>
+                          <TextInput
+                            style={[styles.input, { flex: 1 }]}
+                            placeholder="e.g. 1234 5678 9012"
+                            placeholderTextColor="#94A3B8"
+                            value={aadhaarNumber}
+                            onChangeText={(t) => setAadhaarNumber(t.replace(/\D/g, ''))}
+                            keyboardType="number-pad"
+                            maxLength={12}
+                          />
+                          <TouchableOpacity
+                            style={styles.sandboxBtn}
+                            onPress={handleInitiateAadhaar}
+                            disabled={verifyingAadhaar || aadhaarNumber.replace(/\D/g, '').length !== 12}
+                            activeOpacity={0.88}>
+                            {verifyingAadhaar ? <ActivityIndicator color={GOLD} /> : <Text style={styles.sandboxBtnText}>SEND UIDAI OTP →</Text>}
+                          </TouchableOpacity>
+                        </View>
+
+                        {/* Front & Back Photo Upload Buttons */}
+                        <View style={styles.photoUploadGrid}>
+                          <TouchableOpacity
+                            style={[styles.photoUploadBtn, Boolean(aadhaarFrontUrl) && styles.photoUploadBtnAttached]}
+                            onPress={() => handlePickDocumentImage(setAadhaarFrontUrl)}
+                            activeOpacity={0.85}>
+                            <Ionicons name={aadhaarFrontUrl ? "checkmark-circle" : "cloud-upload-outline"} size={16} color={aadhaarFrontUrl ? "#10B981" : GOLD} />
+                            <Text style={[styles.photoUploadBtnText, Boolean(aadhaarFrontUrl) && styles.photoUploadBtnTextAttached]}>
+                              {aadhaarFrontUrl ? 'Front Attached ✓' : 'Attach Front Image'}
+                            </Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={[styles.photoUploadBtn, Boolean(aadhaarBackUrl) && styles.photoUploadBtnAttached]}
+                            onPress={() => handlePickDocumentImage(setAadhaarBackUrl)}
+                            activeOpacity={0.85}>
+                            <Ionicons name={aadhaarBackUrl ? "checkmark-circle" : "cloud-upload-outline"} size={16} color={aadhaarBackUrl ? "#10B981" : GOLD} />
+                            <Text style={[styles.photoUploadBtnText, Boolean(aadhaarBackUrl) && styles.photoUploadBtnTextAttached]}>
+                              {aadhaarBackUrl ? 'Back Attached ✓' : 'Attach Back Image'}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        {/* Submit Document for Admin Review */}
+                        <TouchableOpacity
+                          style={styles.manualSubmitBtn}
+                          onPress={() => handleManualSubmitDocument('aadhaar', aadhaarNumber, aadhaarFrontUrl, aadhaarBackUrl)}
+                          disabled={submittingAadhaarManual || uploadingImage || (!aadhaarNumber && !aadhaarFrontUrl && !aadhaarBackUrl)}
+                          activeOpacity={0.88}>
+                          {submittingAadhaarManual ? (
+                            <ActivityIndicator color="#FFFFFF" />
+                          ) : (
+                            <>
+                              <Ionicons name="send" size={14} color="#FFFFFF" />
+                              <Text style={styles.manualSubmitBtnText}>SUBMIT DOCUMENT FOR ADMIN REVIEW</Text>
+                            </>
+                          )}
                         </TouchableOpacity>
                       </View>
                     ) : (
                       <View style={styles.formGroup}>
-                        <Text style={styles.inputLabel}>6-Digit DigiLocker Aadhaar OTP</Text>
+                        <Text style={styles.inputLabel}>ENTER 6-DIGIT UIDAI AADHAAR OTP</Text>
                         <TextInput
-                          style={styles.input}
+                          style={[styles.input, { textAlign: 'center', letterSpacing: 4, fontSize: 16, fontWeight: 'bold' }]}
                           placeholder="Enter 6-digit OTP"
                           placeholderTextColor="#94A3B8"
                           value={aadhaarOtp}
@@ -535,9 +633,147 @@ export default function CreatorVerificationScreen() {
                       </View>
                     )
                   ) : (
-                    <View style={styles.successBox}>
-                      <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-                      <Text style={styles.successText}>Aadhaar identity verified via DigiLocker Sandbox API.</Text>
+                    <View style={styles.approvedRecordCard}>
+                      <View style={styles.approvedRecordHeader}>
+                        {aadhaarDoc.photo ? (
+                          <Image source={{ uri: aadhaarDoc.photo }} style={styles.verifiedAvatar} />
+                        ) : (
+                          <View style={styles.verifiedAvatarPlaceholder}>
+                            <Ionicons name="person" size={24} color={GOLD} />
+                          </View>
+                        )}
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={styles.verifiedName}>{aadhaarDoc.fullName || 'Verified Citizen'}</Text>
+                            <View style={styles.uidaiBadge}><Text style={styles.uidaiBadgeText}>UIDAI VERIFIED</Text></View>
+                          </View>
+                          <Text style={styles.verifiedDocNumber}>{aadhaarDoc.maskedNumber || 'XXXX XXXX ****'}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              );
+            })()}
+
+            {/* 2. PAN Card (Taxpayer Identification) Verification */}
+            {(() => {
+              const panDoc = documents.pan || {};
+              const isApproved = panDoc.status === 'approved' || status?.panVerified;
+              const isPending = panDoc.status === 'pending';
+              const isRejected = panDoc.status === 'rejected' || panDoc.status === 'failed';
+              const reason = panDoc.rejectionReason || panDoc.failureReason;
+              const proofUrl = panDoc.frontUrl || panDoc.fileUrl;
+
+              return (
+                <View style={styles.card}>
+                  <View style={styles.cardHeaderRow}>
+                    <View style={styles.cardHeaderLeft}>
+                      <Ionicons name="card" size={20} color={GOLD} />
+                      <View>
+                        <Text style={styles.cardTitle}>2. PAN CARD (TAXPAYER IDENTIFICATION)</Text>
+                        <Text style={styles.cardSub}>Instant Income Tax Dept database check or manual submission for Admin review</Text>
+                      </View>
+                    </View>
+                    {isApproved ? (
+                      <View style={styles.approvedBadge}><Text style={styles.approvedBadgeText}>APPROVED ✓</Text></View>
+                    ) : isPending ? (
+                      <View style={[styles.approvedBadge, { backgroundColor: '#FEF3C7', borderColor: '#FCD34D' }]}><Text style={[styles.approvedBadgeText, { color: '#92400E' }]}>Pending Admin Review ⏳</Text></View>
+                    ) : isRejected ? (
+                      <View style={[styles.approvedBadge, { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' }]}><Text style={[styles.approvedBadgeText, { color: '#991B1B' }]}>REJECTED ❌</Text></View>
+                    ) : (
+                      <View style={[styles.approvedBadge, { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1' }]}><Text style={[styles.approvedBadgeText, { color: '#475569' }]}>Not Submitted</Text></View>
+                    )}
+                  </View>
+
+                  {isRejected && (
+                    <View style={styles.rejectedAlertBox}>
+                      <Text style={styles.rejectedAlertTitle}>❌ PAN Card Verification Rejected</Text>
+                      <Text style={styles.rejectedAlertDesc}>{reason || 'PAN details or document proof could not be validated. Please check PAN number and re-submit.'}</Text>
+                    </View>
+                  )}
+
+                  {isPending && (
+                    <View style={styles.pendingAlertBox}>
+                      <Text style={styles.pendingAlertTitle}>⏳ PAN VERIFICATION SUBMITTED & PENDING APPROVAL</Text>
+                      <Text style={styles.pendingAlertDesc}>Your PAN document details are currently being reviewed by compliance officers.</Text>
+                      {proofUrl && (
+                        <TouchableOpacity style={styles.viewProofBtn} onPress={() => Linking.openURL(proofUrl).catch(() => {})}>
+                          <Ionicons name="open-outline" size={13} color={GOLD} />
+                          <Text style={styles.viewProofText}>View Uploaded Document ↗</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+
+                  {!isApproved ? (
+                    <View style={styles.formGroup}>
+                      <Text style={styles.inputLabel}>ENTER 10-DIGIT PAN NUMBER</Text>
+                      <View style={styles.inputActionRow}>
+                        <TextInput
+                          style={[styles.input, { flex: 1 }]}
+                          placeholder="e.g. ABCDE1234F"
+                          placeholderTextColor="#94A3B8"
+                          value={panNumber}
+                          onChangeText={(t) => setPanNumber(t.toUpperCase())}
+                          autoCapitalize="characters"
+                          maxLength={10}
+                        />
+                        <TouchableOpacity
+                          style={styles.sandboxBtn}
+                          onPress={handleVerifyPan}
+                          disabled={verifyingPan || panNumber.trim().length !== 10}
+                          activeOpacity={0.88}>
+                          {verifyingPan ? <ActivityIndicator color={GOLD} /> : <Text style={styles.sandboxBtnText}>INSTANT SANDBOX CHECK →</Text>}
+                        </TouchableOpacity>
+                      </View>
+
+                      {/* Front & Back Photo Upload Buttons */}
+                      <View style={styles.photoUploadGrid}>
+                        <TouchableOpacity
+                          style={[styles.photoUploadBtn, Boolean(panFrontUrl) && styles.photoUploadBtnAttached]}
+                          onPress={() => handlePickDocumentImage(setPanFrontUrl)}
+                          activeOpacity={0.85}>
+                          <Ionicons name={panFrontUrl ? "checkmark-circle" : "cloud-upload-outline"} size={16} color={panFrontUrl ? "#10B981" : GOLD} />
+                          <Text style={[styles.photoUploadBtnText, Boolean(panFrontUrl) && styles.photoUploadBtnTextAttached]}>
+                            {panFrontUrl ? 'Front Attached ✓' : 'Attach PAN Front Photo'}
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[styles.photoUploadBtn, Boolean(panBackUrl) && styles.photoUploadBtnAttached]}
+                          onPress={() => handlePickDocumentImage(setPanBackUrl)}
+                          activeOpacity={0.85}>
+                          <Ionicons name={panBackUrl ? "checkmark-circle" : "cloud-upload-outline"} size={16} color={panBackUrl ? "#10B981" : GOLD} />
+                          <Text style={[styles.photoUploadBtnText, Boolean(panBackUrl) && styles.photoUploadBtnTextAttached]}>
+                            {panBackUrl ? 'Back Attached ✓' : 'Attach PAN Back Photo'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {/* Submit PAN for Admin Review */}
+                      <TouchableOpacity
+                        style={styles.manualSubmitBtn}
+                        onPress={() => handleManualSubmitDocument('pan', panNumber, panFrontUrl, panBackUrl)}
+                        disabled={submittingPanManual || uploadingImage || (!panNumber && !panFrontUrl && !panBackUrl)}
+                        activeOpacity={0.88}>
+                        {submittingPanManual ? (
+                          <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                          <>
+                            <Ionicons name="send" size={14} color="#FFFFFF" />
+                            <Text style={styles.manualSubmitBtnText}>SUBMIT PAN FOR ADMIN REVIEW</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={styles.approvedRecordCard}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Text style={styles.verifiedName}>{panDoc.fullName || 'Taxpayer Validated'}</Text>
+                        <View style={styles.uidaiBadge}><Text style={styles.uidaiBadgeText}>{panDoc.panStatus || 'ACTIVE'}</Text></View>
+                      </View>
+                      <Text style={styles.verifiedDocNumber}>{panDoc.maskedNumber || panDoc.docNumber || 'ABCDE****F'}</Text>
                     </View>
                   )}
                 </View>
@@ -554,16 +790,19 @@ export default function CreatorVerificationScreen() {
               <View style={styles.cardHeaderRow}>
                 <View style={styles.cardHeaderLeft}>
                   <Ionicons name="flash" size={20} color={GOLD} />
-                  <Text style={styles.cardTitle}>1. Instant UPI Payout Handle</Text>
+                  <View>
+                    <Text style={styles.cardTitle}>1. INSTANT UPI PAYOUT HANDLE</Text>
+                    <Text style={styles.cardSub}>Instant penny drop verification for campaign payouts</Text>
+                  </View>
                 </View>
                 {paymentDetails.upiVerified && (
-                  <View style={styles.approvedBadge}><Text style={styles.approvedBadgeText}>VERIFIED ✓</Text></View>
+                  <View style={styles.approvedBadge}><Text style={styles.approvedBadgeText}>APPROVED ✓</Text></View>
                 )}
               </View>
 
               {!paymentDetails.upiVerified ? (
                 <View style={styles.formGroup}>
-                  <Text style={styles.inputLabel}>VPA / UPI ID Handle</Text>
+                  <Text style={styles.inputLabel}>VPA / UPI ID HANDLE</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="e.g. mobile@upi or username@okicici"
@@ -589,16 +828,19 @@ export default function CreatorVerificationScreen() {
               <View style={styles.cardHeaderRow}>
                 <View style={styles.cardHeaderLeft}>
                   <Ionicons name="business" size={20} color={GOLD} />
-                  <Text style={styles.cardTitle}>2. Bank Account Penny Drop</Text>
+                  <View>
+                    <Text style={styles.cardTitle}>2. BANK ACCOUNT PENNY DROP</Text>
+                    <Text style={styles.cardSub}>Direct Bank Transfer & IFSC verification</Text>
+                  </View>
                 </View>
                 {paymentDetails.verified && paymentDetails.ifscVerified && (
-                  <View style={styles.approvedBadge}><Text style={styles.approvedBadgeText}>VERIFIED ✓</Text></View>
+                  <View style={styles.approvedBadge}><Text style={styles.approvedBadgeText}>APPROVED ✓</Text></View>
                 )}
               </View>
 
               {!(paymentDetails.verified && paymentDetails.ifscVerified) ? (
                 <View style={styles.formGroup}>
-                  <Text style={styles.inputLabel}>Bank Account Number</Text>
+                  <Text style={styles.inputLabel}>BANK ACCOUNT NUMBER</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="Enter Account Number"
@@ -608,7 +850,7 @@ export default function CreatorVerificationScreen() {
                     keyboardType="number-pad"
                   />
                   
-                  <Text style={[styles.inputLabel, { marginTop: 10 }]}>IFSC Code</Text>
+                  <Text style={[styles.inputLabel, { marginTop: 10 }]}>IFSC CODE</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="e.g. SBIN0001234"
@@ -640,18 +882,21 @@ export default function CreatorVerificationScreen() {
               <View style={styles.cardHeaderRow}>
                 <View style={styles.cardHeaderLeft}>
                   <Ionicons name="call" size={20} color={GOLD} />
-                  <Text style={styles.cardTitle}>1. Mobile Phone Verification</Text>
+                  <View>
+                    <Text style={styles.cardTitle}>1. MOBILE PHONE VERIFICATION</Text>
+                    <Text style={styles.cardSub}>Instant SMS OTP code validation</Text>
+                  </View>
                 </View>
                 {contactVerified.mobile ? (
                   <View style={styles.approvedBadge}><Text style={styles.approvedBadgeText}>VERIFIED ✓</Text></View>
                 ) : (
-                  <View style={[styles.approvedBadge, { backgroundColor: '#F59E0B' }]}><Text style={styles.approvedBadgeText}>UNVERIFIED</Text></View>
+                  <View style={[styles.approvedBadge, { backgroundColor: '#FEF3C7', borderColor: '#FCD34D' }]}><Text style={[styles.approvedBadgeText, { color: '#92400E' }]}>UNVERIFIED</Text></View>
                 )}
               </View>
 
               {!contactVerified.mobile ? (
                 <View style={styles.formGroup}>
-                  <Text style={styles.inputLabel}>Mobile Phone Number</Text>
+                  <Text style={styles.inputLabel}>MOBILE PHONE NUMBER</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="Enter 10-digit mobile number"
@@ -681,18 +926,21 @@ export default function CreatorVerificationScreen() {
               <View style={styles.cardHeaderRow}>
                 <View style={styles.cardHeaderLeft}>
                   <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
-                  <Text style={styles.cardTitle}>2. WhatsApp Channel Verification</Text>
+                  <View>
+                    <Text style={styles.cardTitle}>2. WHATSAPP CHANNEL VERIFICATION</Text>
+                    <Text style={styles.cardSub}>Instant WhatsApp OTP alerts for brand campaign offers</Text>
+                  </View>
                 </View>
                 {contactVerified.whatsapp ? (
                   <View style={styles.approvedBadge}><Text style={styles.approvedBadgeText}>VERIFIED ✓</Text></View>
                 ) : (
-                  <View style={[styles.approvedBadge, { backgroundColor: '#F59E0B' }]}><Text style={styles.approvedBadgeText}>UNVERIFIED</Text></View>
+                  <View style={[styles.approvedBadge, { backgroundColor: '#FEF3C7', borderColor: '#FCD34D' }]}><Text style={[styles.approvedBadgeText, { color: '#92400E' }]}>UNVERIFIED</Text></View>
                 )}
               </View>
 
               {!contactVerified.whatsapp ? (
                 <View style={styles.formGroup}>
-                  <Text style={styles.inputLabel}>WhatsApp Number</Text>
+                  <Text style={styles.inputLabel}>WHATSAPP NUMBER</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="Enter WhatsApp phone number"
@@ -722,18 +970,21 @@ export default function CreatorVerificationScreen() {
               <View style={styles.cardHeaderRow}>
                 <View style={styles.cardHeaderLeft}>
                   <Ionicons name="mail" size={20} color={GOLD} />
-                  <Text style={styles.cardTitle}>3. Email Address Verification</Text>
+                  <View>
+                    <Text style={styles.cardTitle}>3. EMAIL ADDRESS VERIFICATION</Text>
+                    <Text style={styles.cardSub}>Campaign contracts and payout receipt notifications</Text>
+                  </View>
                 </View>
                 {contactVerified.email ? (
                   <View style={styles.approvedBadge}><Text style={styles.approvedBadgeText}>VERIFIED ✓</Text></View>
                 ) : (
-                  <View style={[styles.approvedBadge, { backgroundColor: '#F59E0B' }]}><Text style={styles.approvedBadgeText}>UNVERIFIED</Text></View>
+                  <View style={[styles.approvedBadge, { backgroundColor: '#FEF3C7', borderColor: '#FCD34D' }]}><Text style={[styles.approvedBadgeText, { color: '#92400E' }]}>UNVERIFIED</Text></View>
                 )}
               </View>
 
               {!contactVerified.email ? (
                 <View style={styles.formGroup}>
-                  <Text style={styles.inputLabel}>Email Address</Text>
+                  <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="Enter your email address"
@@ -942,32 +1193,89 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  cardTitle: { color: ESPRESSO, fontSize: FontSize.xs, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
-  approvedBadge: { backgroundColor: '#10B981', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  cardHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
+  cardHeaderLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, flex: 1 },
+  cardTitle: { color: ESPRESSO, fontSize: 11.5, fontWeight: '900', letterSpacing: 0.5 },
+  cardSub: { color: TEXT_MUTED, fontSize: 10, marginTop: 2 },
+  approvedBadge: { backgroundColor: '#10B981', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#059669' },
   approvedBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
 
   rejectedAlertBox: { backgroundColor: '#FEF2F2', padding: 10, borderWidth: 1, borderColor: '#FCA5A5', borderRadius: 8 },
   rejectedAlertTitle: { color: '#DC2626', fontSize: 11, fontWeight: '900' },
   rejectedAlertDesc: { color: '#7F1D1D', fontSize: 10, marginTop: 2 },
 
-  pendingAlertBox: { backgroundColor: '#FFFBEB', padding: 10, borderWidth: 1, borderColor: GOLD, borderRadius: 8 },
-  pendingAlertTitle: { color: ESPRESSO, fontSize: 11, fontWeight: '900' },
-  pendingAlertDesc: { color: TEXT_MUTED, fontSize: 10, marginTop: 2 },
+  pendingAlertBox: { backgroundColor: '#FFFBEB', padding: 10, borderWidth: 1, borderColor: '#FCD34D', borderRadius: 8, gap: 4 },
+  pendingAlertTitle: { color: '#92400E', fontSize: 11, fontWeight: '900' },
+  pendingAlertDesc: { color: '#78350F', fontSize: 10, lineHeight: 14 },
+  viewProofBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  viewProofText: { color: GOLD, fontSize: 10.5, fontWeight: '900', textDecorationLine: 'underline' },
 
-  formGroup: { gap: 6 },
-  inputLabel: { color: TEXT_MUTED, fontSize: 10.5, fontWeight: '700' },
+  formGroup: { gap: 8 },
+  inputLabel: { color: ESPRESSO, fontSize: 10.5, fontWeight: '900', letterSpacing: 0.5 },
+  inputActionRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   input: {
     backgroundColor: INPUT_BG,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: BORDER_COLOR,
     color: TEXT_MAIN,
     paddingHorizontal: Spacing.three,
     height: 44,
     fontSize: FontSize.xs,
     borderRadius: 8,
+    fontWeight: 'bold',
   },
+  sandboxBtn: {
+    backgroundColor: ESPRESSO,
+    paddingHorizontal: 12,
+    height: 44,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: ESPRESSO,
+  },
+  sandboxBtnText: { color: GOLD, fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
+
+  // Photo Upload
+  photoUploadGrid: { flexDirection: 'row', gap: 8 },
+  photoUploadBtn: {
+    flex: 1,
+    height: 42,
+    backgroundColor: BG_MATTE,
+    borderWidth: 1.5,
+    borderColor: BORDER_COLOR,
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  photoUploadBtnAttached: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#10B981',
+    borderStyle: 'solid',
+  },
+  photoUploadBtnText: { color: ESPRESSO, fontSize: 10.5, fontWeight: '800' },
+  photoUploadBtnTextAttached: { color: '#065F46', fontWeight: '900' },
+
+  manualSubmitBtn: {
+    backgroundColor: '#047857',
+    height: 44,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 4,
+    shadowColor: '#047857',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  manualSubmitBtnText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
+
   submitBtn: {
     backgroundColor: ESPRESSO,
     borderWidth: 1,
@@ -984,6 +1292,16 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   submitBtnText: { color: GOLD, fontSize: FontSize.xs, fontWeight: '900', letterSpacing: 0.5 },
+  
+  approvedRecordCard: { backgroundColor: '#F8F4EC', padding: 12, borderRadius: 10, borderWidth: 1.5, borderColor: '#10B981', gap: 6 },
+  approvedRecordHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  verifiedAvatar: { width: 44, height: 44, borderRadius: 8 },
+  verifiedAvatarPlaceholder: { width: 44, height: 44, borderRadius: 8, backgroundColor: ESPRESSO, alignItems: 'center', justifyContent: 'center' },
+  verifiedName: { color: ESPRESSO, fontSize: 13, fontWeight: '900' },
+  verifiedDocNumber: { color: TEXT_MUTED, fontSize: 11, fontWeight: '700', fontFamily: 'monospace' },
+  uidaiBadge: { backgroundColor: '#10B981', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  uidaiBadgeText: { color: '#FFFFFF', fontSize: 8.5, fontWeight: '900' },
+
   successBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ECFDF5', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#A7F3D0' },
   successText: { color: '#065F46', fontSize: 11, fontWeight: '700', flex: 1 },
 
