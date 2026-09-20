@@ -15,11 +15,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "in.bizreels.app"
+      "bundleIdentifier": "in.bizreels.app",
+      "buildNumber": "10"
     },
     "android": {
       "package": "in.bizreels.app",
-      "versionCode": 4,
+      "versionCode": 10,
       "allowBackup": false,
       "permissions": [
         "android.permission.INTERNET",
