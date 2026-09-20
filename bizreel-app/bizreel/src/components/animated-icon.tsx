@@ -27,7 +27,6 @@ export function AnimatedSplashOverlay() {
   // Shared Values for animations
   const logoScale = useSharedValue(0.7);
   const logoOpacity = useSharedValue(0);
-  const spinnerRotation = useSharedValue(0);
   const textOpacity = useSharedValue(0);
   const textTranslateY = useSharedValue(20);
   const overlayOpacity = useSharedValue(1);
@@ -42,13 +41,6 @@ export function AnimatedSplashOverlay() {
       damping: 12,
       stiffness: 120,
     });
-
-    // Continuous 360-degree orbital rotation for circular loader ring
-    spinnerRotation.value = withRepeat(
-      withTiming(360, { duration: 1100, easing: Easing.linear }),
-      -1,
-      false
-    );
 
     // Fade in text and tagline
     textOpacity.value = withDelay(200, withTiming(1, { duration: 500 }));
@@ -70,10 +62,6 @@ export function AnimatedSplashOverlay() {
     transform: [{ scale: logoScale.value }],
   }));
 
-  const spinnerAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${spinnerRotation.value}deg` }],
-  }));
-
   const textAnimatedStyle = useAnimatedStyle(() => ({
     opacity: textOpacity.value,
     transform: [{ translateY: textTranslateY.value }],
@@ -87,14 +75,9 @@ export function AnimatedSplashOverlay() {
 
   return (
     <Animated.View style={[styles.splashOverlay, overlayAnimatedStyle]} pointerEvents="none">
-      {/* Background Radial Glow Effect */}
-      <View style={styles.glowBgHalo} />
-
       <View style={styles.centerContainer}>
-        {/* Logo Frame with Dual-Orbital Ring */}
+        {/* Logo Glass Card */}
         <Animated.View style={[styles.logoWrapper, logoAnimatedStyle]}>
-          <Animated.View style={[styles.orbitalRing, spinnerAnimatedStyle]} />
-          
           <View style={styles.logoGlassCard}>
             <Image
               source={require('@/assets/icon.png')}
@@ -142,36 +125,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 99999,
   },
-  glowBgHalo: {
-    position: 'absolute',
-    width: SCREEN_WIDTH * 0.9,
-    height: SCREEN_WIDTH * 0.9,
-    borderRadius: (SCREEN_WIDTH * 0.9) / 2,
-    backgroundColor: GOLD_GLOW,
-    opacity: 0.8,
-    transform: [{ scale: 1.2 }],
-  },
   centerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 24,
   },
   logoWrapper: {
-    width: 120,
-    height: 120,
+    width: 96,
+    height: 96,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-  },
-  orbitalRing: {
-    position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 2.5,
-    borderColor: 'rgba(217, 154, 61, 0.15)',
-    borderTopColor: GOLD_BRAND,
-    borderRightColor: GOLD_BRAND,
   },
   logoGlassCard: {
     width: 92,
