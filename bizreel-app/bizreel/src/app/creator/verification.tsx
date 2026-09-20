@@ -911,19 +911,15 @@ export default function CreatorVerificationScreen() {
 
               {!contactVerified.mobile ? (
                 <View style={styles.formGroup}>
-                  <Text style={styles.inputLabel}>MOBILE PHONE NUMBER</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter 10-digit mobile number"
-                    placeholderTextColor="#94A3B8"
-                    value={mobileInput}
-                    onChangeText={setMobileInput}
-                    keyboardType="phone-pad"
-                  />
+                  <Text style={styles.inputLabel}>REGISTERED MOBILE PHONE NUMBER (READ-ONLY)</Text>
+                  <View style={[styles.input, styles.readOnlyInput]}>
+                    <Text style={styles.readOnlyInputText}>{mobileInput || 'No Phone Number Registered'}</Text>
+                    <Ionicons name="lock-closed" size={14} color="#94A3B8" />
+                  </View>
                   <TouchableOpacity
                     style={styles.submitBtn}
                     onPress={() => handleSendContactOtp('mobile', mobileInput)}
-                    disabled={sendingMobileOtp}
+                    disabled={sendingMobileOtp || !mobileInput}
                     activeOpacity={0.88}>
                     {sendingMobileOtp ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>Send Mobile SMS OTP</Text>}
                   </TouchableOpacity>
@@ -999,20 +995,15 @@ export default function CreatorVerificationScreen() {
 
               {!contactVerified.email ? (
                 <View style={styles.formGroup}>
-                  <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter your email address"
-                    placeholderTextColor="#94A3B8"
-                    value={emailInput}
-                    onChangeText={setEmailInput}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                  />
+                  <Text style={styles.inputLabel}>REGISTERED EMAIL ADDRESS (READ-ONLY)</Text>
+                  <View style={[styles.input, styles.readOnlyInput]}>
+                    <Text style={styles.readOnlyInputText}>{emailInput || 'No Email Address Registered'}</Text>
+                    <Ionicons name="lock-closed" size={14} color="#94A3B8" />
+                  </View>
                   <TouchableOpacity
                     style={styles.submitBtn}
                     onPress={() => handleSendContactOtp('email', emailInput)}
-                    disabled={sendingEmailOtp}
+                    disabled={sendingEmailOtp || !emailInput}
                     activeOpacity={0.88}>
                     {sendingEmailOtp ? <ActivityIndicator color={GOLD} /> : <Text style={styles.submitBtnText}>Send Email Verification Code</Text>}
                   </TouchableOpacity>
@@ -1270,6 +1261,20 @@ const styles = StyleSheet.create({
     borderColor: ESPRESSO,
   },
   sandboxBtnText: { color: GOLD, fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
+
+  readOnlyInput: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  readOnlyInputText: {
+    color: '#475569',
+    fontSize: FontSize.xs,
+    fontWeight: 'bold',
+    flex: 1,
+  },
 
   // Photo Upload
   photoUploadGrid: { flexDirection: 'row', gap: 8 },
