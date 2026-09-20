@@ -348,18 +348,25 @@ export default function CreatorVerificationScreen() {
 
     try {
       const channel = type === 'whatsapp' ? 'whatsapp' : type === 'email' ? 'email' : 'sms';
-      await api.post('/creator/me/send-contact-otp', {
+      const res = await api.post('/creator/me/send-contact-otp', {
         type,
         value: value.trim(),
         channel,
       });
+
+      const mockOtp = res.data?.otp || res.data?.data?.otp;
       setContactOtpModal({
         visible: true,
         type,
         value: value.trim(),
-        code: '',
+        code: mockOtp ? String(mockOtp) : '',
       });
-      Alert.alert('OTP Sent 📲', `Verification code sent to ${type.toUpperCase()}: ${value}`);
+
+      if (mockOtp) {
+        Alert.alert('OTP Dispatched 📲', `Verification code sent to ${type.toUpperCase()}: ${value}\n\n(Dev OTP: ${mockOtp})`);
+      } else {
+        Alert.alert('OTP Dispatched 📲', `Verification code sent to ${type.toUpperCase()}: ${value}`);
+      }
     } catch (err: any) {
       Alert.alert('OTP Failed', err.response?.data?.message || `Failed to send OTP to ${type}`);
     } finally {
@@ -1026,7 +1033,16 @@ export default function CreatorVerificationScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContentCard}>
             <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalTitle}>Enter OTP Code</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons
+                  name={contactOtpModal.type === 'whatsapp' ? 'logo-whatsapp' : contactOtpModal.type === 'email' ? 'mail' : 'call'}
+                  size={18}
+                  color={contactOtpModal.type === 'whatsapp' ? '#25D366' : GOLD}
+                />
+                <Text style={styles.modalTitle}>
+                  Verify {contactOtpModal.type === 'whatsapp' ? 'WhatsApp' : contactOtpModal.type === 'email' ? 'Email' : 'Mobile'} OTP
+                </Text>
+              </View>
               <TouchableOpacity
                 onPress={() => setContactOtpModal({ visible: false, type: '', value: '', code: '' })}>
                 <Ionicons name="close-circle" size={22} color={TEXT_MUTED} />
@@ -1047,6 +1063,17 @@ export default function CreatorVerificationScreen() {
               keyboardType="number-pad"
               maxLength={6}
             />
+
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+              <TouchableOpacity
+                onPress={() => {
+                  if (contactOtpModal.type && contactOtpModal.value) {
+                    handleSendContactOtp(contactOtpModal.type as any, contactOtpModal.value);
+                  }
+                }}>
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: GOLD }}>Resend Code 📲</Text>
+              </TouchableOpacity>
+            </View>
 
             <View style={styles.modalActionRow}>
               <TouchableOpacity
