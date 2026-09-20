@@ -23,7 +23,19 @@ const otpSchema = new Schema(
     },
     purpose: {
       type: String,
-      enum: ['login', 'register', 'forgot-password', 'verify-email', 'verify-phone'],
+      enum: [
+        'login',
+        'register',
+        'forgot-password',
+        'verify-email',
+        'verify-phone',
+        'verify-creator-email',
+        'verify-creator-phone',
+        'verify-creator-whatsapp',
+        'verify-vendor-email',
+        'verify-vendor-phone',
+        'verify-vendor-whatsapp',
+      ],
       required: true,
     },
     attempts: {
