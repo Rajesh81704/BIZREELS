@@ -366,11 +366,11 @@ export default function CreatorVerificationScreen() {
         visible: true,
         type,
         value: cleanValue,
-        code: mockOtp ? String(mockOtp) : '',
+        code: '',
       });
 
       const message = data.message || `Verification code sent to ${type.toUpperCase()}: ${cleanValue}`;
-      Alert.alert('OTP Dispatched 📲', `${message}${mockOtp ? `\n\n(Dev OTP: ${mockOtp})` : ''}`);
+      Alert.alert('OTP Dispatched 📲', message);
     } catch (err: any) {
       console.error(`Send ${type} OTP Error:`, err);
       Alert.alert('OTP Failed', err.response?.data?.message || err.message || `Failed to send OTP to ${type}`);
