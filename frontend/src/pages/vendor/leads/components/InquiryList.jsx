@@ -23,10 +23,14 @@ export default function InquiryList({
     if (!inquirySearch.trim()) return true;
     const q = inquirySearch.toLowerCase();
     const customerName = (item.customer?.name || item.customerName || '').toLowerCase();
+    const customerPhone = (item.customer?.phone || '').toLowerCase();
+    const customerEmail = (item.customer?.email || '').toLowerCase();
     const listingTitle = (item.listing?.title || item.reel?.caption || item.reel?.title || '').toLowerCase();
     const message = (item.message || item.msg || '').toLowerCase();
     return (
       customerName.includes(q) ||
+      customerPhone.includes(q) ||
+      customerEmail.includes(q) ||
       listingTitle.includes(q) ||
       message.includes(q)
     );

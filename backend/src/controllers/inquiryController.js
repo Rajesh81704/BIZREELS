@@ -147,17 +147,7 @@ class InquiryController {
         .limit(parsedLimit),
     ]);
 
-    // Privacy Protection: Strip customer personal phone & email when accessed by vendor
-    const sanitizedInquiries = inquiries.map((inq) => {
-      const inqObj = inq.toObject ? inq.toObject() : { ...inq };
-      if (activeRole === 'vendor' && inqObj.customer) {
-        delete inqObj.customer.phone;
-        delete inqObj.customer.email;
-      }
-      return inqObj;
-    });
-
-    return ApiResponse.paginated(res, 'Inquiries retrieved successfully.', sanitizedInquiries, {
+    return ApiResponse.paginated(res, 'Inquiries retrieved successfully.', inquiries, {
       page: parsedPage,
       limit: parsedLimit,
       total,
@@ -225,13 +215,7 @@ class InquiryController {
     }
     emitToUser(req.user._id.toString(), 'inquiry:updated', inquiry);
 
-    const responseInquiry = inquiry.toObject ? inquiry.toObject() : { ...inquiry };
-    if (responseInquiry.customer) {
-      delete responseInquiry.customer.phone;
-      delete responseInquiry.customer.email;
-    }
-
-    return ApiResponse.ok(res, 'Reply sent successfully.', { inquiry: responseInquiry });
+    return ApiResponse.ok(res, 'Reply sent successfully.', { inquiry });
   });
 
   close = asyncHandler(async (req, res) => {
