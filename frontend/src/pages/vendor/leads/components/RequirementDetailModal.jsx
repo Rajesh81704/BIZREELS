@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 export default function RequirementDetailModal({
   isOpen,
   onClose,
+  requirement,
   detailReq,
   displayReq,
   currentUserId,
@@ -24,7 +25,7 @@ export default function RequirementDetailModal({
   const { bi } = useLanguage();
   const navigate = useNavigate();
 
-  const req = displayReq || detailReq;
+  const req = requirement || displayReq || detailReq;
 
   if (!isOpen || !req) return null;
 

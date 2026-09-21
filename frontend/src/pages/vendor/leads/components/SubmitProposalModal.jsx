@@ -10,6 +10,7 @@ import { useLanguage } from '../../../../context/LanguageContext';
 export default function SubmitProposalModal({
   isOpen,
   onClose,
+  requirement,
   proposalReq,
   displayProposalReq,
   currentCredits = 0,
@@ -17,12 +18,13 @@ export default function SubmitProposalModal({
   bidMultiplier = 0.002,
   bidCapCredits = 20,
   onSubmit,
+  onSubmitProposal,
   isSubmitting = false,
 }) {
   const { bi } = useLanguage();
   const navigate = useNavigate();
 
-  const req = displayProposalReq || proposalReq;
+  const req = requirement || displayProposalReq || proposalReq;
 
   const [quotePrice, setQuotePrice] = useState('');
   const [quoteDelivery, setQuoteDelivery] = useState('');
@@ -70,13 +72,16 @@ export default function SubmitProposalModal({
     if (!quoteDelivery) return;
     if (!hasEnoughCredits) return;
 
-    onSubmit({
-      quotePrice: Number(quotePrice),
-      quoteDelivery,
-      quoteNotes,
-      quoteAttachment,
-      bidCreditCost,
-    });
+    const submitFn = onSubmitProposal || onSubmit;
+    if (typeof submitFn === 'function') {
+      submitFn({
+        quotePrice: Number(quotePrice),
+        quoteDelivery,
+        quoteNotes,
+        quoteAttachment,
+        bidCreditCost,
+      });
+    }
   };
 
   // Quick pre-fills for quote price
