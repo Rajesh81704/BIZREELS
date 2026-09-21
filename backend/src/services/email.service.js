@@ -62,158 +62,229 @@ class EmailService {
   }
 
   /**
-   * Send Password Reset OTP Email
+   * Helper to generate a responsive, client-safe HTML email in BizReels'
+   * Warm Editorial Bento-Brutalism brand aesthetic.
    */
-  async sendPasswordResetOtp({ to, otp, expiresInMinutes = 5 }) {
-    const subject = `Your BizReels Password Reset Code: ${otp}`;
-
-    const html = `
-<!DOCTYPE html>
+  _buildWarmEditorialEmail({
+    badge = 'SECURE VERIFICATION',
+    heading,
+    subheading = 'AI-Powered Local Business Marketplace',
+    title,
+    description,
+    otp,
+    expiresInMinutes = 5,
+    securityNotice = 'Never share this code with anyone. BizReels representatives will never contact you asking for your verification code.',
+    year = new Date().getFullYear(),
+  }) {
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reset Your Password</title>
+  <title>${title || 'BizReels Verification'}</title>
   <style>
     body {
       margin: 0;
       padding: 0;
-      background-color: #0b0f19;
+      background-color: #f4efe6;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      color: #e2e8f0;
+      color: #1a1a1a;
+      -webkit-font-smoothing: antialiased;
     }
-    .wrapper {
+    table {
+      border-collapse: collapse;
+    }
+    .email-wrapper {
       width: 100%;
-      table-layout: fixed;
-      background-color: #0b0f19;
-      padding: 40px 10px;
+      background-color: #f4efe6;
+      padding: 40px 16px;
     }
-    .container {
+    .email-container {
       max-width: 520px;
       margin: 0 auto;
-      background: #131b2e;
-      border: 1px solid #1e293b;
-      border-radius: 16px;
+      background-color: #ffffff;
+      border: 1px solid #e3dccb;
+      border-radius: 24px;
       overflow: hidden;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 4px 20px rgba(36, 27, 21, 0.08);
     }
-    .header {
-      background: linear-gradient(135deg, #d99a3d 0%, #ff6b4a 50%, #e11d48 100%);
-      padding: 28px 24px;
+    .header-banner {
+      background: #241b15;
+      background-image: linear-gradient(135deg, #241b15 0%, #3a2c20 100%);
+      padding: 32px 28px 26px 28px;
       text-align: center;
     }
-    .header h1 {
-      margin: 0;
-      color: #ffffff;
-      font-size: 26px;
+    .badge-pill {
+      display: inline-block;
+      background: rgba(217, 154, 61, 0.18);
+      border: 1px solid rgba(217, 154, 61, 0.4);
+      color: #d99a3d;
+      font-size: 10px;
       font-weight: 800;
-      letter-spacing: 0.5px;
-    }
-    .header p {
-      margin: 6px 0 0 0;
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 13px;
-      font-weight: 500;
-    }
-    .content {
-      padding: 32px 28px;
-    }
-    .greeting {
-      font-size: 16px;
-      font-weight: 600;
-      color: #f8fafc;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 9999px;
       margin-bottom: 12px;
     }
-    .desc {
+    .brand-title {
+      color: #ffffff;
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      margin: 0;
+      text-transform: uppercase;
+    }
+    .brand-title span {
+      color: #d99a3d;
+    }
+    .brand-subtitle {
+      color: #c5bba8;
+      font-size: 12px;
+      font-weight: 500;
+      margin: 6px 0 0 0;
+      letter-spacing: 0.3px;
+    }
+    .content-body {
+      padding: 36px 32px 32px 32px;
+      background-color: #ffffff;
+    }
+    .purpose-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #1a1a1a;
+      margin: 0 0 10px 0;
+      line-height: 1.3;
+    }
+    .desc-text {
       font-size: 14px;
       line-height: 1.6;
-      color: #94a3b8;
+      color: #555555;
       margin: 0 0 24px 0;
     }
-    .otp-box {
-      background: #0f172a;
-      border: 2px dashed #d99a3d;
-      border-radius: 12px;
-      padding: 20px;
+    .otp-card {
+      background-color: #fbf9f5;
+      border: 2px solid #e3dccb;
+      border-radius: 18px;
+      padding: 24px 16px;
       text-align: center;
-      margin-bottom: 24px;
+      margin: 0 0 24px 0;
+    }
+    .otp-micro-label {
+      font-size: 11px;
+      font-weight: 800;
+      color: #9e6715;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
     }
     .otp-code {
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 34px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'SF Pro Display', monospace;
+      font-size: 42px;
       font-weight: 900;
-      letter-spacing: 8px;
-      color: #fbbf24;
+      letter-spacing: 10px;
+      color: #1a1a1a;
       display: inline-block;
+      padding: 6px 0;
+      margin-left: 10px;
     }
-    .expiry {
+    .otp-expiry {
       font-size: 12px;
-      color: #64748b;
+      font-weight: 600;
+      color: #71717a;
       margin-top: 8px;
     }
-    .warning {
-      background: rgba(239, 68, 68, 0.1);
-      border-left: 4px solid #ef4444;
-      padding: 12px 16px;
-      border-radius: 6px;
-      margin-bottom: 24px;
+    .security-box {
+      background-color: #fffbeb;
+      border: 1px solid #fde68a;
+      border-left: 4px solid #d99a3d;
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 8px;
     }
-    .warning p {
-      margin: 0;
+    .security-text {
       font-size: 12px;
-      line-height: 1.5;
-      color: #fca5a5;
-    }
-    .footer {
-      border-top: 1px solid #1e293b;
-      padding: 20px 28px;
-      text-align: center;
-      background: #0b1120;
-    }
-    .footer p {
+      line-height: 1.55;
+      color: #92400e;
       margin: 0;
+    }
+    .email-footer {
+      background-color: #f8f4ec;
+      border-top: 1px solid #e3dccb;
+      padding: 22px 28px;
+      text-align: center;
+    }
+    .footer-text {
       font-size: 11px;
-      color: #475569;
-      line-height: 1.5;
+      color: #8c8273;
+      line-height: 1.6;
+      margin: 0;
     }
   </style>
 </head>
 <body>
-  <div class="wrapper">
-    <table class="container" role="presentation" cellpadding="0" cellspacing="0" width="100%">
+  <div class="email-wrapper">
+    <table class="email-container" role="presentation" cellpadding="0" cellspacing="0" width="100%">
+      <!-- Header Banner -->
       <tr>
-        <td class="header">
-          <h1>BizReels</h1>
-          <p>AI-Powered Local Business Marketplace</p>
+        <td class="header-banner">
+          <div class="badge-pill">${badge}</div>
+          <h1 class="brand-title">BIZ<span>REELS</span></h1>
+          <p class="brand-subtitle">${subheading}</p>
         </td>
       </tr>
-      <tr>
-        <td class="content">
-          <div class="greeting">Password Reset Request</div>
-          <p class="desc">
-            We received a request to reset the password for your BizReels account. Use the one-time verification code below to proceed:
-          </p>
 
-          <div class="otp-box">
+      <!-- Content Body -->
+      <tr>
+        <td class="content-body">
+          <h2 class="purpose-title">${title}</h2>
+          <p class="desc-text">${description}</p>
+
+          <!-- OTP Card Hero -->
+          <div class="otp-card">
+            <div class="otp-micro-label">One-Time Verification Code</div>
             <div class="otp-code">${otp}</div>
-            <div class="expiry">⏱️ This code will expire in <strong>${expiresInMinutes} minutes</strong></div>
+            <div class="otp-expiry">⏱️ Valid for <strong>${expiresInMinutes} minutes</strong></div>
           </div>
 
-          <div class="warning">
-            <p><strong>Security Notice:</strong> Never share this code with anyone. BizReels staff will never ask for your verification code. If you did not make this request, you can safely ignore this email.</p>
+          <!-- Security Alert Notice -->
+          <div class="security-box">
+            <p class="security-text">
+              <strong>🔒 Security Reminder:</strong> ${securityNotice}
+            </p>
           </div>
         </td>
       </tr>
+
+      <!-- Footer -->
       <tr>
-        <td class="footer">
-          <p>© ${new Date().getFullYear()} BizReels Inc. All rights reserved.<br>This is an automated security email, please do not reply.</p>
+        <td class="email-footer">
+          <p class="footer-text">
+            © ${year} <strong>BizReels Inc.</strong> All rights reserved.<br>
+            This is an automated verification email. Please do not reply directly to this message.
+          </p>
         </td>
       </tr>
     </table>
   </div>
 </body>
-</html>
-`;
+</html>`;
+  }
+
+  /**
+   * Send Password Reset OTP Email
+   */
+  async sendPasswordResetOtp({ to, otp, expiresInMinutes = 5 }) {
+    const subject = `Your BizReels Password Reset Code: ${otp}`;
+
+    const html = this._buildWarmEditorialEmail({
+      badge: 'ACCOUNT RECOVERY',
+      title: 'Password Reset Request',
+      description: 'We received a request to reset the password for your BizReels account. Use the one-time verification code below to proceed:',
+      otp,
+      expiresInMinutes,
+      securityNotice: 'Never share this code with anyone. If you did not make this request, you can safely ignore this email.',
+    });
 
     const text = `BizReels Password Reset Request\n\nYour one-time verification OTP code is: ${otp}\n\nThis code will expire in ${expiresInMinutes} minutes.\n\nIf you did not request this, please ignore this email.\n\n- The BizReels Team`;
 
@@ -221,39 +292,22 @@ class EmailService {
   }
 
   /**
-   * General Email OTP verification
+   * General Email OTP verification (Vendor, Creator, Customer)
    */
   async sendOtpEmail({ to, otp, purpose = 'Verification', expiresInMinutes = 5 }) {
     const formattedPurpose = purpose.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const subject = `Your BizReels ${formattedPurpose} Code: ${otp}`;
 
-    const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>${formattedPurpose}</title>
-  <style>
-    body { background-color: #0b0f19; font-family: sans-serif; color: #e2e8f0; margin: 0; padding: 20px; }
-    .card { max-width: 500px; margin: 0 auto; background: #131b2e; border: 1px solid #1e293b; border-radius: 12px; padding: 24px; }
-    .header { color: #d99a3d; font-size: 22px; font-weight: bold; margin-bottom: 12px; }
-    .otp { font-size: 30px; font-weight: bold; letter-spacing: 6px; color: #fbbf24; background: #0f172a; padding: 16px; text-align: center; border-radius: 8px; margin: 20px 0; border: 1px dashed #d99a3d; }
-    .footer { font-size: 11px; color: #64748b; margin-top: 20px; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="header">BizReels ${formattedPurpose}</div>
-    <p>Your one-time verification code is:</p>
-    <div class="otp">${otp}</div>
-    <p>This code expires in <strong>${expiresInMinutes} minutes</strong>. Please do not share it with anyone.</p>
-    <div class="footer">© ${new Date().getFullYear()} BizReels. All rights reserved.</div>
-  </div>
-</body>
-</html>
-`;
+    const html = this._buildWarmEditorialEmail({
+      badge: 'OFFICIAL VERIFICATION',
+      title: `BizReels ${formattedPurpose}`,
+      description: `Please use the 6-digit verification code below to complete your ${formattedPurpose.toLowerCase()} on BizReels:`,
+      otp,
+      expiresInMinutes,
+      securityNotice: 'Never share this code with anyone. BizReels representatives will never contact you asking for your verification code.',
+    });
 
-    const text = `Your BizReels ${formattedPurpose} code is: ${otp}. Valid for ${expiresInMinutes} minutes.`;
+    const text = `Your BizReels ${formattedPurpose} code is: ${otp}. Valid for ${expiresInMinutes} minutes.\n\nPlease do not share this code with anyone.`;
     return this.sendEmail({ to, subject, html, text });
   }
 }
