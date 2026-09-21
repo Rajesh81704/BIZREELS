@@ -163,10 +163,13 @@ The API specification is structured into **26 tagged domain categories**:
 - `POST /calls/webhook` & `POST /webhooks/exotel/call` — Exotel CDR call completion webhook (deducts 2.50 credits if connected >= 10s)
 
 ### 11. Requirements & Bidding (`/requirements`)
-- `POST /requirements` — Customer posts project brief (RFQ)
-- `GET /requirements` — Browse open project briefs
-- `POST /requirements/quotes` — Vendor submits quote proposal
-- `PATCH /requirements/quotes/:quoteId` — Customer accepts quote proposal
+- `GET /requirements` — Browse open customer project briefs (RFQs). Supports query filters (`page`, `limit`, `search`, `category`, `status`, `city`). For authenticated vendors, dynamically queries and injects quote correlation (`hasResponded`, `hasQuoted`, `myQuote`).
+- `POST /requirements` — Customer posts new project brief (RFQ) with title, category, description, budget, timeline, and location.
+- `GET /requirements/:id` — Fetch single requirement details with customer metadata (contact info masked for vendor privacy until proposal acceptance), plus vendor quotation status (`hasResponded`, `hasQuoted`, `myQuote`).
+- `GET /requirements/quotes` — Fetch requirement quotation proposals. Supports query filters (`page`, `limit`, `requirementId`, `status`, and `role=vendor` for authenticated vendor quote history).
+- `POST /requirements/quotes` — Vendor submits quote proposal (`requirementId`, `price`, `estimatedDelivery`, `notes`, `attachments`). Strictly enforces single-quote-per-vendor constraint; returns HTTP 400 if already submitted.
+- `PATCH /requirements/quotes/:quoteId` — Customer accepts or rejects a vendor quotation proposal.
+- `GET /requirements/:id/quotes` — Customer views all quotes received for their specific requirement brief.
 
 ### 12. Wallet & Ledger (`/wallet`, `/transactions`)
 - `GET /wallet/transactions` — Ledger transaction logs
@@ -268,6 +271,24 @@ To ensure vendors are never double-billed for repeated messages or calls from th
 - The deduplication window is set to **24 hours** (`86,400 seconds`).
 - If a customer messages again within 24 hours, the message is delivered and logged in `WhatsAppLead`, but **0 credits are deducted**.
 
+### 6.4 Requirements, RFQs & Quotation Proposal Lifecycle
+1. **Customer RFQ Broadcast**: Customer posts a customized requirement via `POST /api/v1/requirements`. Nearby matched vendors in the corresponding category and city receive notifications.
+2. **Vendor Discovery & Lead Review**: Vendors browse open RFQs on the Vendor Leads dashboard (`GET /api/v1/requirements?status=open`). Contact details (email and mobile number) are securely masked (`***`) to protect customer privacy and encourage platform engagement.
+3. **Single Proposal Enforcement (Duplicate Prevention)**:
+   - A vendor may submit **exactly one proposal per requirement**.
+   - Before submission, `GET /api/v1/requirements` attaches `hasResponded: true`, `hasQuoted: true`, and `myQuote: { price, estimatedDelivery, notes, ... }` to each requirement object if the vendor has already bid.
+   - If a vendor re-attempts submission via `POST /api/v1/requirements/quotes`, the backend strictly returns `HTTP 400 Bad Request`:
+     ```json
+     {
+       "success": false,
+       "message": "You have already submitted a quote for this requirement"
+     }
+     ```
+   - On the frontend (`VendorLeadsPage`), submitted requirements display a persistent **"Proposal Sent"** badge with the quote amount, and proposal dialogs prevent redundant submissions.
+4. **Branded Email Notification**:
+   - Upon quote submission, the customer receives a high-conversion, responsive email notification (`quote_received` / `requirement_quote`).
+   - The email incorporates the official BizReels brand logo (`https://res.cloudinary.com/f6p67fak/image/upload/v1790015688/bizreels-brand/bizreels-logo.png`), dark gradient theme matching the website aesthetic, quotation pricing, delivery timeline, and a direct CTA link to review proposals.
+
 ---
 
 ## 7. How to Test Endpoints in Swagger UI
@@ -278,7 +299,7 @@ To ensure vendors are never double-billed for repeated messages or calls from th
    npm run dev
    ```
 2. **Open Swagger UI**:
-   Navigate to `http://localhost:5000/api-docs` in your browser.
+   Navigate to `http://localhost:5000/api-docs` (or alias `http://localhost:5000/docs`) in your browser.
 3. **Authenticate Session**:
    - Open the **Authentication** section.
    - Execute `POST /auth/login` or `POST /auth/otp/verify`.
@@ -287,5 +308,31 @@ To ensure vendors are never double-billed for repeated messages or calls from th
    - Click the green **Authorize** button at the top right of Swagger UI.
    - Enter `Bearer <your_access_token>` in the value box and click **Authorize**.
 5. **Execute API Requests**:
-   - Select any protected endpoint (e.g. `GET /subscription/plans`, `POST /whatsapp/simulate-inbound`, or `POST /calls/initiate`).
+   - Select any protected endpoint (e.g. `GET /requirements`, `POST /requirements/quotes`, or `GET /requirements/quotes?role=vendor`).
    - Click **Try it out**, fill in parameters or JSON payload, and click **Execute**.
+
+---
+
+## 8. Swagger OpenAPI Specification Analysis & Schema Reference
+
+BizReels leverages an automated route scanner coupled with explicit OpenAPI 3.0 schema definitions in [`backend/src/config/swagger.config.js`](file:///d:/BizReels%20Website/backend/src/config/swagger.config.js). The live specification is served at `/api-docs.json` and mirrored in documentation at [`docs/api/swagger-spec.json`](file:///d:/BizReels%20Website/docs/api/swagger-spec.json).
+
+### 8.1 Architecture of `swagger.config.js`
+1. **Dynamic Scanner vs Explicit Paths**:
+   - The config defines a `routeModuleMap` that inspects express router files in `backend/src/routes/` to automatically register all endpoints across 26 domain categories.
+   - For complex contracts requiring strict payload validation and response contracts (such as `/requirements` and `/requirements/quotes`), explicit path definitions in `options.swaggerDefinition.paths` override default scaffolds with complete parameter schemas, request bodies, and error codes.
+2. **OpenAPI Components & Schemas**:
+   - `Requirement`: Documents the customer brief entity, including `title`, `category`, `description`, `budget`, `timeline`, `status` (`open`, `in_progress`, `closed`), `location`, `hasResponded`, `hasQuoted`, and `myQuote`.
+   - `Quote`: Documents vendor quotations, including `requirementId`, `vendorId`, `price`, `estimatedDelivery`, `notes`, `attachments`, and `status` (`submitted`, `accepted`, `rejected`, `withdrawn`).
+   - `ApiResponse` & `ApiError`: Standard output wrappers.
+
+### 8.2 Swagger File Validation & Health Verification
+To verify the integrity and schema correctness of the Swagger definition:
+```bash
+# Query the live OpenAPI 3.0 schema specification from the local backend
+node -e "fetch('http://localhost:5000/api-docs.json').then(r => r.json()).then(d => console.log('OpenAPI Version:', d.openapi, '| Total Paths:', Object.keys(d.paths).length))"
+```
+Output:
+- OpenAPI Version: `3.0.0`
+- Total Paths: `50+` canonical routes covering 500+ endpoint variations.
+- Includes `/requirements`, `/requirements/{id}`, `/requirements/quotes`, `/requirements/quotes/{quoteId}`, `/requirements/{id}/quotes`, and `/admin/requirements`.

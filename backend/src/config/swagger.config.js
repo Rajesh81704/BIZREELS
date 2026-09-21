@@ -284,6 +284,80 @@ const options = {
             created_at: { type: 'string', format: 'date-time' },
           },
         },
+        Requirement: {
+          type: 'object',
+          description: 'Customer project brief / RFQ lead matching vendor categories and areas',
+          properties: {
+            _id: { type: 'string', example: '6a9ae3a4bc4eae4709ef5b7d' },
+            title: { type: 'string', example: 'Need 5 business laptops for office use' },
+            description: { type: 'string', example: 'Looking for i5/i7 laptops with 16GB RAM and SSD warranty' },
+            category: { type: 'string', example: 'Electronics' },
+            subcategory: { type: 'string', example: 'Laptop' },
+            requirementType: { type: 'string', enum: ['product', 'service'], example: 'product' },
+            type: { type: 'string', enum: ['product', 'service'], example: 'product' },
+            budget: { type: 'number', example: 150000 },
+            budget_min: { type: 'number', example: 120000 },
+            budget_max: { type: 'number', example: 160000 },
+            quantity: { type: 'integer', example: 5 },
+            status: { type: 'string', example: 'Vendors Responded' },
+            quotesCount: { type: 'integer', example: 1 },
+            proposals_count: { type: 'integer', example: 1 },
+            hasResponded: { type: 'boolean', example: true, description: 'True if authenticated vendor already submitted a proposal' },
+            hasQuoted: { type: 'boolean', example: true, description: 'Alias for hasResponded' },
+            myQuote: {
+              type: 'object',
+              nullable: true,
+              description: 'Quotation bid placed by authenticated vendor if already submitted',
+              properties: {
+                _id: { type: 'string', example: '6aa8550285b7265a4fbca24d' },
+                price: { type: 'number', example: 145000 },
+                status: { type: 'string', enum: ['pending', 'accepted', 'rejected'], example: 'pending' },
+                estimatedDelivery: { type: 'string', format: 'date-time' },
+                notes: { type: 'string', example: 'Delivery within 5 business days with brand warranty.' },
+                createdAt: { type: 'string', format: 'date-time' },
+              },
+            },
+            vendorsResponded: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['6a704b8a1a35e3e8424975cc'],
+              description: 'Array of vendor user IDs that have submitted bids',
+            },
+            customer: {
+              type: 'object',
+              properties: {
+                _id: { type: 'string', example: '6a80b6ff42b27c0a39dd0825' },
+                name: { type: 'string', example: 'Ankit Kumar' },
+                avatarUrl: { type: 'string', example: 'https://res.cloudinary.com/bizreels/image/upload/avatar.jpg' },
+              },
+            },
+            location: {
+              type: 'object',
+              properties: {
+                city: { type: 'string', example: 'Delhi' },
+                state: { type: 'string', example: 'Delhi' },
+                pincode: { type: 'string', example: '110001' },
+              },
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        Quote: {
+          type: 'object',
+          description: 'Vendor proposal quotation bid submitted for a customer requirement',
+          properties: {
+            _id: { type: 'string', example: '6aa8550285b7265a4fbca24d' },
+            requirement: { type: 'string', example: '6a9ae3a4bc4eae4709ef5b7d' },
+            vendor: { type: 'string', example: '6a704b8a1a35e3e8424975cc' },
+            price: { type: 'number', example: 145000, description: 'Quoted bid price in INR' },
+            notes: { type: 'string', example: 'Can deliver on site with official invoice and 1-year brand warranty.' },
+            estimatedDelivery: { type: 'string', format: 'date-time', example: '2026-09-28T00:00:00.000Z' },
+            status: { type: 'string', enum: ['pending', 'accepted', 'rejected'], example: 'pending' },
+            paymentStatus: { type: 'string', enum: ['unpaid', 'paid'], example: 'unpaid' },
+            attachments: { type: 'array', items: { type: 'object' } },
+            createdAt: { type: 'string', format: 'date-time' },
+          },
+        },
       },
     },
     tags: [
@@ -1272,6 +1346,204 @@ const options = {
           },
           responses: {
             200: { description: 'Razorpay order created for wallet top-up' },
+          },
+        },
+      },
+
+      // ─── REQUIREMENTS & BIDDING ────────────────────────────────
+      '/requirements': {
+        get: {
+          tags: ['Requirements & Bidding'],
+          summary: 'Query customer project briefs (RFQs) and vendor lead matches',
+          description: 'Returns open requirements matching vendor service radius, categories, or filtered by status. Automatically attaches hasResponded and myQuote when queried by an authenticated vendor who has submitted proposals.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'category', in: 'query', schema: { type: 'string' }, description: 'Filter by category name' },
+            { name: 'requirementType', in: 'query', schema: { type: 'string', enum: ['product', 'service'] }, description: 'Filter by requirement type' },
+            { name: 'status', in: 'query', schema: { type: 'string' }, description: 'Status filter (e.g. active, Pending, Vendors Responded)' },
+            { name: 'lat', in: 'query', schema: { type: 'number' }, description: 'Vendor latitude for distance calculation' },
+            { name: 'lng', in: 'query', schema: { type: 'number' }, description: 'Vendor longitude for distance calculation' },
+            { name: 'distance', in: 'query', schema: { type: 'number' }, description: 'Max radius in kilometers' },
+            { name: 'search', in: 'query', schema: { type: 'string' }, description: 'Search term' },
+            { name: 'sortBy', in: 'query', schema: { type: 'string', enum: ['latest', 'oldest', 'budget_high_low', 'budget_low_high', 'distance'] }, description: 'Sort criteria' },
+            { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+            { name: 'limit', in: 'query', schema: { type: 'integer', default: 10 } },
+          ],
+          responses: {
+            200: {
+              description: 'Paginated requirements list with vendor proposal submission state',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      message: { type: 'string', example: 'Requirements retrieved.' },
+                      data: { type: 'array', items: { $ref: '#/components/schemas/Requirement' } },
+                      meta: { type: 'object' },
+                    },
+                  },
+                },
+              },
+            },
+            401: { description: 'Unauthorized' },
+          },
+        },
+        post: {
+          tags: ['Requirements & Bidding'],
+          summary: 'Customer posts new project brief (RFQ)',
+          description: 'Allows customer or admin to publish a new product or service requirement brief for vendor bidding.',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['title', 'category'],
+                  properties: {
+                    title: { type: 'string', example: 'Need 5 laptops for office deployment' },
+                    description: { type: 'string', example: 'Looking for i5/i7 laptops with 16GB RAM and SSD warranty' },
+                    category: { type: 'string', example: 'Electronics' },
+                    subcategory: { type: 'string', example: 'Laptop' },
+                    requirementType: { type: 'string', enum: ['product', 'service'], example: 'product' },
+                    budget: { type: 'number', example: 150000 },
+                    budget_min: { type: 'number', example: 120000 },
+                    budget_max: { type: 'number', example: 160000 },
+                    quantity: { type: 'integer', example: 5 },
+                    deadline: { type: 'string', format: 'date-time' },
+                    location: {
+                      type: 'object',
+                      properties: {
+                        city: { type: 'string', example: 'Delhi' },
+                        state: { type: 'string', example: 'Delhi' },
+                        pincode: { type: 'string', example: '110001' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: { description: 'Requirement brief published' },
+            400: { description: 'Validation error' },
+          },
+        },
+      },
+      '/requirements/{id}': {
+        get: {
+          tags: ['Requirements & Bidding'],
+          summary: 'Get single requirement brief details',
+          description: 'Retrieves complete requirement specs, buyer context, and attaches hasResponded and myQuote if viewed by a bidding vendor.',
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: {
+            200: {
+              description: 'Requirement details',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      data: {
+                        type: 'object',
+                        properties: {
+                          requirement: { $ref: '#/components/schemas/Requirement' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            404: { description: 'Requirement not found' },
+          },
+        },
+      },
+      '/requirements/quotes': {
+        get: {
+          tags: ['Requirements & Bidding'],
+          summary: 'List proposal quotations for vendor or customer',
+          description: 'When called with role=vendor or by an authenticated vendor, returns all quotation bids submitted by that vendor. When called by a customer, returns bids placed on their requirements.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'role', in: 'query', schema: { type: 'string', enum: ['vendor', 'customer'] }, description: 'Explicit role filter' },
+            { name: 'status', in: 'query', schema: { type: 'string', enum: ['pending', 'accepted', 'rejected'] } },
+            { name: 'search', in: 'query', schema: { type: 'string' } },
+            { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+            { name: 'limit', in: 'query', schema: { type: 'integer', default: 10 } },
+          ],
+          responses: {
+            200: {
+              description: 'Quotations array with requirement and vendor metadata',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      data: { type: 'array', items: { $ref: '#/components/schemas/Quote' } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        post: {
+          tags: ['Requirements & Bidding'],
+          summary: 'Vendor submits quotation bid on a requirement',
+          description: 'Submits a proposal quotation with bid fee calculation. Blocks duplicate bids if vendor has already quoted on this requirement (returns 400 Bad Request).',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['requirementId', 'price', 'estimatedDelivery'],
+                  properties: {
+                    requirementId: { type: 'string', example: '6a9ae3a4bc4eae4709ef5b7d', description: 'Target requirement brief ID' },
+                    price: { type: 'number', example: 145000, description: 'Quoted bid price (INR)' },
+                    estimatedDelivery: { type: 'string', format: 'date-time', example: '2026-09-28T00:00:00.000Z' },
+                    notes: { type: 'string', example: 'We will deliver and install 5 branded units with manufacturer warranty.', maxLength: 1000 },
+                    attachments: { type: 'array', items: { type: 'object' }, description: 'Optional catalog or proposal PDF documents' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: { description: 'Bid quotation submitted successfully and credits deducted' },
+            400: { description: 'Already submitted a quotation for this requirement, or insufficient credits' },
+            404: { description: 'Requirement not found' },
+          },
+        },
+      },
+      '/requirements/quotes/{quoteId}': {
+        patch: {
+          tags: ['Requirements & Bidding'],
+          summary: 'Customer accepts or rejects quotation bid',
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: 'quoteId', in: 'path', required: true, schema: { type: 'string' } }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['status'],
+                  properties: {
+                    status: { type: 'string', enum: ['accepted', 'rejected'], example: 'accepted' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: { description: 'Quote status updated' },
           },
         },
       },

@@ -11297,22 +11297,60 @@
 - **Canonical URL:** `/api/v1/requirements/`
 - **Source File:** [`requirementRoutes.js:16`](file:///d:/BizReels%20Website/backend/src/routes/requirementRoutes.js#L16)
 - **Authentication:** Required (JWT Bearer)
-- **Required Roles:** Any authenticated user
+- **Required Roles:** Any authenticated user (customer, vendor, creator, admin)
 - **Headers:**
   - `Content-Type: application/json`
   - `Authorization: Bearer <access_token>`
-- **Query Parameters:** Supports `page` (default: 1), `limit` (default: 20), `search`, `status`, `sort`.
-- **Success Response (200/201):**
+- **Query Parameters:**
+  | Parameter | Type | Required | Description |
+  |---|---|---|---|
+  | `page` | Integer | No | Page number (default: 1) |
+  | `limit` | Integer | No | Page size (default: 20) |
+  | `search` | String | No | Full-text title or description search |
+  | `category` | String | No | Filter by category ID |
+  | `status` | String | No | Filter by status (`open`, `in_progress`, `closed`) |
+  | `city` | String | No | Filter by location city name |
+  | `sort` | String | No | Sort order (e.g. `-createdAt`) |
+- **Vendor Quotation Correlation:** When accessed by an authenticated vendor, the server cross-references the `Quote` collection and dynamically injects:
+  - `hasResponded`: `true` if the vendor has already submitted a proposal
+  - `hasQuoted`: `true` (alias)
+  - `myQuote`: Object containing the vendor's submitted quote (`_id`, `price`, `estimatedDelivery`, `notes`, `attachments`, `status`, `createdAt`)
+- **Success Response (200 OK):**
   ```json
   {
     "success": true,
-    "message": "Operation completed successfully.",
-    "data": {}
+    "message": "Requirements fetched successfully",
+    "data": [
+      {
+        "_id": "65e9c0f2d84712001a1c94e8",
+        "title": "Need 50 Branded Cotton Hoodies",
+        "category": { "_id": "65e9c0f2d84712001a1c94d0", "name": "Apparel & Fashion" },
+        "description": "Premium fleece hoodies with embroidered logo.",
+        "budget": 35000,
+        "timeline": "2 weeks",
+        "location": { "city": "Mumbai", "pincode": "400001" },
+        "status": "open",
+        "hasResponded": true,
+        "hasQuoted": true,
+        "myQuote": {
+          "_id": "65e9c0f2d84712001a1c94fa",
+          "price": 32000,
+          "estimatedDelivery": "10 days",
+          "notes": "Custom embroidery included.",
+          "status": "submitted"
+        }
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 12,
+      "totalPages": 1
+    }
   }
   ```
 - **Error Responses:**
   - `401 Unauthorized`: Missing or expired access token.
-  - `400 Bad Request`: Invalid request payload or validation failure.
   - `500 Internal Server Error`: Server execution error.
 
 ### 30.2 `GET` /api/v1/requirements/quotes
@@ -11321,22 +11359,40 @@
 - **Canonical URL:** `/api/v1/requirements/quotes`
 - **Source File:** [`requirementRoutes.js:25`](file:///d:/BizReels%20Website/backend/src/routes/requirementRoutes.js#L25)
 - **Authentication:** Required (JWT Bearer)
-- **Required Roles:** Any authenticated user
+- **Required Roles:** Any authenticated user (vendor, customer, admin)
 - **Headers:**
   - `Content-Type: application/json`
   - `Authorization: Bearer <access_token>`
-- **Query Parameters:** Supports `page` (default: 1), `limit` (default: 20), `search`, `status`, `sort`.
-- **Success Response (200/201):**
+- **Query Parameters:**
+  | Parameter | Type | Required | Description |
+  |---|---|---|---|
+  | `role` | String | No | Set to `vendor` to fetch all proposals submitted by the current authenticated vendor across all requirements |
+  | `requirementId` | String | No | Filter quotes submitted for a specific requirement |
+  | `status` | String | No | Filter by quote status (`submitted`, `accepted`, `rejected`, `withdrawn`) |
+  | `page` | Integer | No | Page number (default: 1) |
+  | `limit` | Integer | No | Page size (default: 20) |
+- **Success Response (200 OK):**
   ```json
   {
     "success": true,
-    "message": "Operation completed successfully.",
-    "data": {}
+    "message": "Quotes fetched successfully",
+    "data": [
+      {
+        "_id": "65e9c0f2d84712001a1c94fa",
+        "requirementId": "65e9c0f2d84712001a1c94e8",
+        "vendorId": "65e9b8f2d84712001a1c9400",
+        "price": 32000,
+        "estimatedDelivery": "10 days",
+        "notes": "Custom embroidery included.",
+        "attachments": [],
+        "status": "submitted",
+        "createdAt": "2026-09-21T18:30:00.000Z"
+      }
+    ]
   }
   ```
 - **Error Responses:**
   - `401 Unauthorized`: Missing or expired access token.
-  - `400 Bad Request`: Invalid request payload or validation failure.
   - `500 Internal Server Error`: Server execution error.
 
 ### 30.3 `POST` /api/v1/requirements/
@@ -11349,19 +11405,36 @@
 - **Headers:**
   - `Content-Type: application/json`
   - `Authorization: Bearer <access_token>`
-- **Request Body:** Accepts JSON formatted request body adhering to domain schema.
-- **Success Response (200/201):**
+- **Request Body:**
+  ```json
+  {
+    "title": "Custom solid oak dining table (6-seater)",
+    "category": "65e9c0f2d84712001a1c94d0",
+    "description": "Need a modern Scandinavian-style oak dining table with matte finish.",
+    "budget": 25000,
+    "timeline": "3 weeks",
+    "location": {
+      "city": "Bengaluru",
+      "pincode": "560038"
+    }
+  }
+  ```
+- **Success Response (201 Created):**
   ```json
   {
     "success": true,
-    "message": "Operation completed successfully.",
-    "data": {}
+    "message": "Requirement created successfully",
+    "data": {
+      "_id": "65e9c0f2d84712001a1c94e8",
+      "title": "Custom solid oak dining table (6-seater)",
+      "status": "open"
+    }
   }
   ```
 - **Error Responses:**
   - `401 Unauthorized`: Missing or expired access token.
-  - `403 Forbidden`: Access denied for current active role.
-  - `400 Bad Request`: Invalid request payload or validation failure.
+  - `403 Forbidden`: Access denied for non-customer roles.
+  - `400 Bad Request`: Validation failure on required fields.
   - `500 Internal Server Error`: Server execution error.
 
 ### 30.4 `POST` /api/v1/requirements/quotes
@@ -11374,19 +11447,48 @@
 - **Headers:**
   - `Content-Type: application/json`
   - `Authorization: Bearer <access_token>`
-- **Request Body:** Accepts JSON formatted request body adhering to domain schema.
-- **Success Response (200/201):**
+- **Request Body:**
+  ```json
+  {
+    "requirementId": "65e9c0f2d84712001a1c94e8",
+    "price": 22000,
+    "estimatedDelivery": "18 days",
+    "notes": "We can craft this with seasoned oak in 18 days. Free delivery included.",
+    "attachments": [
+      "https://res.cloudinary.com/bizreels/raw/upload/v1/sample.pdf"
+    ]
+  }
+  ```
+- **Duplicate Prevention Invariant:**
+  - A vendor is strictly prohibited from submitting more than one proposal per requirement.
+  - If a quote already exists for the given vendor and requirement, the server returns `HTTP 400 Bad Request`.
+- **Success Response (201 Created):**
   ```json
   {
     "success": true,
-    "message": "Operation completed successfully.",
-    "data": {}
+    "message": "Quote submitted successfully",
+    "data": {
+      "_id": "65e9c0f2d84712001a1c94fa",
+      "requirementId": "65e9c0f2d84712001a1c94e8",
+      "vendorId": "65e9b8f2d84712001a1c9400",
+      "price": 22000,
+      "estimatedDelivery": "18 days",
+      "notes": "We can craft this with seasoned oak in 18 days. Free delivery included.",
+      "status": "submitted"
+    }
   }
   ```
 - **Error Responses:**
+  - `400 Bad Request`: Duplicate proposal attempt:
+    ```json
+    {
+      "success": false,
+      "message": "You have already submitted a quote for this requirement"
+    }
+    ```
   - `401 Unauthorized`: Missing or expired access token.
-  - `403 Forbidden`: Access denied for current active role.
-  - `400 Bad Request`: Invalid request payload or validation failure.
+  - `403 Forbidden`: Access denied (user is not a registered vendor).
+  - `404 Not Found`: Requirement ID does not exist or is no longer open.
   - `500 Internal Server Error`: Server execution error.
 
 ### 30.5 `GET` /api/v1/requirements/:id
@@ -11395,29 +11497,51 @@
 - **Canonical URL:** `/api/v1/requirements/:id`
 - **Source File:** [`requirementRoutes.js:147`](file:///d:/BizReels%20Website/backend/src/routes/requirementRoutes.js#L147)
 - **Authentication:** Required (JWT Bearer)
-- **Required Roles:** customer, admin
+- **Required Roles:** Any authenticated user
 - **Headers:**
   - `Content-Type: application/json`
   - `Authorization: Bearer <access_token>`
 - **URL Path Parameters:**
   | Parameter | Type | Required | Description |
   |---|---|---|---|
-  | `id` | String (ObjectId) | Yes | Identifier of target resource. |
-- **Query Parameters:** Supports `page` (default: 1), `limit` (default: 20), `search`, `status`, `sort`.
-- **Success Response (200/201):**
+  | `id` | String (ObjectId) | Yes | Identifier of target requirement brief |
+- **Privacy Masking & Quotation Correlation:**
+  - Customer contact details (email and phone number) are masked (`***`) for vendor viewing until a quote is accepted.
+  - If requested by an authenticated vendor, includes `hasResponded: true`, `hasQuoted: true`, and `myQuote` if already bid.
+- **Success Response (200 OK):**
   ```json
   {
     "success": true,
-    "message": "Operation completed successfully.",
-    "data": {}
+    "message": "Requirement details fetched successfully",
+    "data": {
+      "_id": "65e9c0f2d84712001a1c94e8",
+      "title": "Need 50 Branded Cotton Hoodies",
+      "description": "Premium fleece hoodies with embroidered logo.",
+      "budget": 35000,
+      "timeline": "2 weeks",
+      "location": { "city": "Mumbai", "pincode": "400001" },
+      "status": "open",
+      "customer": {
+        "name": "Priya Sharma",
+        "email": "pr***@***.com",
+        "phone": "98*****321"
+      },
+      "hasResponded": true,
+      "hasQuoted": true,
+      "myQuote": {
+        "_id": "65e9c0f2d84712001a1c94fa",
+        "price": 32000,
+        "estimatedDelivery": "10 days",
+        "status": "submitted"
+      }
+    }
   }
   ```
 - **Error Responses:**
   - `401 Unauthorized`: Missing or expired access token.
-  - `403 Forbidden`: Access denied for current active role.
-  - `400 Bad Request`: Invalid request payload or validation failure.
   - `404 Not Found`: Resource ID not found.
   - `500 Internal Server Error`: Server execution error.
+
 
 ### 30.6 `PUT` /api/v1/requirements/:id
 

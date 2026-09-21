@@ -561,17 +561,21 @@ Before constructing request bodies, all client developers must observe these cri
 
 ### Vendor Submit Quote Proposal
 * **Endpoint:** `POST /api/v1/requirements/quotes`
-* **Authentication:** Required (Vendor)
+* **Authentication:** Required (Vendor or Admin)
 * **Content-Type:** `application/json`
-* **Description:** Vendor bids a price and proposal on an open requirement.
+* **Description:** Vendor bids a price and proposal on an open requirement. Enforces a strict one-proposal-per-vendor constraint.
+* **Duplicate Prevention Invariant:** If a vendor attempts to submit a second quote for the same requirement, the server rejects the request with `HTTP 400 Bad Request`: `{"success": false, "message": "You have already submitted a quote for this requirement"}`.
 
 **Sample Request Body:**
 ```json
 {
   "requirementId": "65e9c0f2d84712001a1c94e8",
-  "quotePrice": 22000,
-  "proposalNote": "We can craft this with seasoned oak in 18 days.",
-  "deliveryDays": 18
+  "price": 22000,
+  "estimatedDelivery": "18 days",
+  "notes": "We can craft this with seasoned oak in 18 days. Free delivery included.",
+  "attachments": [
+    "https://res.cloudinary.com/bizreels/raw/upload/v1/blueprints/oak-table-sample.pdf"
+  ]
 }
 ```
 
@@ -579,12 +583,14 @@ Before constructing request bodies, all client developers must observe these cri
 
 | Field Name | Type | Status | Default | Allowed Values / Constraint | Description |
 |---|---|---|---|---|---|
-| `requirementId` | `String (ObjectId)` | **Required** | `None` | ObjectId | Target Requirement ID. |
-| `quotePrice` | `Number` | **Required** | `None` | Number > 0 | Proposed bid price (INR). |
-| `proposalNote` | `String` | **Required** | `None` | 10-1000 chars | Proposal pitch. |
-| `deliveryDays` | `Number` | **Optional** | `7` | Integer >= 1 | Estimated delivery days. |
+| `requirementId` | `String (ObjectId)` | **Required** | `None` | 24-char hex ObjectId | Target Requirement ID. |
+| `price` | `Number` | **Required** | `None` | Number > 0 | Proposed quotation price (INR). |
+| `estimatedDelivery` | `String` | **Required** | `None` | String (e.g., "5 days", "2 weeks") | Estimated timeline/duration for delivery. |
+| `notes` | `String` | **Optional** | `""` | Max 2000 chars | Vendor proposal pitch, execution plan, or notes. |
+| `attachments` | `Array[String]` | **Optional** | `[]` | Array of valid URLs | URLs to sample work, blueprints, or documents. |
 
 ---
+
 
 ## 7. AI Services (Gemini 1.5 Flash)
 
