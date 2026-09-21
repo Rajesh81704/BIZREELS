@@ -76,6 +76,8 @@ class EmailService {
     securityNotice = 'Never share this code with anyone. BizReels representatives will never contact you asking for your verification code.',
     year = new Date().getFullYear(),
   }) {
+    const logoUrl = 'https://res.cloudinary.com/f6p67fak/image/upload/v1790015688/bizreels-brand/bizreels-logo.png';
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -111,7 +113,7 @@ class EmailService {
     .header-banner {
       background: #241b15;
       background-image: linear-gradient(135deg, #241b15 0%, #3a2c20 100%);
-      padding: 32px 28px 26px 28px;
+      padding: 30px 24px 24px 24px;
       text-align: center;
     }
     .badge-pill {
@@ -125,14 +127,15 @@ class EmailService {
       text-transform: uppercase;
       padding: 4px 14px;
       border-radius: 9999px;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
     .brand-title {
       color: #ffffff;
-      font-size: 26px;
+      font-size: 24px;
       font-weight: 900;
       letter-spacing: 1px;
       margin: 0;
+      line-height: 1;
       text-transform: uppercase;
     }
     .brand-title span {
@@ -140,9 +143,9 @@ class EmailService {
     }
     .brand-subtitle {
       color: #c5bba8;
-      font-size: 12px;
-      font-weight: 500;
-      margin: 6px 0 0 0;
+      font-size: 11px;
+      font-weight: 600;
+      margin: 4px 0 0 0;
       letter-spacing: 0.3px;
     }
     .content-body {
@@ -225,12 +228,27 @@ class EmailService {
 <body>
   <div class="email-wrapper">
     <table class="email-container" role="presentation" cellpadding="0" cellspacing="0" width="100%">
-      <!-- Header Banner -->
+      <!-- Header Banner with Official Logo -->
       <tr>
         <td class="header-banner">
           <div class="badge-pill">${badge}</div>
-          <h1 class="brand-title">BIZ<span>REELS</span></h1>
-          <p class="brand-subtitle">${subheading}</p>
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+            <tr>
+              <td style="vertical-align: middle; padding-right: 12px;">
+                <img
+                  src="${logoUrl}"
+                  alt="BizReels Logo"
+                  width="44"
+                  height="44"
+                  style="width: 44px; height: 44px; object-fit: contain; display: block; border-radius: 12px; background: #ffffff; border: 2px solid #d99a3d; padding: 2px; box-shadow: 0 4px 10px rgba(0,0,0,0.25);"
+                />
+              </td>
+              <td style="vertical-align: middle; text-align: left;">
+                <h1 class="brand-title">BIZ<span>REELS</span></h1>
+                <p class="brand-subtitle">${subheading}</p>
+              </td>
+            </tr>
+          </table>
         </td>
       </tr>
 
