@@ -144,10 +144,20 @@ class InquiryController {
         .populate('reel', 'title caption videoUrl thumbnail views likesCount mediaType')
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(parsedLimit)
+        .limit(parsedLimit),
     ]);
 
-    return ApiResponse.paginated(res, 'Inquiries retrieved successfully.', inquiries, {
+    // Privacy Protection: Strip customer personal phone & email when accessed by vendor
+    const sanitizedInquiries = inquiries.map((inq) => {
+      const inqObj = inq.toObject ? inq.toObject() : { ...inq };
+      if (activeRole === 'vendor' && inqObj.customer) {
+        delete inqObj.customer.phone;
+        delete inqObj.customer.email;
+      }
+      return inqObj;
+    });
+
+    return ApiResponse.paginated(res, 'Inquiries retrieved successfully.', sanitizedInquiries, {
       page: parsedPage,
       limit: parsedLimit,
       total,
@@ -215,7 +225,13 @@ class InquiryController {
     }
     emitToUser(req.user._id.toString(), 'inquiry:updated', inquiry);
 
-    return ApiResponse.ok(res, 'Reply sent successfully.', { inquiry });
+    const responseInquiry = inquiry.toObject ? inquiry.toObject() : { ...inquiry };
+    if (responseInquiry.customer) {
+      delete responseInquiry.customer.phone;
+      delete responseInquiry.customer.email;
+    }
+
+    return ApiResponse.ok(res, 'Reply sent successfully.', { inquiry: responseInquiry });
   });
 
   close = asyncHandler(async (req, res) => {

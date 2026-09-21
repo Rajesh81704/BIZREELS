@@ -1,23 +1,21 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import {
-  FiShoppingBag, FiTool, FiMessageCircle, FiPhone, FiClock,
-  FiMail, FiExternalLink, FiCornerDownRight, FiTrash, FiSend
+  FiShoppingBag, FiTool, FiMessageCircle, FiClock,
+  FiExternalLink, FiCornerDownRight, FiTrash2, FiSend,
+  FiShield, FiCheckCircle
 } from 'react-icons/fi';
-import toast from 'react-hot-toast';
 import { resolveMediaUrl } from '../../../../lib/api';
 
 export default function InquiryCard({ inquiry, onReply, onClose, onDelete }) {
   const customerObj = inquiry.customer || {};
-  const customerName = customerObj.name || (typeof customerObj === 'string' ? customerObj : 'Client Buyer');
-  const customerPhone = customerObj.phone || '';
-  const customerEmail = customerObj.email || '';
+  const customerName = customerObj.name || (typeof customerObj === 'string' ? customerObj : 'Verified Customer');
   const customerAvatar = customerObj.profile_pic || customerObj.avatarUrl || null;
 
   const listing = inquiry.listing || {};
   const reel = inquiry.reel || {};
   const isReel = !!inquiry.reel && !inquiry.listing;
-  const itemTitle = listing.title || reel.caption || reel.title || 'Marketplace Item';
+  const itemTitle = listing.title || reel.caption || reel.title || 'Marketplace Listing';
   const isService = listing.type === 'service';
   const itemImage = listing.images?.[0]?.url || listing.images?.[0] || reel.thumbnail || null;
   const price = listing.sellingPrice || listing.price || null;
@@ -40,79 +38,62 @@ export default function InquiryCard({ inquiry, onReply, onClose, onDelete }) {
     return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const handleWhatsAppReply = (phone, title, name) => {
-    if (!phone) {
-      toast.error('Customer phone details not available');
-      return;
-    }
-    let cleanPhone = phone.replace(/[^0-9]/g, '');
-    if (cleanPhone.length === 10) {
-      cleanPhone = '91' + cleanPhone;
-    }
-    const greeting = name ? `Hi ${name}!` : 'Hi!';
-    const text = encodeURIComponent(`${greeting} Regarding your inquiry on BizReels for "${title || 'our listing'}"...`);
-    window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
-  };
-
-  const handleCallReply = (phone) => {
-    if (!phone) {
-      toast.error('Customer phone details not available');
-      return;
-    }
-    window.location.href = `tel:${phone}`;
-  };
-
   return (
-    <div className="glass rounded-2xl p-4 sm:p-5 border border-white/20 hover:border-brand-purple/40 shadow-sm transition-all flex flex-col gap-3.5">
-      {/* Top Header: Customer Info & Status */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/50 pb-3">
+    <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#e3dccb] hover:border-[#d99a3d] hover:shadow-md transition-all flex flex-col gap-3.5 group">
+      {/* ── Top Header: Customer Identity & Status ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e3dccb]/70 pb-3">
         <div className="flex items-center gap-3 min-w-0">
           {customerAvatar ? (
             <img
               src={resolveMediaUrl(customerAvatar)}
               alt={customerName}
-              className="w-10 h-10 rounded-full object-cover border border-brand-purple/20 bg-surface shadow-sm shrink-0"
+              className="w-10 h-10 rounded-full object-cover border border-[#d5cbba] bg-[#f8f4ec] shadow-2xs shrink-0"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full gradient-brand text-white font-bold flex items-center justify-center text-sm shadow-sm shrink-0 uppercase">
+            <div className="w-10 h-10 rounded-full bg-[#f5efe4] text-[#9e6715] font-black border border-[#d5cbba] flex items-center justify-center text-sm shadow-2xs shrink-0 uppercase">
               {customerName.charAt(0) || 'C'}
             </div>
           )}
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="font-bold text-sm text-text-primary truncate">{customerName}</h4>
-              <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
-                status === 'replied' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                status === 'closed' ? 'bg-slate-500/10 text-slate-600 border-slate-500/20' :
-                'bg-amber-500/10 text-amber-600 border-amber-500/20'
+              <h4 className="font-extrabold text-sm sm:text-base text-[#1a1a1a] truncate">
+                {customerName}
+              </h4>
+
+              {/* Status Badge */}
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                status === 'replied'
+                  ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                  : status === 'closed'
+                  ? 'bg-slate-100 text-slate-700 border-slate-300'
+                  : 'bg-amber-100 text-amber-900 border-amber-300'
               }`}>
                 {status === 'replied' ? '✓ Replied' : status === 'closed' ? 'Closed' : '● New Inquiry'}
               </span>
-            </div>
-            <div className="flex items-center gap-3 text-[11px] text-text-tertiary mt-0.5 flex-wrap">
-              {customerPhone && (
-                <span className="flex items-center gap-1">
-                  <FiPhone size={11} className="text-brand-purple" /> {customerPhone}
-                </span>
-              )}
-              {customerEmail && (
-                <span className="flex items-center gap-1 truncate max-w-[200px]">
-                  <FiMail size={11} className="text-brand-orange" /> {customerEmail}
-                </span>
-              )}
-              <span className="flex items-center gap-1">
-                <FiClock size={11} /> {formatTimestamp(inquiry.createdAt)}
+
+              {/* Privacy Shield Pill */}
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-600 bg-[#f8f4ec] border border-[#e3dccb] px-2 py-0.5 rounded-full shadow-2xs" title="Customer direct contact details are kept private to protect customer confidentiality">
+                <FiShield size={10} className="text-[#9e6715]" />
+                <span>Protected Buyer</span>
               </span>
+            </div>
+
+            <div className="flex items-center gap-3 text-[11px] text-slate-500 mt-1 flex-wrap">
+              <span className="flex items-center gap-1">
+                <FiClock size={11} className="text-slate-400" />
+                <span>{formatTimestamp(inquiry.createdAt)}</span>
+              </span>
+              <span className="text-[10px] text-slate-400">• In-App Secure Inquiry</span>
             </div>
           </div>
         </div>
 
-        {/* Action Tools */}
+        {/* Action Tools: Mark Closed & Delete */}
         <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
           {status !== 'closed' && (
             <button
               onClick={() => onClose(inquiry._id || inquiry.id)}
-              className="px-2.5 py-1 text-[11px] font-semibold text-text-tertiary hover:text-text-primary rounded-lg border border-border bg-surface transition"
+              className="px-3 py-1.5 text-xs font-extrabold text-slate-700 hover:text-black bg-[#f8f4ec] hover:bg-[#ede5d8] rounded-xl border border-[#e3dccb] transition cursor-pointer shadow-2xs"
               title="Mark Closed"
             >
               Mark Closed
@@ -120,112 +101,97 @@ export default function InquiryCard({ inquiry, onReply, onClose, onDelete }) {
           )}
           <button
             onClick={() => onDelete(inquiry._id || inquiry.id)}
-            className="p-1.5 text-text-tertiary hover:text-error rounded-lg border border-border bg-surface transition"
+            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl border border-[#e3dccb] transition cursor-pointer shadow-2xs"
             title="Delete Inquiry"
           >
-            <FiTrash size={13} />
+            <FiTrash2 size={13} />
           </button>
         </div>
       </div>
 
-      {/* Listing / Reel Reference Bar */}
-      <div className="flex items-center gap-3 bg-surface-secondary/70 p-2.5 sm:p-3 rounded-xl border border-border/60">
+      {/* ── Listing / Reel Reference Card ── */}
+      <div className="flex items-center gap-3 bg-[#fbf9f5] p-3 rounded-xl border border-[#e3dccb]">
         {itemImage ? (
           <img
             src={resolveMediaUrl(itemImage)}
             alt={itemTitle}
-            className="w-11 h-11 rounded-lg object-cover border border-border shrink-0 bg-white"
+            className="w-12 h-12 rounded-xl object-cover border border-[#e3dccb] shrink-0 bg-white shadow-2xs"
           />
         ) : (
-          <div className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ${
-            isReel ? 'bg-brand-purple/10 text-brand-purple' :
-            isService ? 'bg-brand-purple/10 text-brand-purple' : 'bg-brand-orange/10 text-brand-orange'
-          }`}>
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-[#f5efe4] text-[#9e6715] border border-[#e3dccb]">
             {isReel ? <FiMessageCircle size={18} /> : isService ? <FiTool size={18} /> : <FiShoppingBag size={18} />}
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
-              isReel ? 'bg-brand-purple text-white' :
-              isService ? 'bg-brand-purple/10 text-brand-purple' : 'bg-brand-orange/10 text-brand-orange'
-            }`}>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-white border border-[#e3dccb] text-slate-700">
               {isReel ? 'Reel / Post' : isService ? 'Service' : 'Product'}
             </span>
             {listing._id ? (
               <Link
                 to={`/customer/listing/${listing._id}`}
-                className="font-bold text-xs text-text-primary hover:text-brand-purple transition-colors truncate flex items-center gap-1"
+                className="font-extrabold text-xs sm:text-sm text-[#1a1a1a] hover:text-[#d99a3d] transition-colors truncate flex items-center gap-1"
               >
                 <span className="truncate">{itemTitle}</span>
-                <FiExternalLink size={11} className="shrink-0 opacity-70" />
+                <FiExternalLink size={11} className="shrink-0 opacity-60" />
               </Link>
             ) : (
-              <span className="font-bold text-xs text-text-primary truncate">{itemTitle}</span>
+              <span className="font-extrabold text-xs sm:text-sm text-[#1a1a1a] truncate">{itemTitle}</span>
             )}
           </div>
           {price !== null && (
-            <p className="text-[11px] text-text-secondary mt-0.5 font-medium">
-              Price / Rate: <strong className="text-emerald-600 font-bold">₹{Number(price).toLocaleString('en-IN')}</strong>
+            <p className="text-xs text-slate-600 mt-0.5 font-medium">
+              Listing Price: <strong className="text-emerald-800 font-black">₹{Number(price).toLocaleString('en-IN')}</strong>
             </p>
           )}
         </div>
       </div>
 
-      {/* Customer Message Box */}
-      <div className="bg-surface/80 rounded-xl p-3 border border-border/50 space-y-2">
-        <p className="text-xs text-text-secondary leading-relaxed font-medium">
-          <span className="font-bold text-text-primary text-[11px] block uppercase tracking-wider text-text-tertiary mb-1">
-            Customer Message:
-          </span>
+      {/* ── Customer Inquiry Message Box ── */}
+      <div className="bg-[#f8f4ec] rounded-xl p-3.5 border border-[#e3dccb] space-y-1.5">
+        <span className="font-black text-[#9e6715] text-[10px] uppercase tracking-wider block">
+          Customer Message:
+        </span>
+        <p className="text-xs sm:text-[13px] text-[#2d261e] leading-relaxed font-medium italic">
           "{inquiry.message || inquiry.msg}"
         </p>
 
-        {/* Vendor Reply if exists */}
+        {/* Vendor Reply if already submitted */}
         {inquiry.replyMessage && (
-          <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-2.5 mt-2 flex items-start gap-2">
-            <FiCornerDownRight className="text-emerald-600 shrink-0 mt-0.5" size={14} />
+          <div className="bg-emerald-50/90 border border-emerald-200 rounded-xl p-3 mt-2.5 flex items-start gap-2.5">
+            <FiCornerDownRight className="text-emerald-700 shrink-0 mt-0.5" size={14} />
             <div className="min-w-0 text-xs">
-              <span className="font-bold text-emerald-700 block text-[10px] uppercase tracking-wider">
-                Your Reply ({formatTimestamp(inquiry.repliedAt)}):
+              <span className="font-black text-emerald-900 block text-[10px] uppercase tracking-wider">
+                Your Official Reply ({formatTimestamp(inquiry.repliedAt)}):
               </span>
-              <p className="text-text-primary leading-relaxed mt-0.5">{inquiry.replyMessage}</p>
+              <p className="text-slate-800 leading-relaxed mt-0.5 font-medium">{inquiry.replyMessage}</p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Action Buttons Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-        <div className="flex flex-wrap items-center gap-2">
-          {customerPhone && (
-            <button
-              onClick={() => handleWhatsAppReply(customerPhone, itemTitle, customerName)}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5"
-            >
-              <FiMessageCircle size={14} />
-              <span>Reply on WhatsApp</span>
-            </button>
-          )}
-
-          {customerPhone && (
-            <button
-              onClick={() => handleCallReply(customerPhone)}
-              className="px-3 py-2 bg-surface hover:bg-surface-secondary text-text-primary border border-border font-bold text-xs rounded-xl transition flex items-center gap-1.5"
-            >
-              <FiPhone size={13} className="text-brand-purple" />
-              <span>Call Customer</span>
-            </button>
-          )}
-
+      {/* ── Action Buttons ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => onReply(inquiry)}
-            className="px-3.5 py-2 gradient-brand text-white font-bold text-xs rounded-xl shadow-premium hover:opacity-90 transition flex items-center gap-1.5"
+            className="px-4 py-2 bg-[#d99a3d] hover:bg-[#c4872c] text-white font-extrabold text-xs rounded-xl shadow-2xs hover:shadow-xs transition flex items-center gap-1.5 cursor-pointer"
           >
             <FiSend size={13} />
             <span>{inquiry.replyMessage ? 'Update Reply' : 'Send Quick Reply'}</span>
           </button>
+
+          {inquiry.replyMessage && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-xl">
+              <FiCheckCircle size={12} />
+              <span>Delivered in-app</span>
+            </span>
+          )}
         </div>
+
+        <span className="text-[11px] text-slate-400 hidden sm:inline-block">
+          Responses delivered instantly to customer notification center
+        </span>
       </div>
     </div>
   );

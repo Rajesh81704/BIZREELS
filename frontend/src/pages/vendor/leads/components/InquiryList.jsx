@@ -19,18 +19,14 @@ export default function InquiryList({
       if (inquiryStatusFilter === 'replied' && item.status !== 'replied') return false;
       if (inquiryStatusFilter === 'closed' && item.status !== 'closed') return false;
     }
-    // Text search
+    // Text search (search customer name, listing title, or message)
     if (!inquirySearch.trim()) return true;
     const q = inquirySearch.toLowerCase();
     const customerName = (item.customer?.name || item.customerName || '').toLowerCase();
-    const customerPhone = (item.customer?.phone || '').toLowerCase();
-    const customerEmail = (item.customer?.email || '').toLowerCase();
-    const listingTitle = (item.listing?.title || '').toLowerCase();
+    const listingTitle = (item.listing?.title || item.reel?.caption || item.reel?.title || '').toLowerCase();
     const message = (item.message || item.msg || '').toLowerCase();
     return (
       customerName.includes(q) ||
-      customerPhone.includes(q) ||
-      customerEmail.includes(q) ||
       listingTitle.includes(q) ||
       message.includes(q)
     );
@@ -39,32 +35,32 @@ export default function InquiryList({
   return (
     <div className="space-y-4">
       {/* Search & Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-center gap-3 bg-surface-secondary/50 p-3 rounded-xl border border-border text-xs">
+      <div className="flex flex-col sm:flex-row items-center gap-3 bg-[#f8f4ec] p-3 rounded-2xl border border-[#e3dccb] text-xs">
         <div className="relative flex-1 w-full">
-          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" size={14} />
+          <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
           <input
             type="text"
             value={inquirySearch}
             onChange={(e) => setInquirySearch(e.target.value)}
-            placeholder="Search by customer name, phone, message, or listing..."
-            className="w-full pl-9 pr-8 py-2 bg-surface border border-border rounded-lg text-xs text-text-primary focus:outline-none focus:border-brand-purple"
+            placeholder="Search by customer name, message, or listing title..."
+            className="w-full pl-9 pr-8 py-2 bg-white border border-[#e3dccb] rounded-xl text-xs text-[#1a1a1a] placeholder:text-slate-400 focus:outline-none focus:border-[#d99a3d] focus:ring-1 focus:ring-[#d99a3d] transition shadow-2xs"
           />
           {inquirySearch && (
             <button
               onClick={() => setInquirySearch('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-black cursor-pointer"
             >
               <FiX size={13} />
             </button>
           )}
         </div>
 
-        <div className="flex items-center gap-2 font-semibold text-text-secondary w-full sm:w-auto shrink-0">
-          <span>Status:</span>
+        <div className="flex items-center gap-2 font-bold text-slate-600 w-full sm:w-auto shrink-0">
+          <span className="text-[11px] uppercase tracking-wider text-slate-500">Status:</span>
           <select
             value={inquiryStatusFilter}
             onChange={(e) => setInquiryStatusFilter(e.target.value)}
-            className="bg-surface border border-border rounded-lg px-2.5 py-2 text-xs text-text-primary focus:outline-none focus:border-brand-purple"
+            className="bg-white border border-[#e3dccb] rounded-xl px-3 py-2 text-xs font-bold text-[#1a1a1a] focus:outline-none focus:border-[#d99a3d] cursor-pointer shadow-2xs"
           >
             <option value="all">All ({inquiries.length})</option>
             <option value="sent">New / Unreplied</option>
@@ -76,19 +72,21 @@ export default function InquiryList({
 
       {/* Inquiry Cards List */}
       {filteredInquiries.length === 0 ? (
-        <div className="py-12 text-center text-xs text-text-tertiary space-y-2">
-          <FiInbox size={36} className="mx-auto text-brand-purple opacity-40" />
-          <p className="font-bold text-text-primary text-sm">
+        <div className="py-14 text-center text-xs text-slate-500 space-y-2 bg-[#fbf9f5] rounded-2xl border border-[#e3dccb]/70 p-6">
+          <div className="w-12 h-12 rounded-2xl bg-[#f5efe4] text-[#9e6715] flex items-center justify-center mx-auto border border-[#e3dccb] shadow-2xs">
+            <FiInbox size={24} />
+          </div>
+          <p className="font-extrabold text-[#1a1a1a] text-sm sm:text-base pt-1">
             {inquirySearch ? 'No matching enquiries found' : emptyText}
           </p>
-          <p className="max-w-xs mx-auto text-text-tertiary">
+          <p className="max-w-md mx-auto text-slate-500 leading-relaxed text-xs">
             {inquirySearch
-              ? 'Try adjusting your search keywords or clear filters.'
-              : 'Customer enquiries and product questions from your listings will appear here.'}
+              ? 'Try adjusting your search keywords or clear the status filter.'
+              : 'Customer inquiries and questions sent from your listings or reels will appear here in real-time.'}
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3.5">
           {filteredInquiries.map((e) => (
             <InquiryCard
               key={e._id || e.id}
