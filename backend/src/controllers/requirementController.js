@@ -104,7 +104,47 @@ class RequirementController {
       limit,
     });
 
-    return ApiResponse.paginated(res, 'Requirements retrieved.', result.requirements, {
+    const Quote = require('../models/Quote');
+    const currentUserId = req.user?._id;
+    let requirements = result.requirements || [];
+
+    if (currentUserId && requirements.length > 0) {
+      const reqIds = requirements.map(r => r._id);
+      const quotes = await Quote.find({
+        requirement: { $in: reqIds },
+        vendor: currentUserId,
+        isDeleted: { $ne: true }
+      }).select('_id requirement price status estimatedDelivery createdAt notes').lean();
+
+      const quoteMap = new Map();
+      for (const q of quotes) {
+        quoteMap.set(q.requirement.toString(), q);
+      }
+
+      requirements = requirements.map(r => {
+        const rIdStr = (r._id || r.id).toString();
+        const myQuote = quoteMap.get(rIdStr);
+        const inVendorsResponded = Array.isArray(r.vendorsResponded) && r.vendorsResponded.some(
+          v => (v._id || v).toString() === currentUserId.toString()
+        );
+        const hasResponded = Boolean(myQuote || inVendorsResponded);
+
+        let vendorsResponded = Array.isArray(r.vendorsResponded) ? [...r.vendorsResponded] : [];
+        if (myQuote && !inVendorsResponded) {
+          vendorsResponded.push(currentUserId);
+        }
+
+        return {
+          ...r,
+          vendorsResponded,
+          hasResponded,
+          hasQuoted: hasResponded,
+          myQuote: myQuote || null,
+        };
+      });
+    }
+
+    return ApiResponse.paginated(res, 'Requirements retrieved.', requirements, {
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
       total: result.total,
@@ -117,7 +157,37 @@ class RequirementController {
     const userRoles = req.user?.roles || [];
     const activeRole = req.user?.current_role || req.user?.activeRole || 'customer';
 
-    const requirement = await requirementService.getRequirementDetails(id, req.user._id, activeRole);
+    const requirementDoc = await requirementService.getRequirementDetails(id, req.user._id, activeRole);
+    let requirement = requirementDoc?.toObject ? requirementDoc.toObject() : { ...requirementDoc };
+
+    const Quote = require('../models/Quote');
+    const currentUserId = req.user?._id;
+    if (currentUserId && requirement && requirement._id) {
+      const myQuote = await Quote.findOne({
+        requirement: requirement._id,
+        vendor: currentUserId,
+        isDeleted: { $ne: true }
+      }).select('_id requirement price status estimatedDelivery createdAt notes').lean();
+
+      const inVendorsResponded = Array.isArray(requirement.vendorsResponded) && requirement.vendorsResponded.some(
+        v => (v._id || v).toString() === currentUserId.toString()
+      );
+      const hasResponded = Boolean(myQuote || inVendorsResponded);
+
+      let vendorsResponded = Array.isArray(requirement.vendorsResponded) ? [...requirement.vendorsResponded] : [];
+      if (myQuote && !inVendorsResponded) {
+        vendorsResponded.push(currentUserId);
+      }
+
+      requirement = {
+        ...requirement,
+        vendorsResponded,
+        hasResponded,
+        hasQuoted: hasResponded,
+        myQuote: myQuote || null,
+      };
+    }
+
     return ApiResponse.ok(res, 'Requirement details retrieved.', { requirement });
   });
 

@@ -31,9 +31,15 @@ export default function RequirementDetailModal({
 
   const reqId = req._id || req.id;
   const isService = req.type === 'service' || req.requirementType === 'service';
-  const hasResponded = (req.vendorsResponded && req.vendorsResponded.some(
-    vId => (vId._id || vId).toString() === currentUserId?.toString()
-  )) || (respondedReqIds && respondedReqIds.includes(reqId?.toString()));
+  const hasResponded = Boolean(
+    req.hasResponded ||
+    req.hasQuoted ||
+    req.myQuote ||
+    (req.vendorsResponded && req.vendorsResponded.some(
+      vId => (vId?._id || vId)?.toString() === currentUserId?.toString()
+    )) ||
+    (respondedReqIds && respondedReqIds.includes(reqId?.toString()))
+  );
 
   const budget = Number(req.budget || req.budget_max || req.budget_min || 0);
   const estimatedBidCost = typeof calculateBidCreditCost === 'function'
@@ -278,6 +284,32 @@ export default function RequirementDetailModal({
             </div>
           </div>
         </div>
+
+        {/* Proposal Already Submitted Banner */}
+        {hasResponded && (
+          <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between gap-3 text-xs animate-fade-in shadow-2xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <FiCheck size={16} />
+              </div>
+              <div className="min-w-0">
+                <strong className="text-emerald-950 font-black block">
+                  {bi('Proposal Already Submitted', 'प्रस्ताव पहले ही भेजा जा चुका है')}
+                </strong>
+                <span className="text-emerald-800 text-[11px] block truncate">
+                  {req.myQuote?.price
+                    ? bi(`Your Bid: ₹${Number(req.myQuote.price).toLocaleString('en-IN')}`, `आपकी बोली: ₹${Number(req.myQuote.price).toLocaleString('en-IN')}`)
+                    : bi('You have already submitted a quotation for this requirement.', 'आप इस आवश्यकता के लिए पहले ही कोटेशन जमा कर चुके हैं।')}
+                </span>
+              </div>
+            </div>
+            {req.myQuote?.status && (
+              <span className="px-2.5 py-1 bg-white border border-emerald-300 text-emerald-900 rounded-lg text-[10px] font-black uppercase shadow-2xs shrink-0">
+                {req.myQuote.status}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Modal Footer Actions */}
         <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#e3dccb]">

@@ -7,7 +7,9 @@ import {
   FiArrowRight, FiLock
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import { useSelector } from 'react-redux';
 import { useAuth } from '../../../context/AuthContext';
+import { tokenStore } from '../../../lib/api';
 import {
   useGetVendorLeadsQuery,
   useGetVendorWalletQuery,
@@ -19,7 +21,8 @@ import {
 import {
   useGetRequirementsQuery,
   useSubmitQuoteMutation,
-  useGetRequirementDetailsQuery
+  useGetRequirementDetailsQuery,
+  useGetVendorQuotesQuery
 } from '../../../features/customer/requirementsApi';
 
 // Subcomponents
@@ -32,7 +35,10 @@ import { useLanguage } from '../../../context/LanguageContext';
 
 export default function VendorLeadsPage() {
   const { bi, t } = useLanguage();
-  const { user } = useAuth();
+  const reduxUser = useSelector((state) => state.auth?.user);
+  const { user: authUser } = useAuth();
+  const user = reduxUser || authUser || tokenStore.getUser();
+  const currentUserId = user?._id || user?.id;
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') || 'all-enquiries';
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -111,7 +117,12 @@ export default function VendorLeadsPage() {
     0
   );
 
-  // Local state for tracking proposals submitted in this session
+  // Fetch quotes previously submitted by this vendor
+  const { data: vendorQuotesData, refetch: refetchVendorQuotes } = useGetVendorQuotesQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
+
+  // Local state for tracking proposals submitted in this session or synced from API
   const [respondedReqIds, setRespondedReqIds] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('vendor_responded_req_ids') || '[]');
@@ -119,6 +130,49 @@ export default function VendorLeadsPage() {
       return [];
     }
   });
+
+  // Synchronize submitted proposal IDs from database (both quotes endpoint and requirements list)
+  useEffect(() => {
+    const quotedIds = [];
+
+    // 1. From vendor quotes query
+    const quotesList = Array.isArray(vendorQuotesData?.data)
+      ? vendorQuotesData.data
+      : Array.isArray(vendorQuotesData)
+      ? vendorQuotesData
+      : [];
+
+    for (const q of quotesList) {
+      const rId = q.requirement?._id || q.requirement_id || q.requirement;
+      if (rId) quotedIds.push(rId.toString());
+    }
+
+    // 2. From requirements data
+    const reqsList = reqsData?.requirements || reqsData?.data?.requirements || reqsData?.data || [];
+    if (Array.isArray(reqsList)) {
+      for (const r of reqsList) {
+        const rId = (r._id || r.id)?.toString();
+        if (!rId) continue;
+        const hasRes = Boolean(
+          r.hasResponded ||
+          r.hasQuoted ||
+          r.myQuote ||
+          (Array.isArray(r.vendorsResponded) && r.vendorsResponded.some(v => (v?._id || v)?.toString() === currentUserId?.toString()))
+        );
+        if (hasRes) quotedIds.push(rId);
+      }
+    }
+
+    if (quotedIds.length > 0) {
+      setRespondedReqIds(prev => {
+        const merged = Array.from(new Set([...prev, ...quotedIds]));
+        try {
+          localStorage.setItem('vendor_responded_req_ids', JSON.stringify(merged));
+        } catch (_) {}
+        return merged;
+      });
+    }
+  }, [vendorQuotesData, reqsData, currentUserId]);
 
   // Local state for ignored/saved requirements
   const [ignoredIds, setIgnoredIds] = useState(() => {
@@ -344,6 +398,11 @@ export default function VendorLeadsPage() {
 
     const reqId = proposalReq._id || proposalReq.id;
 
+    if (respondedReqIds.includes(reqId?.toString()) || proposalReq?.hasResponded || proposalReq?.hasQuoted) {
+      toast.error('You have already submitted a proposal for this requirement.');
+      return;
+    }
+
     try {
       const payload = {
         requirementId: reqId,
@@ -367,6 +426,7 @@ export default function VendorLeadsPage() {
       setProposalReq(null);
       if (typeof refetchReqs === 'function') refetchReqs();
       if (typeof refetchWallet === 'function') refetchWallet();
+      if (typeof refetchVendorQuotes === 'function') refetchVendorQuotes();
     } catch (err) {
       toast.error(err?.data?.message || err?.message || 'Failed to submit proposal');
     }
@@ -376,6 +436,7 @@ export default function VendorLeadsPage() {
     refetchLeads();
     refetchReqs();
     refetchWallet();
+    if (typeof refetchVendorQuotes === 'function') refetchVendorQuotes();
     toast.success('Leads refreshed!');
   };
 
@@ -658,7 +719,9 @@ export default function VendorLeadsPage() {
       <SubmitProposalModal
         isOpen={!!proposalReq}
         requirement={displayProposalReq}
+        currentUserId={currentUserId}
         currentCredits={currentCredits}
+        respondedReqIds={respondedReqIds}
         calculateBidCreditCost={calculateBidCreditCost}
         bidMultiplier={bidMultiplier}
         bidCapCredits={bidCapCredits}

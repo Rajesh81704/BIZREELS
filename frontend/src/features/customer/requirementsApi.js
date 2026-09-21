@@ -71,6 +71,15 @@ const requirementsApi = apiSlice.injectEndpoints({
       providesTags: (result, error, requirementId) => [{ type: 'Quotes', id: requirementId }],
     }),
 
+    // Fetch quotation bids submitted by vendor
+    getVendorQuotes: builder.query({
+      query: (params) => ({
+        url: '/requirements/quotes',
+        params: { role: 'vendor', ...(params || {}) },
+      }),
+      providesTags: ['Quotes'],
+    }),
+
     // Vendor submits new quotation bid
     submitQuote: builder.mutation({
       query: (data) => ({
@@ -80,6 +89,8 @@ const requirementsApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: (result, error, { requirementId }) => [
         { type: 'Quotes', id: requirementId },
+        { type: 'Quotes', id: 'LIST' },
+        'Quotes',
         { type: 'Requirements', id: 'LIST' },
         { type: 'Requirements', id: requirementId },
         'Wallet',
@@ -110,6 +121,7 @@ export const {
   useDeleteRequirementMutation,
   useUpdateRequirementMutation,
   useGetQuotesForRequirementQuery,
+  useGetVendorQuotesQuery,
   useSubmitQuoteMutation,
   useUpdateQuoteStatusMutation,
 } = requirementsApi;

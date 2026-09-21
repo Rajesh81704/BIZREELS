@@ -32,16 +32,17 @@ router.get(
 
     const { search, status, page = 1, limit = 10, sortBy } = req.query;
     const activeRole = req.user.activeRole || req.user.current_role || 'customer';
+    const isVendor = req.query.role === 'vendor' || activeRole === 'vendor' || (req.user.roles && req.user.roles.includes('vendor') && !req.query.customerId);
 
-    let baseQuery = {};
+    let baseQuery = { isDeleted: { $ne: true } };
 
-    if (activeRole === 'vendor') {
-      baseQuery = { vendor: req.user._id };
+    if (isVendor) {
+      baseQuery.vendor = req.user._id;
     } else {
       // Find requirements for this customer
       const myReqs = await Requirement.find({ customer: req.user._id }).select('_id');
       const reqIds = myReqs.map(r => r._id);
-      baseQuery = { requirement: { $in: reqIds } };
+      baseQuery.requirement = { $in: reqIds };
     }
 
     if (status) {

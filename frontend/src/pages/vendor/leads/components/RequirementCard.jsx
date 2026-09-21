@@ -31,9 +31,15 @@ export default function RequirementCard({
 
   const isService = requirement.type === 'service' || requirement.requirementType === 'service';
 
-  const hasResponded = (requirement.vendorsResponded && requirement.vendorsResponded.some(
-    vId => (vId._id || vId).toString() === currentUserId?.toString()
-  )) || (respondedReqIds && respondedReqIds.includes(reqId?.toString()));
+  const hasResponded = Boolean(
+    requirement.hasResponded ||
+    requirement.hasQuoted ||
+    requirement.myQuote ||
+    (requirement.vendorsResponded && requirement.vendorsResponded.some(
+      vId => (vId?._id || vId)?.toString() === currentUserId?.toString()
+    )) ||
+    (respondedReqIds && respondedReqIds.includes(reqId?.toString()))
+  );
 
   const budget = Number(requirement.budget || requirement.budget_max || requirement.budget_min || 0);
   const estimatedBidCost = typeof calculateBidCreditCost === 'function'
@@ -174,9 +180,14 @@ export default function RequirementCard({
           </button>
 
           {hasResponded ? (
-            <span className="px-3 py-1.5 bg-emerald-100 text-emerald-800 text-xs font-black rounded-xl border border-emerald-300 flex items-center gap-1 shadow-2xs">
-              <FiCheck size={13} />
+            <span className="px-3.5 py-1.5 bg-emerald-50 text-emerald-800 text-xs font-black rounded-xl border border-emerald-300 flex items-center gap-1.5 shadow-2xs">
+              <FiCheck size={13} className="text-emerald-700" />
               <span>{bi('Proposal Sent', 'प्रस्ताव भेजा')}</span>
+              {requirement.myQuote?.price ? (
+                <span className="text-[11px] text-emerald-700 font-bold ml-0.5">
+                  (₹{Number(requirement.myQuote.price).toLocaleString('en-IN')})
+                </span>
+              ) : null}
             </span>
           ) : (
             <button

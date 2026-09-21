@@ -13,7 +13,9 @@ export default function SubmitProposalModal({
   requirement,
   proposalReq,
   displayProposalReq,
+  currentUserId,
   currentCredits = 0,
+  respondedReqIds = [],
   calculateBidCreditCost,
   bidMultiplier = 0.002,
   bidCapCredits = 20,
@@ -47,6 +49,17 @@ export default function SubmitProposalModal({
     }
   }, [isOpen, req]);
 
+  const reqId = req?._id || req?.id;
+  const isAlreadySubmitted = Boolean(
+    req?.hasResponded ||
+    req?.hasQuoted ||
+    req?.myQuote ||
+    (req?.vendorsResponded && req?.vendorsResponded.some(
+      vId => (vId?._id || vId)?.toString() === currentUserId?.toString()
+    )) ||
+    (respondedReqIds && respondedReqIds.includes(reqId?.toString()))
+  );
+
   // Dynamic Bid Calculation Formula driven by Admin Settings
   const computeBidCost = (p) => {
     if (typeof calculateBidCreditCost === 'function') {
@@ -68,6 +81,7 @@ export default function SubmitProposalModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (isAlreadySubmitted) return;
     if (!quotePrice || Number(quotePrice) <= 0) return;
     if (!quoteDelivery) return;
     if (!hasEnoughCredits) return;
@@ -127,6 +141,25 @@ export default function SubmitProposalModal({
             <FiX size={16} />
           </button>
         </div>
+
+        {/* Already Submitted Warning Banner */}
+        {isAlreadySubmitted && (
+          <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center gap-3 text-xs shadow-2xs animate-fade-in">
+            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+              <FiCheckCircle size={16} />
+            </div>
+            <div>
+              <strong className="text-emerald-950 font-black block">
+                {bi('Proposal Already Submitted', 'प्रस्ताव पहले ही भेजा जा चुका है')}
+              </strong>
+              <p className="text-emerald-800 text-[11px] mt-0.5">
+                {req.myQuote?.price
+                  ? bi(`You have already submitted a proposal of ₹${Number(req.myQuote.price).toLocaleString('en-IN')} for this requirement. Further proposals cannot be placed.`, `आप इस आवश्यकता के लिए पहले ही ₹${Number(req.myQuote.price).toLocaleString('en-IN')} का प्रस्ताव प्रस्तुत कर चुके हैं। आगे और प्रस्ताव प्रस्तुत नहीं किए जा सकते।`)
+                  : bi('You have already submitted a proposal for this requirement. Further proposals cannot be placed.', 'आप इस आवश्यकता के लिए पहले ही प्रस्ताव प्रस्तुत कर चुके हैं। आगे और प्रस्ताव प्रस्तुत नहीं किए जा सकते।')}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Customer Requirement Summary Card */}
         <div className="bg-[#f8f4ec] rounded-2xl p-3.5 border border-[#e3dccb] space-y-2.5 shadow-2xs text-xs">
@@ -401,15 +434,17 @@ export default function SubmitProposalModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !hasEnoughCredits || quotedPriceNum <= 0}
-              className={`flex-1 py-3 text-white font-extrabold text-xs uppercase tracking-wider rounded-full shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer border border-amber-400 ${
-                isSubmitting || !hasEnoughCredits || quotedPriceNum <= 0
+              disabled={isAlreadySubmitted || isSubmitting || !hasEnoughCredits || quotedPriceNum <= 0}
+              className={`flex-1 py-3 text-white font-extrabold text-xs uppercase tracking-wider rounded-full shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer border ${
+                isAlreadySubmitted || isSubmitting || !hasEnoughCredits || quotedPriceNum <= 0
                   ? 'bg-slate-200 text-slate-400 cursor-not-allowed border-slate-300 shadow-none'
-                  : 'bg-gradient-to-r from-amber-500 via-amber-500 to-amber-600 hover:shadow-amber-500/30 hover:scale-[1.01]'
+                  : 'bg-gradient-to-r from-amber-500 via-amber-500 to-amber-600 hover:shadow-amber-500/30 hover:scale-[1.01] border-amber-400'
               }`}
             >
-              <FiZap size={14} className="fill-white" />
-              {isSubmitting
+              <FiZap size={14} className={isAlreadySubmitted ? 'text-slate-400' : 'fill-white'} />
+              {isAlreadySubmitted
+                ? bi('Proposal Already Submitted', 'प्रस्ताव पहले ही भेजा जा चुका है')
+                : isSubmitting
                 ? bi('Submitting Proposal...', 'प्रस्ताव भेजा जा रहा है...')
                 : `${bi('Submit Proposal', 'प्रस्ताव भेजें')} (-${bidCreditCost.toFixed(2)} Cr)`}
             </button>
