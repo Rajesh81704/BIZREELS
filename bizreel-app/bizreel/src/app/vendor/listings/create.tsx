@@ -382,9 +382,10 @@ export default function CreateListingScreen() {
     }
   }, [editId]);
 
-  // Fetch Categories Taxonomy
+  // Fetch Categories Taxonomy (Filtered by active listing type: 'product' | 'service')
   useEffect(() => {
-    api.get('/categories')
+    api.get(`/categories?type=${type}`)
+      .catch(() => api.get('/categories'))
       .then((res) => {
         const items = res.data?.items || res.data?.data || (Array.isArray(res.data) ? res.data : []);
         if (items.length > 0) {
@@ -392,7 +393,7 @@ export default function CreateListingScreen() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [type]);
 
   const { user } = useAuth();
   const vendorProfile = user?.vendorProfile || (user as any)?.profileData || {};
@@ -433,21 +434,85 @@ export default function CreateListingScreen() {
     return subs.filter(Boolean);
   }, [user, vendorProfile]);
 
+  const isServiceCategoryName = (name: string): boolean => {
+    const n = (name || '').toLowerCase().trim();
+    return (
+      n.includes('service') ||
+      n.includes('real estate') ||
+      n.includes('beauty') ||
+      n.includes('salon') ||
+      n.includes('health') ||
+      n.includes('fitness') ||
+      n.includes('education') ||
+      n.includes('coaching') ||
+      n.includes('repair') ||
+      n.includes('cleaning') ||
+      n.includes('photography') ||
+      n.includes('consulting') ||
+      n.includes('maintenance') ||
+      n.includes('spa') ||
+      n.includes('doctor') ||
+      n.includes('tuition')
+    );
+  };
+
+  const isProductCategoryName = (name: string): boolean => {
+    const n = (name || '').toLowerCase().trim();
+    return (
+      n.includes('electronic') ||
+      n.includes('fashion') ||
+      n.includes('apparel') ||
+      n.includes('furniture') ||
+      n.includes('vehicle') ||
+      n.includes('car') ||
+      n.includes('bike') ||
+      n.includes('food') ||
+      n.includes('grocery') ||
+      n.includes('machinery') ||
+      n.includes('industrial') ||
+      n.includes('hardware') ||
+      n.includes('product') ||
+      n.includes('mobile') ||
+      n.includes('laptop') ||
+      n.includes('clothing')
+    );
+  };
+
   const parentCategories = React.useMemo(() => {
+    // Filter master categories according to active listing type ('product' | 'service')
+    const typeMasterCategories = categoriesList.filter((c: any) => {
+      if (c.parent_id) return false;
+      if (c.category_type) return c.category_type === type;
+      if (type === 'service') {
+        return isServiceCategoryName(c.name);
+      }
+      return isProductCategoryName(c.name) || !isServiceCategoryName(c.name);
+    });
+
     let list: any[] = [];
     if (onboardedCategories.length > 0) {
-      list = onboardedCategories.map((catName) => {
-        const foundMaster = categoriesList.find(
-          (c: any) => !c.parent_id && (c.name?.toLowerCase() === catName.toLowerCase() || c.id === catName || c._id === catName)
-        );
-        return {
-          id: foundMaster?.id || foundMaster?._id || catName,
-          name: foundMaster?.name || catName,
-        };
-      });
+      list = onboardedCategories
+        .map((catName) => {
+          const foundMaster = categoriesList.find(
+            (c: any) => !c.parent_id && (c.name?.toLowerCase() === catName.toLowerCase() || c.id === catName || c._id === catName)
+          );
+          return {
+            id: foundMaster?.id || foundMaster?._id || catName,
+            name: foundMaster?.name || catName,
+            category_type: foundMaster?.category_type,
+          };
+        })
+        .filter((c: any) => {
+          if (c.category_type) return c.category_type === type;
+          if (type === 'service') return isServiceCategoryName(c.name);
+          return isProductCategoryName(c.name) || !isServiceCategoryName(c.name);
+        });
+
+      if (list.length === 0) {
+        list = typeMasterCategories.map((c: any) => ({ id: c.id || c._id, name: c.name, category_type: c.category_type }));
+      }
     } else {
-      const allParents = categoriesList.filter((c: any) => !c.parent_id);
-      list = allParents.map((c: any) => ({ id: c.id || c._id, name: c.name }));
+      list = typeMasterCategories.map((c: any) => ({ id: c.id || c._id, name: c.name, category_type: c.category_type }));
     }
 
     if (category && !list.some((c: any) => c.name?.toLowerCase() === category.toLowerCase())) {
@@ -455,7 +520,16 @@ export default function CreateListingScreen() {
     }
 
     return list;
-  }, [categoriesList, onboardedCategories, category]);
+  }, [categoriesList, onboardedCategories, category, type]);
+
+  useEffect(() => {
+    if (parentCategories.length > 0) {
+      const isCurrentValid = parentCategories.some((c: any) => c.name?.toLowerCase() === category?.toLowerCase());
+      if (!isCurrentValid && parentCategories[0]?.name) {
+        setCategory(parentCategories[0].name);
+      }
+    }
+  }, [type, parentCategories]);
 
   const childSubcategories = React.useMemo(() => {
     const activeParent = parentCategories.find((c: any) => c.name?.toLowerCase() === category?.toLowerCase());

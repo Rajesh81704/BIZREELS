@@ -19,7 +19,7 @@ router.get('/', catchAsync(async (req, res) => {
   const parent_id = req.query.parent_id || null;
   const topLevel = req.query.top_level === 'true';
   const tree = req.query.tree === 'true';
-  const category_type = req.query.category_type || null;
+  const category_type = req.query.category_type || req.query.type || req.query.listingType || req.query.listing_type || null;
   const search = req.query.search || req.query.q || null;
 
   const items = await categoryService.listCategories({

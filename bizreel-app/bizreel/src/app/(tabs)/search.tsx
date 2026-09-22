@@ -401,7 +401,62 @@ export default function SearchScreen() {
   }, [isQueryActive, refetchListings, refetchCats]);
 
   const catList = Array.isArray(categories) ? categories : (categories as any)?.data || [];
-  const parentCategories = catList.filter((c: any) => !c.parent_id);
+
+  const isServiceCategoryName = (name: string): boolean => {
+    const n = (name || '').toLowerCase().trim();
+    return (
+      n.includes('service') ||
+      n.includes('real estate') ||
+      n.includes('beauty') ||
+      n.includes('salon') ||
+      n.includes('health') ||
+      n.includes('fitness') ||
+      n.includes('education') ||
+      n.includes('coaching') ||
+      n.includes('repair') ||
+      n.includes('cleaning') ||
+      n.includes('photography') ||
+      n.includes('consulting') ||
+      n.includes('maintenance') ||
+      n.includes('spa') ||
+      n.includes('doctor') ||
+      n.includes('tuition')
+    );
+  };
+
+  const isProductCategoryName = (name: string): boolean => {
+    const n = (name || '').toLowerCase().trim();
+    return (
+      n.includes('electronic') ||
+      n.includes('fashion') ||
+      n.includes('apparel') ||
+      n.includes('furniture') ||
+      n.includes('vehicle') ||
+      n.includes('car') ||
+      n.includes('bike') ||
+      n.includes('food') ||
+      n.includes('grocery') ||
+      n.includes('machinery') ||
+      n.includes('industrial') ||
+      n.includes('hardware') ||
+      n.includes('product') ||
+      n.includes('mobile') ||
+      n.includes('laptop') ||
+      n.includes('clothing')
+    );
+  };
+
+  const parentCategories = useCallback(() => {
+    const topParents = catList.filter((c: any) => !c.parent_id);
+    if (activeTypeFilter === 'all') return topParents;
+    return topParents.filter((c: any) => {
+      if (c.category_type) return c.category_type === activeTypeFilter;
+      if (activeTypeFilter === 'service') {
+        return isServiceCategoryName(c.name);
+      }
+      return isProductCategoryName(c.name) || !isServiceCategoryName(c.name);
+    });
+  }, [catList, activeTypeFilter])();
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
