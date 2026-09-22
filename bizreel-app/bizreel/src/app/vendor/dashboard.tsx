@@ -69,12 +69,13 @@ export default function VendorDashboardScreen() {
 
   const fetchDashboardData = async () => {
     try {
-      const [overviewRes, leadsRes, analyticsRes, conversationsRes, walletRes] = await Promise.all([
+      const [overviewRes, leadsRes, analyticsRes, conversationsRes, walletRes, txRes] = await Promise.all([
         api.get('/vendor/analytics/overview?range=30d').catch(() => ({ data: {} })),
         api.get('/inquiries').catch(() => ({ data: {} })),
         api.get('/analytics/vendor-lead-summary').catch(() => ({ data: {} })),
         api.get('/chat/conversations').catch(() => ({ data: {} })),
-        api.get('/wallet/balance').catch(() => ({ data: {} })),
+        api.get('/wallet/vendor').catch(() => api.get('/wallet/balance')).catch(() => ({ data: {} })),
+        api.get('/wallet/transactions?role=vendor').catch(() => ({ data: {} })),
       ]);
 
       const rawOverview = overviewRes.data?.data || overviewRes.data || {};
@@ -84,6 +85,7 @@ export default function VendorDashboardScreen() {
       const conversationsList = conversationsRes.data?.data || conversationsRes.data || conversationsRes.data?.conversations || [];
       const conversationsCount = Array.isArray(conversationsList) ? conversationsList.length : 0;
       const walletData = walletRes.data?.data || walletRes.data || {};
+      const overviewCredits = rawOverview.credits || {};
 
       const productsCount = Number(rawOverview.totalProducts ?? kpis.products_total ?? rawOverview.activeListings ?? kpis.listings_active ?? 0);
       const servicesCount = Number(rawOverview.totalServices ?? kpis.services_total ?? 0);
@@ -118,14 +120,37 @@ export default function VendorDashboardScreen() {
         setRecentLeads(inquiriesList.slice(0, 4));
       }
 
-      if (walletData.balance !== undefined) {
-        setCredits({
-          available: walletData.balance || 100,
-          deposited: walletData.deposited || 0,
-          earned: walletData.earned || 100,
-          used: walletData.used || 0,
-        });
+      const availableCredits = Number(
+        walletData.available ?? walletData.balance ?? walletData.credits ?? overviewCredits.available ?? 100
+      );
+      const depositedCredits = Number(
+        walletData.deposited ?? overviewCredits.deposited ?? 0
+      );
+      const earnedCredits = Number(
+        walletData.earned ?? overviewCredits.earned ?? Math.max(availableCredits, 100)
+      );
+
+      const txList = txRes.data?.data || txRes.data?.items || (Array.isArray(txRes.data) ? txRes.data : []);
+      let calculatedUsed = 0;
+      if (Array.isArray(txList)) {
+        calculatedUsed = txList
+          .filter((t: any) => {
+            const typeStr = (t.type || t.credit_debit || '').toLowerCase();
+            return typeStr === 'debit' || t.credit_debit === 'debit' || typeStr === 'payout' || typeStr === 'withdrawal' || typeStr === 'subscription_purchase';
+          })
+          .reduce((acc: number, t: any) => acc + Math.abs(Number(t.amount || 0)), 0);
       }
+
+      const usedCredits = Number(
+        walletData.used ?? walletData.total_spent ?? overviewCredits.used ?? calculatedUsed ?? 0
+      ) || calculatedUsed;
+
+      setCredits({
+        available: availableCredits,
+        deposited: depositedCredits,
+        earned: earnedCredits,
+        used: usedCredits,
+      });
     } catch (err) {
       console.warn('Vendor dashboard fetch error', err);
     } finally {

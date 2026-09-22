@@ -29,6 +29,9 @@ router.post('/payout', authenticate, walletController.requestPayout);
 router.get('/vendor', authenticate, roleMiddleware('vendor'), asyncHandler(async (req, res) => {
   const balance = await walletService.getRoleBalance(req.user._id, 'vendor');
   const mainWallet = await walletService.getBalance(req.user._id);
+  const mainWalletDoc = await walletService.getOrCreateWallet(req.user._id);
+  const isoWallet = await walletService.getRoleWallet(req.user._id, 'vendor');
+
   const credits = Math.max(
     balance?.balance ?? 0,
     mainWallet?.credits ?? 0,
@@ -36,17 +39,40 @@ router.get('/vendor', authenticate, roleMiddleware('vendor'), asyncHandler(async
     req.user?.wallet_credits ?? 0
   );
   const withdrawableInr = (mainWallet?.balance_inr_paise || 0) / 100;
+
+  let used = Math.max(mainWalletDoc?.lifetime_spent_credits || 0, isoWallet?.lifetime_spent || 0);
+  if (!used) {
+    const WalletTransactionV2 = require('../models/WalletTransactionV2.model');
+    const debitAgg = await WalletTransactionV2.aggregate([
+      { $match: { user_id: req.user._id.toString(), credit_debit: 'debit', status: { $ne: 'failed' } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]).catch(() => []);
+    used = debitAgg?.[0]?.total || 0;
+  }
+
+  const deposited = (mainWalletDoc?.lifetime_deposited_paise ? Math.floor(mainWalletDoc.lifetime_deposited_paise / 100) : 0) || 0;
+  const earned = Math.max(mainWalletDoc?.lifetime_earned_credits || 0, isoWallet?.lifetime_earned || 0, 100);
+
   return ApiResponse.ok(res, 'Vendor wallet loaded.', {
     ...balance,
     credits,
     walletBalance: credits,
     balance: credits,
+    available: credits,
+    deposited,
+    earned,
+    used,
+    total_spent: used,
     free_reel_boosts: mainWallet?.free_reel_boosts || req.user?.free_reel_boosts || 0,
     freeReelBoosts: mainWallet?.free_reel_boosts || req.user?.free_reel_boosts || 0,
     balance_inr_paise: mainWallet?.balance_inr_paise || 0,
     earnings_inr: withdrawableInr,
     platformCredits: {
       available: credits,
+      deposited,
+      earned,
+      used,
+      total_spent: used,
       free_reel_boosts: mainWallet?.free_reel_boosts || req.user?.free_reel_boosts || 0,
       currency: 'CREDITS',
       conversionRate: '1 Credit = ₹1 INR',
@@ -62,7 +88,7 @@ router.get('/vendor', authenticate, roleMiddleware('vendor'), asyncHandler(async
 }));
 
 // GET /api/v1/wallet/creator — Creator wallet balance
-router.get('/creator', authenticate, roleMiddleware('creator'), asyncHandler(async (req, res) => {
+router.get('/creator', authenticate, asyncHandler(async (req, res) => {
   const balance = await walletService.getRoleBalance(req.user._id, 'creator');
   return ApiResponse.ok(res, 'Creator wallet loaded.', balance);
 }));

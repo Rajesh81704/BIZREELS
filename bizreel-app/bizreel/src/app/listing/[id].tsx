@@ -285,13 +285,23 @@ export default function ListingDetailsScreen() {
   };
 
   const handleSubmitReview = () => {
-    if (!reviewComment.trim()) return;
+    if (!reviewComment.trim()) {
+      Alert.alert('Required', 'Please enter a review comment.');
+      return;
+    }
+    const targetListingId = listing._id || listing.id || id;
+    const targetUserId = vendorId || listing.vendorId || listing.vendor;
+
     createReviewMutation.mutate(
       {
-        listing_id: listing._id,
+        targetListingId,
+        listingId: targetListingId,
+        listing_id: targetListingId,
+        targetUserId,
+        vendorId: targetUserId,
         rating: selectedRating,
         comment: reviewComment.trim(),
-      },
+      } as any,
       {
         onSuccess: () => {
           Alert.alert('Review Posted ⭐', 'Thank you for your review!');

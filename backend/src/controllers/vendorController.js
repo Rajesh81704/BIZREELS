@@ -343,10 +343,30 @@ class VendorController {
       mainWallet?.lifetime_earned_credits ?? 0,
       isoWallet?.lifetime_earned ?? 0
     ));
-    const usedCreditHistory = roundCredit(Math.max(
+    let usedCreditHistory = roundCredit(Math.max(
       mainWallet?.lifetime_spent_credits ?? 0,
       isoWallet?.lifetime_spent ?? 0
     ));
+
+    if (usedCreditHistory === 0) {
+      const WalletTransactionV2 = require('../models/WalletTransactionV2.model');
+      const IsolatedTransaction = require('../models/IsolatedTransaction.model');
+
+      const [v2DebitAgg, isoDebitAgg] = await Promise.all([
+        WalletTransactionV2.aggregate([
+          { $match: { user_id: userId.toString(), credit_debit: 'debit', status: { $ne: 'failed' } } },
+          { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]).catch(() => []),
+        IsolatedTransaction.aggregate([
+          { $match: { userId: userId.toString(), role: 'vendor', type: { $in: ['debit', 'payout', 'subscription_purchase'] }, status: 'success' } },
+          { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]).catch(() => [])
+      ]);
+
+      const v2Spent = v2DebitAgg?.[0]?.total || 0;
+      const isoSpent = isoDebitAgg?.[0]?.total || 0;
+      usedCreditHistory = roundCredit(Math.max(v2Spent, isoSpent));
+    }
 
     // View counts from ReelView model to determine historical views trend accurately
     let recentViews = 0;

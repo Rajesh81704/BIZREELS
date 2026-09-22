@@ -11,11 +11,42 @@ class WalletController {
 
   // ── Get Wallet Balance ──────────────────────────────────
   getWallet = asyncHandler(async (req, res) => {
+    const role = (req.query.role || req.user?.activeRole || req.user?.current_role || '').toLowerCase().trim();
+    if (role === 'creator') {
+      const roleBalance = await walletService.getRoleBalance(req.user._id, 'creator');
+      return ApiResponse.ok(res, 'Creator wallet details loaded.', {
+        balance: roleBalance.balance || 0,
+        walletBalance: roleBalance.balance || 0,
+        earnings: roleBalance.balance || 0,
+        credits: 0,
+        is_frozen: roleBalance.is_frozen || false,
+      });
+    }
     const balance = await walletService.getBalance(req.user._id);
+    const mainWalletDoc = await walletService.getOrCreateWallet(req.user._id);
+
+    let used = mainWalletDoc?.lifetime_spent_credits || 0;
+    if (!used) {
+      const WalletTransactionV2 = require('../models/WalletTransactionV2.model');
+      const debitAgg = await WalletTransactionV2.aggregate([
+        { $match: { user_id: req.user._id.toString(), credit_debit: 'debit', status: { $ne: 'failed' } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]).catch(() => []);
+      used = debitAgg?.[0]?.total || 0;
+    }
+
+    const deposited = (mainWalletDoc?.lifetime_deposited_paise ? Math.floor(mainWalletDoc.lifetime_deposited_paise / 100) : 0) || 0;
+    const earned = mainWalletDoc?.lifetime_earned_credits || Math.max(balance.credits || 0, 100);
+
     return ApiResponse.ok(res, 'Wallet details loaded.', {
       balance: balance.credits,
       walletBalance: balance.credits,
       credits: balance.credits,
+      available: balance.credits,
+      deposited,
+      earned,
+      used,
+      total_spent: used,
       free_reel_boosts: balance.free_reel_boosts || 0,
       freeReelBoosts: balance.free_reel_boosts || 0,
       balance_inr_paise: balance.balance_inr_paise,
@@ -26,9 +57,29 @@ class WalletController {
   // ── Quick Balance Check ─────────────────────────────────
   getBalance = asyncHandler(async (req, res) => {
     const balance = await walletService.getBalance(req.user._id);
+    const mainWalletDoc = await walletService.getOrCreateWallet(req.user._id);
+
+    let used = mainWalletDoc?.lifetime_spent_credits || 0;
+    if (!used) {
+      const WalletTransactionV2 = require('../models/WalletTransactionV2.model');
+      const debitAgg = await WalletTransactionV2.aggregate([
+        { $match: { user_id: req.user._id.toString(), credit_debit: 'debit', status: { $ne: 'failed' } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]).catch(() => []);
+      used = debitAgg?.[0]?.total || 0;
+    }
+
+    const deposited = (mainWalletDoc?.lifetime_deposited_paise ? Math.floor(mainWalletDoc.lifetime_deposited_paise / 100) : 0) || 0;
+    const earned = mainWalletDoc?.lifetime_earned_credits || Math.max(balance.credits || 0, 100);
+
     return ApiResponse.ok(res, 'Balance fetched.', {
       balance: balance.credits,
       credits: balance.credits,
+      available: balance.credits,
+      deposited,
+      earned,
+      used,
+      total_spent: used,
       free_reel_boosts: balance.free_reel_boosts || 0,
     });
   });
@@ -230,23 +281,30 @@ class WalletController {
   getTransactions = asyncHandler(async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page || 1, 10));
     const limit = Math.max(1, Math.min(100, parseInt(req.query.limit || 20, 10)));
+    const role = (req.query.role || req.user?.activeRole || req.user?.current_role || '').toLowerCase().trim();
 
-    const result = await walletService.getTransactions(req.user._id, page, limit);
+    let result;
+    if (role && ['vendor', 'creator'].includes(role)) {
+      result = await walletService.getRoleTransactions(req.user._id, role, page, limit);
+    } else {
+      result = await walletService.getTransactions(req.user._id, page, limit);
+    }
 
-    const mapped = result.items.map(tx => ({
-      id: tx.id,
-      _id: tx.transaction_id,
-      title: tx.transaction_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-      description: tx.admin_remarks || tx.transaction_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-      type: tx.credit_debit === 'credit' ? 'credit' : 'debit',
+    const items = result?.items || (Array.isArray(result) ? result : []);
+    const mapped = items.map(tx => ({
+      id: tx.id || tx._id,
+      _id: tx.transaction_id || tx.reference_id || tx._id,
+      title: (tx.title || tx.transaction_type || tx.type || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      description: tx.description || tx.admin_remarks || (tx.transaction_type || tx.type || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      type: (tx.credit_debit === 'credit' || tx.type === 'credit') ? 'credit' : 'debit',
       amount: tx.amount,
-      createdAt: tx.created_at,
+      createdAt: tx.created_at || tx.createdAt,
     }));
 
     return ApiResponse.paginated(res, 'Transactions ledger loaded.', mapped, {
       page,
       limit,
-      total: result.total,
+      total: result?.total || mapped.length,
     });
   });
 
@@ -271,7 +329,24 @@ class WalletController {
 
   // ── Request Payout ──────────────────────────────────────
   requestPayout = asyncHandler(async (req, res) => {
-    const { amount } = req.body;
+    const { amount, role } = req.body;
+    const userRole = (role || req.query.role || req.user?.activeRole || req.user?.current_role || '').toLowerCase().trim();
+
+    if (userRole === 'creator') {
+      const result = await walletService.roleDebit({
+        userId: req.user._id,
+        role: 'creator',
+        amount,
+        type: 'withdrawal',
+        description: `Creator Earnings Withdrawal Request (₹${amount})`,
+      });
+      return ApiResponse.ok(res, 'Creator earnings withdrawal request submitted successfully.', {
+        balance: result.wallet.balance,
+        walletBalance: result.wallet.balance,
+        transaction: result.transaction,
+      });
+    }
+
     const result = await walletService.requestPayout({
       userId: req.user._id,
       amount,
