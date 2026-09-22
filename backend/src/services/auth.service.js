@@ -186,6 +186,9 @@ class AuthService {
     }
 
     if (role && ['customer', 'vendor', 'creator', 'admin'].includes(role)) {
+      if (!user.roles.includes(role) && role !== 'admin') {
+        user.roles.push(role);
+      }
       if (user.roles.includes(role)) {
         user.activeRole = role;
         user.current_role = role;
@@ -278,7 +281,7 @@ class AuthService {
     return result;
   }
 
-  async verifyOtpAndLogin(identifier, identifierType = 'phone', otp, req, channel = null, purpose = 'login') {
+  async verifyOtpAndLogin(identifier, identifierType = 'phone', otp, req, channel = null, purpose = 'login', role = null) {
     const otpService = require('./otp.service');
 
     if (identifierType === 'phone') {
@@ -300,9 +303,9 @@ class AuthService {
           phone,
           isPhoneVerified: true,
           authProvider: 'otp',
-          roles: ['customer'],
-          activeRole: 'customer',
-          current_role: 'customer',
+          roles: role && role !== 'admin' ? ['customer', role] : ['customer'],
+          activeRole: role && role !== 'admin' ? role : 'customer',
+          current_role: role && role !== 'admin' ? role : 'customer',
         });
         await this._logAction(user._id, 'USER_REGISTER', 'User', user._id, `Mobile OTP registration via ${verified.channel || 'sms'}`, req);
 
@@ -324,6 +327,16 @@ class AuthService {
       } else {
         if (!user.isPhoneVerified) {
           user.isPhoneVerified = true;
+        }
+      }
+
+      if (role && ['customer', 'vendor', 'creator', 'admin'].includes(role)) {
+        if (!user.roles.includes(role) && role !== 'admin') {
+          user.roles.push(role);
+        }
+        if (user.roles.includes(role)) {
+          user.activeRole = role;
+          user.current_role = role;
         }
       }
 
@@ -383,6 +396,20 @@ class AuthService {
         }
       }
     }
+
+    if (role && ['customer', 'vendor', 'creator', 'admin'].includes(role)) {
+      if (!user.roles.includes(role) && role !== 'admin') {
+        user.roles.push(role);
+      }
+      if (user.roles.includes(role)) {
+        user.activeRole = role;
+        user.current_role = role;
+      }
+    }
+
+    user.lastLoginAt = new Date();
+    user.lastLoginIp = req?.ip || '127.0.0.1';
+    await user.save();
 
     const tokens = await this.generateTokenPair(user, req);
 

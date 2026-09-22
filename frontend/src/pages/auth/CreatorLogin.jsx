@@ -6,7 +6,8 @@ import { toast } from 'react-hot-toast';
 import { FcGoogle } from 'react-icons/fc';
 import { FiVideo, FiArrowRight, FiRotateCw, FiSmartphone } from 'react-icons/fi';
 import { useLoginWithEmailMutation, useSendOtpMutation, useVerifyOtpMutation, useSwitchRoleMutation } from '../../features/auth/authApi';
-import { setCredentials } from '../../features/auth/authSlice';
+import { setCredentials, setActiveRole } from '../../features/auth/authSlice';
+import { isOnboardingComplete } from '../../lib/roleNav';
 import Input from '../../components/common/Input';
 import RoleQuickSwitcher from '../../components/auth/RoleQuickSwitcher';
 import API_CONFIG from '../../config';
@@ -51,28 +52,34 @@ const CreatorLogin = () => {
 
   const handlePostLogin = async (res) => {
     dispatch(setCredentials(res.data));
-    const user = res.data?.user || res.data;
+    dispatch(setActiveRole(ROLE));
+
+    let user = res.data?.user || res.data;
     const roles = user?.roles || [];
 
-    // Switch to creator role if not already active
-    if (roles.includes(ROLE) && user?.activeRole !== ROLE) {
+    // Switch to creator role on backend if not already active
+    if (user?.activeRole !== ROLE) {
       try {
         const switchRes = await switchRoleApi({ role: ROLE }).unwrap();
-        const switchedUser = switchRes?.user || switchRes?.data?.user;
+        const switchedUser = switchRes?.data?.user || switchRes?.user;
         if (switchedUser) {
+          user = switchedUser;
           dispatch(setCredentials({ user: switchedUser, accessToken: res.data?.accessToken }));
+          dispatch(setActiveRole(ROLE));
         }
       } catch { /* continue */ }
     }
 
-    if (!roles.includes(ROLE)) {
+    const hasCreatorRole = user?.roles?.includes(ROLE) || roles.includes(ROLE);
+    if (!hasCreatorRole) {
       toast.error('Your account does not have Creator access. Please register as a creator first.');
       navigate('/creator/onboarding', { replace: true });
       return;
     }
 
-    // Check onboarding completion
-    if (!user?.creatorProfile?.displayName) {
+    // Check onboarding completion using unified helper
+    const isCompleted = isOnboardingComplete(user, ROLE) || Boolean(user?.creatorProfile?.displayName || user?.creatorProfile?.name);
+    if (!isCompleted) {
       toast.success('Welcome! Please complete your creator setup.');
       navigate('/creator/onboarding', { replace: true });
       return;
@@ -131,6 +138,7 @@ const CreatorLogin = () => {
         identifierType: otpType,
         channel: otpType === 'phone' ? otpChannel : undefined,
         purpose: 'login',
+        role: ROLE,
         otp: data.otp,
       }).unwrap();
 

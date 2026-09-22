@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet, Navigate, useLocation, Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { selectIsAuthenticated, selectCurrentUser, selectActiveRole } from '../features/auth/authSlice';
-import { getRoleDashboard } from '../lib/roleNav';
+import { getRoleDashboard, getRoleOnboarding } from '../lib/roleNav';
 import { FiVideo, FiZap, FiShield, FiArrowLeft } from 'react-icons/fi';
 import SEO from '../components/common/SEO';
 
@@ -26,6 +26,27 @@ const AuthLayout = () => {
         return <Navigate to="/admin/dashboard" replace />;
       }
     } else {
+      const pathname = location.pathname;
+      let targetRole = null;
+      if (pathname.includes('creator-login')) targetRole = 'creator';
+      else if (pathname.includes('vendor-login')) targetRole = 'vendor';
+      else if (pathname.includes('customer-login')) targetRole = 'customer';
+      else {
+        const searchParams = new URLSearchParams(location.search);
+        const roleParam = searchParams.get('role');
+        if (roleParam && ['creator', 'vendor', 'customer', 'admin'].includes(roleParam)) {
+          targetRole = roleParam;
+        }
+      }
+
+      const userRoles = user?.roles || [];
+      if (targetRole) {
+        if (userRoles.includes(targetRole) || activeRole === targetRole) {
+          return <Navigate to={getRoleDashboard(targetRole)} replace />;
+        }
+        return <Navigate to={getRoleOnboarding(targetRole)} replace />;
+      }
+
       return <Navigate to={getRoleDashboard(activeRole)} replace />;
     }
   }

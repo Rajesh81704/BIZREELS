@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast';
 import { FcGoogle } from 'react-icons/fc';
 import { FiShoppingBag, FiArrowRight, FiRotateCw, FiSmartphone } from 'react-icons/fi';
 import { useLoginWithEmailMutation, useSendOtpMutation, useVerifyOtpMutation } from '../../features/auth/authApi';
-import { setCredentials } from '../../features/auth/authSlice';
+import { setCredentials, setActiveRole } from '../../features/auth/authSlice';
 import Input from '../../components/common/Input';
 import RoleQuickSwitcher from '../../components/auth/RoleQuickSwitcher';
 import API_CONFIG from '../../config';
@@ -48,6 +48,7 @@ const CustomerLogin = () => {
     try {
       const res = await loginEmail({ email: data.email, password: data.password, role: ROLE }).unwrap();
       dispatch(setCredentials(res.data));
+      dispatch(setActiveRole(ROLE));
       toast.success('Welcome back to BizReels!');
       const targetPath = from && from.startsWith('/customer') ? from : '/customer/home';
       navigate(targetPath, { replace: true });
@@ -92,10 +93,12 @@ const CustomerLogin = () => {
         identifierType: otpType,
         channel: otpType === 'phone' ? otpChannel : undefined,
         purpose: 'login',
+        role: ROLE,
         otp: data.otp,
       }).unwrap();
 
       dispatch(setCredentials(res.data));
+      dispatch(setActiveRole(ROLE));
       toast.success('Welcome back to BizReels!');
       navigate('/customer/home', { replace: true });
     } catch (err) {

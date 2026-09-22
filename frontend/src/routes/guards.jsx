@@ -103,17 +103,41 @@ export const OnboardingRoute = ({ children, targetRole }) => {
 
 /**
  * Guard for auth pages (login/register) to prevent logged-in users from re-visiting.
+ * Intelligently routes to the intended role's portal if role-specific login/query was accessed.
  */
 export const PublicRoute = ({ children }) => {
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const activeRole = useSelector(selectActiveRole);
+  const user = useSelector(selectCurrentUser);
   const isLoading = useSelector(selectAuthLoading);
+  const location = useLocation();
 
   if (isLoading) {
     return <Loader fullPage />;
   }
 
   if (isAuthenticated) {
+    const pathname = location.pathname;
+    let targetRole = null;
+    if (pathname.includes('creator-login')) targetRole = 'creator';
+    else if (pathname.includes('vendor-login')) targetRole = 'vendor';
+    else if (pathname.includes('customer-login')) targetRole = 'customer';
+    else {
+      const searchParams = new URLSearchParams(location.search);
+      const roleParam = searchParams.get('role');
+      if (roleParam && ['creator', 'vendor', 'customer', 'admin'].includes(roleParam)) {
+        targetRole = roleParam;
+      }
+    }
+
+    const userRoles = user?.roles || [];
+    if (targetRole) {
+      if (userRoles.includes(targetRole) || activeRole === targetRole) {
+        return <Navigate to={getRoleDashboard(targetRole)} replace />;
+      }
+      return <Navigate to={getRoleOnboarding(targetRole)} replace />;
+    }
+
     return <Navigate to={getRoleDashboard(activeRole)} replace />;
   }
 

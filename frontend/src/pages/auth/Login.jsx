@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast';
 import { FcGoogle } from 'react-icons/fc';
 import { FiMail, FiLock, FiPhone, FiSmartphone, FiShoppingBag, FiShoppingCart, FiFilm, FiArrowRight, FiRotateCw } from 'react-icons/fi';
 import { useLoginWithEmailMutation, useSendOtpMutation, useResendOtpMutation, useRequestOtpMutation, useVerifyOtpMutation } from '../../features/auth/authApi';
-import { setCredentials } from '../../features/auth/authSlice';
+import { setCredentials, setActiveRole } from '../../features/auth/authSlice';
 import { getRoleDashboard, getPostLoginDestination } from '../../lib/roleNav';
 import Input from '../../components/common/Input';
 import RoleQuickSwitcher from '../../components/auth/RoleQuickSwitcher';
@@ -20,6 +20,24 @@ const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const searchParams = new URLSearchParams(location.search);
+  const initialRole = searchParams.get('role');
+  const [selectedRole, setSelectedRole] = useState(
+    ['customer', 'vendor', 'creator'].includes(initialRole) ? initialRole : 'customer'
+  );
+
+  useEffect(() => {
+    const roleParam = new URLSearchParams(location.search).get('role');
+    if (roleParam && ['customer', 'vendor', 'creator'].includes(roleParam)) {
+      setSelectedRole(roleParam);
+    }
+  }, [location.search]);
+
+  const handleRoleSelect = (roleKey) => {
+    setSelectedRole(roleKey);
+    navigate(`/auth/login?role=${roleKey}`, { replace: true });
+  };
   
   const [loginMode, setLoginMode] = useState('email'); // email | otp
   const [otpSent, setOtpSent] = useState(false);
@@ -52,12 +70,14 @@ const Login = () => {
     try {
       const res = await loginEmail({
         email: data.email,
-        password: data.password
+        password: data.password,
+        role: selectedRole,
       }).unwrap();
       dispatch(setCredentials(res.data));
+      dispatch(setActiveRole(selectedRole));
       toast.success('Welcome back to BizReels!');
       const user = res.data?.user || res.data;
-      const activeRole = user?.activeRole || user?.current_role || 'customer';
+      const activeRole = selectedRole || user?.activeRole || user?.current_role || 'customer';
       const roles = user?.roles || [];
       if (roles.includes('admin') || activeRole === 'admin') {
         navigate('/admin/dashboard', { replace: true });
@@ -119,13 +139,15 @@ const Login = () => {
         identifierType: otpType,
         channel: otpType === 'phone' ? otpChannel : undefined,
         purpose: 'login',
+        role: selectedRole,
         otp: data.otp,
       }).unwrap();
 
       dispatch(setCredentials(res.data));
+      dispatch(setActiveRole(selectedRole));
       toast.success('Welcome back to BizReels!');
       const user = res.data?.user || res.data;
-      const activeRole = user?.activeRole || user?.current_role || 'customer';
+      const activeRole = selectedRole || user?.activeRole || user?.current_role || 'customer';
 
       const roles = user?.roles || [];
       if (roles.includes('admin') || activeRole === 'admin') {
@@ -168,7 +190,11 @@ const Login = () => {
       </div>
 
       {/* Role Selection Tabs */}
-      <RoleQuickSwitcher label="Log In As" />
+      <RoleQuickSwitcher
+        label="Log In As"
+        selectedRole={selectedRole}
+        onSelectRole={handleRoleSelect}
+      />
 
       {/* ── 1-Click Fast Google Sign-In (Top Placement — No Scrolling Required!) ── */}
       <button

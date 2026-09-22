@@ -7,7 +7,7 @@ import { FiShoppingBag, FiShoppingCart, FiVideo } from 'react-icons/fi';
  * Renders the 3 portal quick access pill tabs (Customer, Vendor, Creator)
  * matching the Warm Editorial Bento-Brutalism system used on Register.
  */
-export default function RoleQuickSwitcher({ label = 'Log In As' }) {
+export default function RoleQuickSwitcher({ label = 'Log In As', selectedRole, onSelectRole }) {
   const location = useLocation();
   const currentPath = location.pathname;
 
@@ -42,9 +42,31 @@ export default function RoleQuickSwitcher({ label = 'Log In As' }) {
       <div className="grid grid-cols-3 gap-1.5 p-1 bg-[#f5efe4] rounded-xl border border-[#e3dccb]">
         {roles.map((role) => {
           const Icon = role.icon;
-          const isActive =
-            currentPath === role.path ||
-            (currentPath === '/auth/login' && role.key === 'customer');
+          const isActive = selectedRole
+            ? selectedRole === role.key
+            : (currentPath === role.path || (currentPath === '/auth/login' && role.key === 'customer'));
+
+          if (onSelectRole) {
+            return (
+              <button
+                key={role.key}
+                type="button"
+                onClick={() => onSelectRole(role.key)}
+                className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
+                  isActive
+                    ? 'bg-[#1c1a17] text-[#d99a3d] border-[#1c1a17] shadow-2xs'
+                    : 'bg-transparent text-slate-700 border-transparent hover:bg-white/60'
+                }`}
+              >
+                <Icon
+                  className={`w-3.5 h-3.5 flex-shrink-0 ${
+                    isActive ? 'text-[#d99a3d]' : 'text-slate-600'
+                  }`}
+                />
+                <span className="truncate">{role.label}</span>
+              </button>
+            );
+          }
 
           return (
             <Link

@@ -122,9 +122,10 @@ class AuthController {
     const identifierType = req.body.identifierType || (req.body.phone ? 'phone' : 'email');
     const channel = req.body.channel || null;
     const purpose = req.body.purpose || 'login';
+    const role = req.body.role || null;
     const { otp } = req.body;
 
-    const result = await authService.verifyOtpAndLogin(identifier, identifierType, otp, req, channel, purpose);
+    const result = await authService.verifyOtpAndLogin(identifier, identifierType, otp, req, channel, purpose, role);
 
     this._setRefreshTokenCookie(res, result.refreshToken);
     this._setAccessTokenCookie(res, result.accessToken);

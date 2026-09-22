@@ -33,6 +33,10 @@ const authValidation = {
       .normalizeEmail(),
     body('password')
       .notEmpty().withMessage('Password is required.'),
+    body('role')
+      .optional()
+      .trim()
+      .isIn(['customer', 'vendor', 'creator', 'admin']).withMessage('Invalid role specified.'),
   ],
 
   sendOtp: [
@@ -121,6 +125,10 @@ const authValidation = {
     body('purpose')
       .optional()
       .trim(),
+    body('role')
+      .optional()
+      .trim()
+      .isIn(['customer', 'vendor', 'creator', 'admin']).withMessage('Invalid role specified.'),
   ],
 
   sendPhoneOtp: [

@@ -1163,6 +1163,16 @@
                     "type": "string",
                     "format": "password",
                     "example": "Password@123"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "customer",
+                      "vendor",
+                      "creator"
+                    ],
+                    "description": "Optional intended role context. If user holds multiple roles, sets activeRole and generates token for this role.",
+                    "example": "creator"
                   }
                 }
               }
@@ -1288,6 +1298,16 @@
                       "reset_password"
                     ],
                     "default": "login"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "customer",
+                      "vendor",
+                      "creator"
+                    ],
+                    "description": "Optional intended role context for multi-role users upon login.",
+                    "example": "creator"
                   }
                 }
               }

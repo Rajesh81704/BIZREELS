@@ -6,7 +6,8 @@ import { toast } from 'react-hot-toast';
 import { FcGoogle } from 'react-icons/fc';
 import { FiShoppingCart, FiArrowRight, FiRotateCw, FiSmartphone } from 'react-icons/fi';
 import { useLoginWithEmailMutation, useSendOtpMutation, useVerifyOtpMutation, useSwitchRoleMutation } from '../../features/auth/authApi';
-import { setCredentials } from '../../features/auth/authSlice';
+import { setCredentials, setActiveRole } from '../../features/auth/authSlice';
+import { isOnboardingComplete } from '../../lib/roleNav';
 import Input from '../../components/common/Input';
 import RoleQuickSwitcher from '../../components/auth/RoleQuickSwitcher';
 import API_CONFIG from '../../config';
@@ -51,7 +52,7 @@ const VendorLogin = () => {
 
   const handlePostLogin = async (res) => {
     dispatch(setCredentials(res.data));
-    const user = res.data?.user || res.data;
+    let user = res.data?.user || res.data;
     const roles = user?.roles || [];
 
     // Switch to vendor role if not already active
@@ -60,10 +61,13 @@ const VendorLogin = () => {
         const switchRes = await switchRoleApi({ role: ROLE }).unwrap();
         const switchedUser = switchRes?.user || switchRes?.data?.user;
         if (switchedUser) {
+          user = switchedUser;
           dispatch(setCredentials({ user: switchedUser, accessToken: res.data?.accessToken }));
         }
       } catch { /* continue */ }
     }
+
+    dispatch(setActiveRole(ROLE));
 
     if (!roles.includes(ROLE)) {
       toast.error('Your account does not have Vendor access. Please register as a vendor first.');
@@ -72,7 +76,7 @@ const VendorLogin = () => {
     }
 
     // Check onboarding completion
-    if (!user?.vendorProfile?.shopName) {
+    if (!isOnboardingComplete(user, ROLE) && !user?.vendorProfile?.shopName) {
       toast.success('Welcome! Please complete your vendor setup.');
       navigate('/vendor/onboarding', { replace: true });
       return;
@@ -131,6 +135,7 @@ const VendorLogin = () => {
         identifierType: otpType,
         channel: otpType === 'phone' ? otpChannel : undefined,
         purpose: 'login',
+        role: ROLE,
         otp: data.otp,
       }).unwrap();
 
