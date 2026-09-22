@@ -522,7 +522,9 @@ export default function ListingDetailsScreen() {
               reviews.map((rev: any) => (
                 <View key={rev._id} style={styles.reviewCard}>
                   <View style={styles.reviewUserRow}>
-                    <Text style={styles.reviewUserName}>{rev.user?.name || 'Customer'}</Text>
+                    <Text style={styles.reviewUserName}>
+                      {rev.author?.name || rev.user?.name || rev.userName || rev.user_name || rev.customer || rev.author_name || rev.name || 'Customer'}
+                    </Text>
                     <View style={styles.starsRow}>
                       {[1, 2, 3, 4, 5].map((star) => (
                         <Ionicons

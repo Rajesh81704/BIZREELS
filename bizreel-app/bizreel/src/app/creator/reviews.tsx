@@ -84,7 +84,9 @@ export default function CreatorReviewsScreen() {
             <View key={rev._id} style={styles.reviewCard}>
               <View style={styles.revHeader}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.revUser}>{rev.user?.name || 'Client Vendor'}</Text>
+                  <Text style={styles.revUser}>
+                    {(rev as any).author?.name || (rev as any).user?.name || (rev as any).userName || (rev as any).user_name || (rev as any).customer || (rev as any).name || 'Client Vendor'}
+                  </Text>
                   <Text style={styles.revDate}>
                     {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString() : 'Recent Client'}
                   </Text>

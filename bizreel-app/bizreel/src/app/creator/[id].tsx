@@ -680,7 +680,9 @@ export default function PublicCreatorProfileScreen() {
                           style={styles.reviewAvatar}
                         />
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.reviewAuthorName}>{rev.author?.name || 'Verified Client'}</Text>
+                          <Text style={styles.reviewAuthorName}>
+                            {rev.author?.name || (rev as any).user?.name || (rev as any).userName || (rev as any).user_name || (rev as any).customer || (rev as any).name || 'Verified Client'}
+                          </Text>
                           <View style={styles.starRow}>
                             {[1, 2, 3, 4, 5].map((star) => (
                               <Ionicons

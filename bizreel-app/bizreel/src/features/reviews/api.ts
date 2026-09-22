@@ -4,7 +4,17 @@ import type { CreateReviewInput, Review } from './types';
 export async function getListingReviews(listingId: string): Promise<Review[]> {
   const { data } = await api.get(`/reviews/listing/${listingId}`);
   const items = data.data || data.reviews || data.items || data || [];
-  return Array.isArray(items) ? items : [];
+  const list = Array.isArray(items) ? items : [];
+  return list.map((item: any) => {
+    const name = item.author?.name || item.user?.name || item.userName || item.user_name || item.customer || item.name || 'Customer';
+    const userObj = item.user && typeof item.user === 'object' ? item.user : (item.author && typeof item.author === 'object' ? item.author : { name });
+    const authorObj = item.author && typeof item.author === 'object' ? item.author : userObj;
+    return {
+      ...item,
+      user: { ...userObj, name: userObj.name || name },
+      author: { ...authorObj, name: authorObj.name || name },
+    };
+  });
 }
 
 export async function createReview(input: CreateReviewInput): Promise<Review> {

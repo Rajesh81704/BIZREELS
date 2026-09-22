@@ -210,7 +210,15 @@ export default function VendorReviewsScreen() {
         }
         renderItem={({ item }) => {
           const reviewId = (item._id || item.id || '').toString();
-          const customerName = item.customer || item.reviewer_id || item.name || 'Customer';
+          const customerName =
+            (item as any).author?.name ||
+            (item as any).user?.name ||
+            (item as any).userName ||
+            (item as any).user_name ||
+            item.customer ||
+            item.name ||
+            item.reviewer_id ||
+            'Customer';
           const ratingCount = item.rating || 5;
           const isSubmitting = submittingReplyId === reviewId;
 
