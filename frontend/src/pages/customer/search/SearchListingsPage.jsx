@@ -202,7 +202,6 @@ export default function SearchListingsPage() {
       setUserInterests(user.customerProfile.interests);
     }
     const loadUserInterests = async () => {
-      if (!user) return;
       try {
         const res = await api.get('/v1/users/me/interests');
         const list = res.data?.interests || [];
@@ -213,7 +212,20 @@ export default function SearchListingsPage() {
         // guest or non-auth
       }
     };
+    const loadCategories = async () => {
+      try {
+        const res = await api.get('/v1/categories?only_top_level=true');
+        const items = res.data?.items || res.data || [];
+        if (Array.isArray(items) && items.length > 0) {
+          setCategories(items);
+        }
+      } catch (err) {
+        // non-critical
+      }
+    };
+
     loadUserInterests();
+    loadCategories();
   }, [user]);
 
   // Build category & subcategory chips strictly from onboarding interests (or default curated catalog)
@@ -228,7 +240,7 @@ export default function SearchListingsPage() {
         if (cat && cat.trim() && !seenLabels.has(cat.trim().toLowerCase())) {
           seenLabels.add(cat.trim().toLowerCase());
           chips.push({
-            id: `cat_${cat.trim().toLowerCase()}`,
+            id: `cat_${cat.trim().toLowerCase().replace(/\s+/g, '_')}`,
             label: cat.trim(),
             category: cat.trim(),
             subcategory: null,
@@ -244,7 +256,7 @@ export default function SearchListingsPage() {
           if (!seenLabels.has(sub.toLowerCase())) {
             seenLabels.add(sub.toLowerCase());
             chips.push({
-              id: `sub_${sub.toLowerCase()}`,
+              id: `sub_${sub.toLowerCase().replace(/\s+/g, '_')}`,
               label: sub,
               category: item.category ? item.category.trim() : null,
               subcategory: sub,
@@ -255,6 +267,16 @@ export default function SearchListingsPage() {
       });
 
       return chips;
+    }
+
+    if (categories && categories.length > 0) {
+      return categories.map((c) => ({
+        id: `cat_${(c.name || c).toLowerCase().replace(/\s+/g, '_')}`,
+        label: c.name || c,
+        category: c.name || c,
+        subcategory: null,
+        type: 'category',
+      }));
     }
 
     // Default clean catalog if guest or no onboarding interests selected
@@ -268,7 +290,7 @@ export default function SearchListingsPage() {
       { id: 'cat_beauty', label: 'Beauty & Salon', category: 'Beauty & Salon', type: 'category' },
       { id: 'cat_realestate', label: 'Real Estate', category: 'Real Estate', type: 'category' },
     ];
-  }, [userInterests]);
+  }, [userInterests, categories]);
 
   const handleSelectChip = (chip) => {
     if (!chip || chip.id === 'all' || selectedChipId === chip.id) {

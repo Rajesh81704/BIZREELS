@@ -254,7 +254,10 @@ export default function CustomerSettingsPage() {
     setSaving(true);
     const toastId = toast.loading('Updating your feed interests...');
     try {
-      await api.patch('/v1/users/me/interests', { interests: selectedInterests });
+      const res = await api.patch('/v1/users/me/interests', { interests: selectedInterests });
+      if (res.data?.user) {
+        dispatch(setCredentials({ user: res.data.user }));
+      }
       toast.success('Your feed interests have been updated successfully!', { id: toastId });
     } catch (err) {
       const msg = err?.response?.data?.message || err?.data?.message || 'Failed to update interests';

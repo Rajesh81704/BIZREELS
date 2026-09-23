@@ -13,25 +13,6 @@ const DISTANCE_VALUES = [
   { value: '50', label: 'Within 50 km' },
 ];
 
-const getCategoryEmojiIcon = (categoryName) => {
-  const name = (categoryName || '').toLowerCase().trim();
-  if (name.includes('home') || name.includes('clean') || name.includes('housekeeping') || name.includes('maid')) return '🏠';
-  if (name.includes('electronic') || name.includes('tech') || name.includes('gadget') || name.includes('phone')) return '💻';
-  if (name.includes('fashion') || name.includes('apparel') || name.includes('cloth')) return '👔';
-  if (name.includes('furniture') || name.includes('living')) return '🛋️';
-  if (name.includes('service') || name.includes('repair') || name.includes('work')) return '🛠️';
-  if (name.includes('auto') || name.includes('vehicle') || name.includes('car')) return '🚗';
-  if (name.includes('grocery') || name.includes('mart') || name.includes('store')) return '🛒';
-  if (name.includes('health') || name.includes('beauty') || name.includes('salon')) return '✨';
-  if (name.includes('food') || name.includes('restaurant') || name.includes('cafe')) return '🍲';
-  if (name.includes('education') || name.includes('coaching') || name.includes('school')) return '🎓';
-  if (name.includes('real estate') || name.includes('property')) return '🏢';
-  if (name.includes('jewelry') || name.includes('watch')) return '💎';
-  if (name.includes('event') || name.includes('wedding')) return '🎉';
-  if (name.includes('shoe') || name.includes('footwear')) return '👟';
-  if (name.includes('gym') || name.includes('fitness') || name.includes('workout')) return '🏋️';
-  return '📦';
-};
 
 export default function SearchFiltersBar({
   query,
@@ -199,10 +180,7 @@ export default function SearchFiltersBar({
                   : 'bg-[#f8f4ec] text-slate-600 border-[#e3dccb] hover:border-[#d99a3d]'
               }`}
             >
-              <span className="flex items-center gap-1">
-                <span>{getCategoryEmojiIcon(chipLabel)}</span>
-                <span>{chipLabel}</span>
-              </span>
+              <span>{chipLabel}</span>
             </button>
           );
         })}

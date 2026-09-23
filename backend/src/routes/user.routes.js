@@ -503,11 +503,13 @@ router.patch('/me', requireAuth, catchAsync(async (req, res) => {
 
 // ── Interest Selection (Post-Login) ────────────────────────────────────
 router.get('/me/interests', requireAuth, catchAsync(async (req, res) => {
-  const user = req.user;
+  const userDoc = await User.findById(req.user._id)
+    .select('customerProfile.interests customerProfile.interestsSelectedAt')
+    .lean();
   res.json({
     success: true,
-    interests: user.customerProfile?.interests || [],
-    interestsSelectedAt: user.customerProfile?.interestsSelectedAt || null,
+    interests: userDoc?.customerProfile?.interests || [],
+    interestsSelectedAt: userDoc?.customerProfile?.interestsSelectedAt || null,
   });
 }));
 
@@ -534,10 +536,17 @@ router.patch('/me/interests', requireAuth, catchAsync(async (req, res) => {
     },
     { returnDocument: 'after' }
   );
+
+  try {
+    const cache = require('../utils/cache');
+    await cache.deleteCache(`user:auth:${req.user._id}`);
+  } catch (err) {}
+
   res.json({
     success: true,
     interests: updated.customerProfile?.interests || [],
     interestsSelectedAt: updated.customerProfile?.interestsSelectedAt,
+    user: userService.serialize(updated),
   });
 }));
 
