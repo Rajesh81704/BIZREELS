@@ -79,6 +79,8 @@ class ListingRepository {
     condition,
     status,
     rating,
+    has_offer,
+    shopName,
     verified,
     uploadDate,
     sort,
@@ -90,6 +92,7 @@ class ListingRepository {
   }) {
     const skip = (page - 1) * limit;
     const match = { isDeleted: false };
+    const escapeRegex = (str) => String(str).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 
     if (vendor) {
       if (mongoose.Types.ObjectId.isValid(vendor)) {
@@ -98,11 +101,42 @@ class ListingRepository {
         match.vendor = vendor;
       }
     }
-    const escapeRegex = (str) => str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 
     if (type && type !== 'all') match.type = type;
     if (condition && condition !== 'all') match.condition = condition;
     if (status && status !== 'all') match.status = status;
+
+    // Filter by offers
+    if (has_offer === true || has_offer === 'true') {
+      match.$and = match.$and || [];
+      match.$and.push({
+        $or: [
+          { 'offers.0': { $exists: true } },
+          { discount: { $gt: 0 } },
+          { activeOffer: { $exists: true, $ne: null } }
+        ]
+      });
+    }
+
+    // Filter by Shop/Vendor Name
+    if (shopName && shopName.trim()) {
+      try {
+        const User = require('../models/User');
+        const shopRegex = new RegExp(escapeRegex(shopName.trim()), 'i');
+        const matchedVendors = await User.find({
+          $or: [
+            { name: shopRegex },
+            { 'vendorProfile.businessName': shopRegex },
+            { 'vendorProfile.shopName': shopRegex }
+          ]
+        }).select('_id').lean();
+        const vendorIds = matchedVendors.map(v => v._id);
+        match.$and = match.$and || [];
+        match.$and.push({ vendor: { $in: vendorIds } });
+      } catch (err) {
+        console.error('Error filtering listings by shopName:', err);
+      }
+    }
 
     // Price filters
     if (minPrice !== undefined || maxPrice !== undefined) {
@@ -176,22 +210,36 @@ class ListingRepository {
       }
     }
 
-    // Search query match (regex across multiple fields)
-    if (search) {
-      const escapedSearch = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-      const regex = new RegExp(escapedSearch, 'i');
-      const searchOr = [
-        { title: regex },
-        { description: regex },
-        { category: regex },
-        { subcategory: regex },
-        { brand: regex },
-        { tags: regex },
-        { 'labels.key': regex },
-        { 'labels.value': regex }
-      ];
+    // Multi-Word Tokenized Search query match
+    if (search && search.trim()) {
+      const tokens = search.trim().split(/\s+/).filter(Boolean);
+
+      const buildTokenOr = (token) => {
+        const tokenRegex = new RegExp(escapeRegex(token), 'i');
+        return [
+          { title: tokenRegex },
+          { description: tokenRegex },
+          { shortDescription: tokenRegex },
+          { category: tokenRegex },
+          { subcategory: tokenRegex },
+          { brand: tokenRegex },
+          { sku: tokenRegex },
+          { tags: tokenRegex },
+          { 'labels.key': tokenRegex },
+          { 'labels.value': tokenRegex },
+          { 'variants.name': tokenRegex },
+          { 'variants.sku': tokenRegex }
+        ];
+      };
+
       match.$and = match.$and || [];
-      match.$and.push({ $or: searchOr });
+      if (tokens.length > 1) {
+        tokens.forEach(token => {
+          match.$and.push({ $or: buildTokenOr(token) });
+        });
+      } else if (tokens.length === 1) {
+        match.$and.push({ $or: buildTokenOr(tokens[0]) });
+      }
     }
 
     const pipeline = [];
@@ -216,90 +264,74 @@ class ListingRepository {
     }
 
     // Dynamic Relevance score calculation
-    if (search) {
+    if (search && search.trim()) {
+      const cleanSearch = escapeRegex(search.trim());
+      const tokens = search.trim().split(/\s+/).filter(Boolean);
+
+      const scoreExpressions = [
+        // 1. Exact title match (case-insensitive) -> 1000 points
+        {
+          $cond: [
+            { $eq: [{ $toLower: '$title' }, search.trim().toLowerCase()] },
+            1000,
+            0
+          ]
+        },
+        // 2. Title partial match with full search phrase -> 500 points
+        {
+          $cond: [
+            { $regexMatch: { input: '$title', regex: cleanSearch, options: 'i' } },
+            500,
+            0
+          ]
+        },
+        // 3. Category/brand match -> 300 points
+        {
+          $cond: [
+            {
+              $or: [
+                { $regexMatch: { input: { $ifNull: ['$category', ''] }, regex: cleanSearch, options: 'i' } },
+                { $regexMatch: { input: { $ifNull: ['$subcategory', ''] }, regex: cleanSearch, options: 'i' } },
+                { $regexMatch: { input: { $ifNull: ['$brand', ''] }, regex: cleanSearch, options: 'i' } }
+              ]
+            },
+            300,
+            0
+          ]
+        },
+        // 4. Description match -> 200 points
+        {
+          $cond: [
+            { $regexMatch: { input: { $ifNull: ['$description', ''] }, regex: cleanSearch, options: 'i' } },
+            200,
+            0
+          ]
+        }
+      ];
+
+      // Add points for each individual token matching title (150 pts) or brand/tags (75 pts)
+      tokens.forEach(tok => {
+        const cleanTok = escapeRegex(tok);
+        scoreExpressions.push({
+          $cond: [
+            { $regexMatch: { input: '$title', regex: cleanTok, options: 'i' } },
+            150,
+            0
+          ]
+        });
+        scoreExpressions.push({
+          $cond: [
+            { $regexMatch: { input: { $ifNull: ['$brand', ''] }, regex: cleanTok, options: 'i' } },
+            75,
+            0
+          ]
+        });
+      });
+
       pipeline.push({
         $addFields: {
           relevanceScore: {
-            $add: [
-              // 1. Exact title match (case-insensitive) -> 1000 points
-              {
-                $cond: [
-                  { $eq: [{ $toLower: '$title' }, search.toLowerCase()] },
-                  1000,
-                  0
-                ]
-              },
-              // 2. Title partial match -> 500 points
-              {
-                $cond: [
-                  { $regexMatch: { input: '$title', regex: search, options: 'i' } },
-                  500,
-                  0
-                ]
-              },
-              // 3. Category/brand match -> 300 points
-              {
-                $cond: [
-                  {
-                    $or: [
-                      { $regexMatch: { input: { $ifNull: ['$category', ''] }, regex: search, options: 'i' } },
-                      { $regexMatch: { input: { $ifNull: ['$subcategory', ''] }, regex: search, options: 'i' } },
-                      { $regexMatch: { input: { $ifNull: ['$brand', ''] }, regex: search, options: 'i' } }
-                    ]
-                  },
-                  300,
-                  0
-                ]
-              },
-              // 4. Description match -> 200 points
-              {
-                $cond: [
-                  { $regexMatch: { input: { $ifNull: ['$description', ''] }, regex: search, options: 'i' } },
-                  200,
-                  0
-                ]
-              },
-              // 5. Specification/label match -> 100 points
-              {
-                $cond: [
-                  {
-                    $regexMatch: {
-                      input: {
-                        $reduce: {
-                          input: { $ifNull: ['$labels', []] },
-                          initialValue: '',
-                          in: { $concat: ['$$value', ' ', '$$this.key', ' ', '$$this.value'] }
-                        }
-                      },
-                      regex: search,
-                      options: 'i'
-                    }
-                  },
-                  100,
-                  0
-                ]
-              },
-              // 6. Tags match -> 50 points
-              {
-                $cond: [
-                  {
-                    $regexMatch: {
-                      input: {
-                        $reduce: {
-                          input: { $ifNull: ['$tags', []] },
-                          initialValue: '',
-                          in: { $concat: ['$$value', ' ', '$$this'] }
-                        }
-                      },
-                      regex: search,
-                      options: 'i'
-                    }
-                  },
-                  50,
-                  0
-                ]
-              }
-            ]
+            $add: scoreExpressions
           }
         }
       });

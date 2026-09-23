@@ -5,7 +5,8 @@ import {
   FiArrowLeft, FiMapPin, FiStar, FiHeart, FiBookmark, FiShare2,
   FiPhone, FiMessageSquare, FiShoppingCart, FiClock, FiCheckCircle,
   FiTruck, FiShield, FiCreditCard, FiPackage, FiTool, FiCheck, FiX,
-  FiChevronRight, FiCopy, FiAlertTriangle, FiLock, FiDollarSign, FiExternalLink
+  FiChevronRight, FiCopy, FiAlertTriangle, FiLock, FiDollarSign, FiExternalLink,
+  FiRotateCcw
 } from 'react-icons/fi';
 import { BsQrCode } from 'react-icons/bs';
 import { FaWhatsapp } from 'react-icons/fa';
@@ -398,12 +399,32 @@ export default function ListingDetailPage() {
   const validPrice = rawPriceCandidates.map(p => Number(p)).find(p => !isNaN(p) && p > 0);
   const priceVal = validPrice || 0;
   const originalPrice = Number(item.actualPrice || item.regularPrice || item.originalPrice || item.compareAtPrice || 0);
-  const discountPercent = (originalPrice > priceVal && priceVal > 0) ? Math.round(((originalPrice - priceVal) / originalPrice) * 100) : 0;
 
   const vendorObj = item.vendor || item.vendorId || item.seller || {};
+  const vendorId = vendorObj._id || vendorObj.id || (typeof item.vendor === 'string' ? item.vendor : null);
   const vendorName = vendorObj.shopName || vendorObj.businessName || vendorObj.name || item.vendorName || 'Vendor';
   const vendorAvatar = vendorObj.avatarUrl || vendorObj.logo || vendorObj.profile_pic || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80';
   const city = item.city || vendorObj.city || item.location?.city || 'Local Area';
+
+  // Dynamic variants state
+  const variants = Array.isArray(item.variants) ? item.variants.filter(v => v && v.name) : [];
+  const [selectedVariant, setSelectedVariant] = useState(null);
+
+  const effectivePrice = priceVal + (selectedVariant?.priceAdjustment || 0);
+  const effectiveStock = selectedVariant?.stock !== undefined && selectedVariant?.stock !== -1
+    ? selectedVariant.stock
+    : (item.stock !== undefined ? Number(item.stock) : 1);
+  const effectiveSku = selectedVariant?.sku || item.sku || '';
+
+  const discountPercent = (originalPrice > effectivePrice && effectivePrice > 0) ? Math.round(((originalPrice - effectivePrice) / originalPrice) * 100) : 0;
+
+  // Rich specifications & policies
+  const labels = Array.isArray(item.labels) ? item.labels.filter(l => l && (l.key || l.value)) : [];
+  const tags = Array.isArray(item.tags) ? item.tags.filter(Boolean) : [];
+  const shipping = item.shippingDetails || {};
+  const serviceDetails = item.serviceDetails || {};
+  const videos = Array.isArray(item.videos) ? item.videos.filter(Boolean) : (item.video ? [item.video] : []);
+  const [activeMediaTab, setActiveMediaTab] = useState('image'); // 'image' | 'video'
 
   // Check vendor verification status & onboarding credentials
   const isVendorVerified = (vendor) => {
@@ -578,7 +599,7 @@ export default function ListingDetailPage() {
     } catch {}
 
     const text = encodeURIComponent(
-      `Hello ${vendorName}!\nI found your listing "${item.title}" on BizReels (₹${priceVal.toLocaleString('en-IN')}).\nLink: ${window.location.href}\nI would like to inquire about details/availability.`
+      `Hello ${vendorName}!\nI found your listing "${item.title}" on BizReels (₹${effectivePrice.toLocaleString('en-IN')}${selectedVariant ? ` - ${selectedVariant.name}` : ''}).\nLink: ${window.location.href}\nI would like to inquire about details/availability.`
     );
     window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
   };
@@ -586,10 +607,15 @@ export default function ListingDetailPage() {
   // Add to Shopping Cart
   const handleAddToCart = async () => {
     try {
-      await cartApi.add({ listing_id: itemId, quantity: orderQty || 1 });
+      await cartApi.add({
+        listing_id: itemId,
+        quantity: orderQty || 1,
+        variant: selectedVariant?.name || undefined,
+        price: effectivePrice,
+      });
       notifyCartChanged();
       openCartDrawer();
-      toast.success(`"${item.title}" added to your cart!`);
+      toast.success(`"${item.title}${selectedVariant ? ` (${selectedVariant.name})` : ''}" added to your cart!`);
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Could not add item to cart.');
     }
@@ -607,16 +633,16 @@ export default function ListingDetailPage() {
     try {
       await api.post('/v1/orders', {
         listingId: itemId,
-        vendorId: vendorObj._id || vendorObj.id,
+        vendorId: vendorId || vendorObj._id || vendorObj.id,
         itemType: isService ? 'service' : 'product',
         quantity: orderQty,
         address: orderAddress,
         bookingDate: isService ? bookingDate : undefined,
         bookingTime: isService ? bookingTime : undefined,
         bookingTimeSlot: isService ? bookingTime : undefined,
-        notes: bookingNotes,
+        notes: selectedVariant ? `${bookingNotes ? bookingNotes + ' | ' : ''}Option: ${selectedVariant.name}` : bookingNotes,
         paymentMethod,
-        totalAmount: priceVal * orderQty,
+        totalAmount: effectivePrice * orderQty,
       });
 
       toast.success(isService ? 'Service booking request sent successfully!' : 'Order request submitted successfully!');
@@ -793,16 +819,52 @@ export default function ListingDetailPage() {
 
           {/* Left Column: Image Gallery (5 Cols) */}
           <div className="lg:col-span-6 space-y-4">
+            {videos.length > 0 && (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveMediaTab('image')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition cursor-pointer ${
+                    activeMediaTab === 'image'
+                      ? 'bg-[#241b15] text-[#d99a3d] border-[#241b15]'
+                      : 'bg-white text-slate-700 border-[#e3dccb] hover:bg-[#f8f4ec]'
+                  }`}
+                >
+                  Photos ({images.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveMediaTab('video')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition cursor-pointer flex items-center gap-1 ${
+                    activeMediaTab === 'video'
+                      ? 'bg-[#241b15] text-[#d99a3d] border-[#241b15]'
+                      : 'bg-white text-slate-700 border-[#e3dccb] hover:bg-[#f8f4ec]'
+                  }`}
+                >
+                  <span>▶ Video Showcase</span>
+                </button>
+              </div>
+            )}
+
             <div className="relative aspect-square w-full rounded-2xl bg-white border border-[#e3dccb] overflow-hidden shadow-sm flex items-center justify-center">
-              <img
-                src={resolveMediaUrl(images[selectedImgIdx] || images[0])}
-                alt={item.title || 'Product Image'}
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=600&q=80';
-                }}
-                className="w-full h-full object-contain p-4 transition-all duration-300"
-              />
+              {activeMediaTab === 'video' && videos[0] ? (
+                <video
+                  controls
+                  autoPlay
+                  src={resolveMediaUrl(videos[0])}
+                  className="w-full h-full object-contain bg-black"
+                />
+              ) : (
+                <img
+                  src={selectedVariant?.imageUrl ? resolveMediaUrl(selectedVariant.imageUrl) : resolveMediaUrl(images[selectedImgIdx] || images[0])}
+                  alt={item.title || 'Product Image'}
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=600&q=80';
+                  }}
+                  className="w-full h-full object-contain p-4 transition-all duration-300"
+                />
+              )}
 
               {/* Type Badge */}
               <span className={`absolute top-4 left-4 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider shadow-sm border ${
@@ -820,14 +882,17 @@ export default function ListingDetailPage() {
             </div>
 
             {/* Thumbnail Selector */}
-            {images.length > 1 && (
+            {activeMediaTab === 'image' && images.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
                 {images.map((imgUrl, idx) => (
                   <button
                     key={idx}
-                    onClick={() => setSelectedImgIdx(idx)}
+                    onClick={() => {
+                      setSelectedImgIdx(idx);
+                      if (selectedVariant?.imageUrl) setSelectedVariant(null);
+                    }}
                     className={`w-16 h-16 rounded-xl border-2 overflow-hidden flex-shrink-0 bg-white transition cursor-pointer ${
-                      selectedImgIdx === idx ? 'border-[#d99a3d] ring-2 ring-[#d99a3d]/20' : 'border-[#e3dccb] opacity-70 hover:opacity-100'
+                      selectedImgIdx === idx && !selectedVariant?.imageUrl ? 'border-[#d99a3d] ring-2 ring-[#d99a3d]/20' : 'border-[#e3dccb] opacity-70 hover:opacity-100'
                     }`}
                   >
                     <img src={resolveMediaUrl(imgUrl)} alt="" className="w-full h-full object-cover" />
@@ -881,17 +946,52 @@ export default function ListingDetailPage() {
                     </span>
                   )}
                 </div>
+
+                {/* Key Product Metadata Chips: Brand, SKU, Condition, Stock, Min Order */}
+                <div className="flex flex-wrap items-center gap-2 pt-1.5">
+                  {item.brand && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black bg-[#241b15] text-[#d99a3d] border border-[#241b15]">
+                      🏷️ {item.brand}
+                    </span>
+                  )}
+                  {effectiveSku && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-[#f8f4ec] text-slate-700 border border-[#e3dccb]">
+                      SKU: {effectiveSku}
+                    </span>
+                  )}
+                  {item.condition && item.condition !== 'not_applicable' && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-[#f8f4ec] text-slate-700 border border-[#e3dccb] capitalize">
+                      Condition: {item.condition}
+                    </span>
+                  )}
+                  {!isService && (
+                    effectiveStock > 0 ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <FiCheck size={12} /> {effectiveStock} In Stock
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                        <FiX size={12} /> Out of Stock
+                      </span>
+                    )
+                  )}
+                  {item.minOrderQty > 1 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                      Min Order: {item.minOrderQty} {item.unit || 'units'}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Price Block */}
               <div className="p-4 rounded-xl bg-[#f8f4ec] border border-[#e3dccb] flex items-baseline justify-between gap-4">
                 <div>
                   <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
-                    Price
+                    Price {selectedVariant ? `(${selectedVariant.name})` : ''}
                   </div>
                   <div className="flex items-baseline gap-2.5">
                     <span className="text-3xl font-black text-[#1a1a1a]">
-                      ₹{priceVal.toLocaleString('en-IN')}
+                      ₹{effectivePrice.toLocaleString('en-IN')}
                     </span>
                     <span className="text-xs font-bold text-slate-500">
                       /{item.unit || (isService ? 'service' : 'piece')}
@@ -899,7 +999,7 @@ export default function ListingDetailPage() {
                   </div>
                 </div>
 
-                {originalPrice > priceVal && (
+                {originalPrice > effectivePrice && (
                   <div className="text-right">
                     <div className="text-[10px] font-bold text-slate-400 uppercase">Original</div>
                     <div className="text-sm text-slate-400 line-through font-bold">
@@ -908,6 +1008,55 @@ export default function ListingDetailPage() {
                   </div>
                 )}
               </div>
+
+              {/* Variants Selector */}
+              {variants.length > 0 && (
+                <div className="space-y-2 p-3.5 rounded-xl bg-[#f8f4ec]/60 border border-[#e3dccb] shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-[#1a1a1a] uppercase tracking-wider">
+                      Select Variant / Option:
+                    </span>
+                    {selectedVariant && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedVariant(null)}
+                        className="text-[10.5px] font-bold text-[#d99a3d] hover:underline cursor-pointer"
+                      >
+                        Reset Option
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {variants.map((v, vIdx) => {
+                      const isSel = selectedVariant?.name === v.name;
+                      return (
+                        <button
+                          key={vIdx}
+                          type="button"
+                          onClick={() => setSelectedVariant(isSel ? null : v)}
+                          className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-2 ${
+                            isSel
+                              ? 'bg-[#241b15] text-[#d99a3d] border-[#241b15] shadow-xs ring-2 ring-[#d99a3d]/20'
+                              : 'bg-white text-[#1a1a1a] border-[#e3dccb] hover:border-[#d99a3d]'
+                          }`}
+                        >
+                          {v.imageUrl && (
+                            <img src={resolveMediaUrl(v.imageUrl)} alt="" className="w-5 h-5 rounded-md object-cover" />
+                          )}
+                          <span>{v.name}</span>
+                          {v.priceAdjustment !== undefined && v.priceAdjustment !== 0 && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-black ${
+                              isSel ? 'bg-amber-400/20 text-amber-300' : 'bg-[#f8f4ec] text-slate-700'
+                            }`}>
+                              {v.priceAdjustment > 0 ? `+₹${v.priceAdjustment}` : `-₹${Math.abs(v.priceAdjustment)}`}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Active Offer Banner */}
               {item.activeOffer && item.activeOffer.validTill && (
@@ -927,6 +1076,122 @@ export default function ListingDetailPage() {
                   {item.description || 'No detailed description available for this item.'}
                 </p>
               </div>
+
+              {/* Technical Specifications & Attributes */}
+              {labels.length > 0 && (
+                <div className="space-y-2.5 pt-2 border-t border-[#e3dccb]">
+                  <h3 className="text-xs font-black text-[#1a1a1a] uppercase tracking-wider flex items-center gap-1.5">
+                    <span>📋 Product Specifications & Attributes</span>
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {labels.map((lbl, lIdx) => (
+                      <div key={lIdx} className="p-2.5 rounded-xl bg-[#f8f4ec] border border-[#e3dccb] flex items-center justify-between gap-2">
+                        <span className="font-extrabold text-slate-500 uppercase text-[10.5px]">{lbl.key}</span>
+                        <span className="font-black text-[#1a1a1a] text-right truncate">{lbl.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Highlights Bento Cards: Warranty, Return Policy, Shipping, GST */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                {/* Warranty Card */}
+                {item.warranty && (
+                  <div className="p-3.5 rounded-xl bg-[#f8f4ec]/80 border border-[#e3dccb] shadow-2xs space-y-1">
+                    <div className="flex items-center gap-2 text-amber-800 font-extrabold text-xs">
+                      <FiShield size={15} className="text-[#d99a3d]" />
+                      <span>Warranty Protection</span>
+                    </div>
+                    <p className="text-xs font-semibold text-[#1a1a1a]">{item.warranty}</p>
+                  </div>
+                )}
+
+                {/* Return Policy Card */}
+                {item.returnPolicy && (
+                  <div className="p-3.5 rounded-xl bg-[#f8f4ec]/80 border border-[#e3dccb] shadow-2xs space-y-1">
+                    <div className="flex items-center gap-2 text-blue-800 font-extrabold text-xs">
+                      <FiRotateCcw size={15} />
+                      <span>Return & Exchange Policy</span>
+                    </div>
+                    <p className="text-xs font-semibold text-[#1a1a1a]">{item.returnPolicy}</p>
+                  </div>
+                )}
+
+                {/* Shipping & Delivery Card */}
+                {(shipping.freeShipping || shipping.estimatedDays || shipping.weight) && (
+                  <div className="p-3.5 rounded-xl bg-[#f8f4ec]/80 border border-[#e3dccb] shadow-2xs space-y-1">
+                    <div className="flex items-center gap-2 text-emerald-800 font-extrabold text-xs">
+                      <FiTruck size={15} />
+                      <span>Shipping & Delivery</span>
+                    </div>
+                    <p className="text-xs font-semibold text-[#1a1a1a]">
+                      {shipping.freeShipping ? 'Free Delivery Included' : 'Standard Shipping'}
+                      {shipping.estimatedDays ? ` • In ${shipping.estimatedDays} business days` : ''}
+                      {shipping.weight ? ` • ${shipping.weight} kg` : ''}
+                    </p>
+                  </div>
+                )}
+
+                {/* GST / Tax Card */}
+                {item.gst && (
+                  <div className="p-3.5 rounded-xl bg-[#f8f4ec]/80 border border-[#e3dccb] shadow-2xs space-y-1">
+                    <div className="flex items-center gap-2 text-purple-800 font-extrabold text-xs">
+                      <FiCheckCircle size={15} />
+                      <span>Tax Invoice Available</span>
+                    </div>
+                    <p className="text-xs font-semibold text-[#1a1a1a]">GSTIN: {item.gst}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Tags */}
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {tags.map((tag, tIdx) => (
+                    <span key={tIdx} className="px-2.5 py-0.5 rounded-full bg-[#f8f4ec] border border-[#e3dccb] text-[10.5px] font-bold text-slate-600">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Service Execution Details (when service) */}
+              {isService && (serviceDetails.serviceType || serviceDetails.durationText || serviceDetails.workingHours) && (
+                <div className="p-4 rounded-xl bg-[#f8f4ec]/80 border border-[#e3dccb] space-y-2.5 shadow-2xs">
+                  <h4 className="text-xs font-black text-[#1a1a1a] uppercase tracking-wider flex items-center gap-1.5">
+                    <FiTool className="text-[#d99a3d]" />
+                    <span>Service Execution Details</span>
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {serviceDetails.serviceType && (
+                      <div className="p-2 rounded-lg bg-white border border-[#e3dccb]">
+                        <span className="text-[10px] text-slate-500 font-bold block uppercase">Type</span>
+                        <span className="font-extrabold text-[#1a1a1a]">{serviceDetails.serviceType}</span>
+                      </div>
+                    )}
+                    {serviceDetails.durationText && (
+                      <div className="p-2 rounded-lg bg-white border border-[#e3dccb]">
+                        <span className="text-[10px] text-slate-500 font-bold block uppercase">Duration</span>
+                        <span className="font-extrabold text-[#1a1a1a]">{serviceDetails.durationText}</span>
+                      </div>
+                    )}
+                    {serviceDetails.workingHours && (
+                      <div className="p-2 rounded-lg bg-white border border-[#e3dccb] col-span-2">
+                        <span className="text-[10px] text-slate-500 font-bold block uppercase">Hours & Availability</span>
+                        <span className="font-extrabold text-[#1a1a1a]">
+                          {serviceDetails.workingDays?.join(', ')} • {serviceDetails.workingHours}
+                        </span>
+                      </div>
+                    )}
+                    {serviceDetails.emergencyService24x7 && (
+                      <div className="col-span-2 px-2.5 py-1 rounded bg-amber-50 border border-amber-200 text-[11px] font-bold text-amber-900 flex items-center gap-1.5">
+                        <span>⚡ 24x7 Emergency Service Available</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="pt-4 border-t border-[#e3dccb] space-y-3">
@@ -964,7 +1229,7 @@ export default function ListingDetailPage() {
 
                   <button
                     type="button"
-                    onClick={() => navigate(`/customer/chat?vendorId=${vendorObj._id || vendorObj.id}`)}
+                    onClick={() => navigate(`/customer/chat?vendorId=${vendorId || vendorObj._id || vendorObj.id}`)}
                     className="py-2.5 px-3 rounded-xl bg-white border border-[#e3dccb] hover:bg-[#f8f4ec] text-[#1a1a1a] text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <FiMessageSquare size={16} className="text-[#d99a3d]" />
@@ -996,8 +1261,8 @@ export default function ListingDetailPage() {
               </div>
 
               <Link
-                to={`/customer/search?vendorId=${vendorObj._id || vendorObj.id}`}
-                className="px-3 py-1.5 rounded-lg bg-[#f8f4ec] border border-[#e3dccb] text-xs font-bold text-[#1a1a1a] hover:bg-[#241b15] hover:text-[#d99a3d] transition flex-shrink-0"
+                to={vendorId ? `/customer/vendor/${vendorId}` : '#'}
+                className="px-3 py-1.5 rounded-lg bg-[#f8f4ec] border border-[#e3dccb] text-xs font-bold text-[#1a1a1a] hover:bg-[#241b15] hover:text-[#d99a3d] transition flex-shrink-0 shadow-2xs"
               >
                 View Store
               </Link>

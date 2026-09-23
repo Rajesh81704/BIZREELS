@@ -22,7 +22,15 @@ export default function SearchListingsPage() {
   const { productId } = useParams();
   const [searchParams] = useSearchParams();
   const queryProductId = productId || searchParams.get('productId') || searchParams.get('id');
+  const queryVendorId = searchParams.get('vendorId') || searchParams.get('vendor') || '';
   const { user } = useAuth();
+
+  const [vendorFilter, setVendorFilter] = useState(queryVendorId);
+
+  useEffect(() => {
+    const vId = searchParams.get('vendorId') || searchParams.get('vendor') || '';
+    setVendorFilter(vId);
+  }, [searchParams]);
 
   const [query, setQuery] = useState('');
   const [type, setType] = useState('all'); // 'all' | 'product' | 'service'
@@ -630,6 +638,7 @@ export default function SearchListingsPage() {
     shopName,
     openNow,
     deliveryType,
+    vendorFilter,
   ]);
 
   const fetchListings = async (pageNum = 1) => {
@@ -638,6 +647,7 @@ export default function SearchListingsPage() {
       const params = new URLSearchParams();
       params.append('page', pageNum);
       params.append('limit', '50');
+      if (vendorFilter) params.append('vendor', vendorFilter);
       if (type !== 'all') params.append('type', type);
       if (category !== 'all') params.append('category', category);
       if (subcategory !== 'all') params.append('subcategory', subcategory);
@@ -874,6 +884,30 @@ export default function SearchListingsPage() {
           deliveryType={deliveryType}
           toggleDeliveryType={toggleDeliveryType}
         />
+
+        {/* ── Active Vendor Filter Banner ── */}
+        {vendorFilter && (
+          <div className="flex items-center justify-between gap-3 p-3.5 bg-amber-50/80 border border-[#d99a3d]/50 rounded-xl text-xs text-[#241b15] font-bold shadow-2xs animate-fade-in">
+            <div className="flex items-center gap-2.5">
+              <span className="p-1.5 rounded-lg bg-[#241b15] text-[#d99a3d] text-sm leading-none">🏪</span>
+              <div>
+                <span className="font-extrabold text-[#1a1a1a]">Filtered Store View</span>
+                <p className="text-[11px] text-slate-600 font-medium">Showing products & services from specific vendor</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setVendorFilter('');
+                navigate('/customer/search', { replace: true });
+              }}
+              className="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-[#1a1a1a] text-xs font-black border border-[#e3dccb] cursor-pointer flex items-center gap-1.5 transition shadow-2xs hover:border-[#d99a3d]"
+            >
+              <span>Clear Filter</span>
+              <span className="text-red-500 font-bold">✕</span>
+            </button>
+          </div>
+        )}
 
         {/* ── Search Results Grid ── */}
         {loading ? (

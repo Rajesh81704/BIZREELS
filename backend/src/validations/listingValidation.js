@@ -66,6 +66,9 @@ const listingValidation = {
     query('vendor')
       .optional({ checkFalsy: true })
       .isMongoId().withMessage('Invalid vendor ID.'),
+    query('vendorId')
+      .optional({ checkFalsy: true })
+      .isMongoId().withMessage('Invalid vendor ID.'),
     query('type')
       .optional({ checkFalsy: true })
       .isIn(['product', 'service']).withMessage('Type must be "product" or "service".'),
@@ -96,6 +99,15 @@ const listingValidation = {
     query('rating')
       .optional({ checkFalsy: true })
       .isFloat({ min: 0, max: 5 }).withMessage('Rating must be between 0 and 5.'),
+    query('minRating')
+      .optional({ checkFalsy: true })
+      .isFloat({ min: 0, max: 5 }).withMessage('Rating must be between 0 and 5.'),
+    query('has_offer')
+      .optional({ checkFalsy: true })
+      .isString().withMessage('has_offer must be a string or boolean.'),
+    query('shopName')
+      .optional({ checkFalsy: true })
+      .isString().withMessage('shopName must be a string.'),
     query('lat')
       .optional({ checkFalsy: true })
       .isFloat({ min: -90, max: 90 }).withMessage('Invalid latitude coordinates.'),
