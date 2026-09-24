@@ -1,30 +1,40 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
   Dimensions,
   Linking,
   RefreshControl,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BrandColors, FontSize, Spacing } from '@/constants/theme';
-import { api } from '@/lib/api';
-import { resolveImageUrl } from '@/utils/image';
+import { FontSize, Radius, Spacing } from '@/constants/theme';
+import { useAuth } from '@/features/auth/context';
 import { useAddToCart } from '@/features/cart/queries';
 import { useFollowUser, useUnfollowUser } from '@/features/reels/queries';
-import { useAuth } from '@/features/auth/context';
+import { api } from '@/lib/api';
+import { resolveImageUrl } from '@/utils/image';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const COLUMN_WIDTH = (SCREEN_WIDTH - Spacing.four * 3) / 2;
+
+// Theme Design System Tokens matching Web & App
+const GOLD = '#D99A3D';
+const ESPRESSO = '#241B15';
+const BG_MATTE = '#F8F4EC';
+const CARD_BG = '#FFFFFF';
+const BORDER_COLOR = '#E3DCCB';
+const TEXT_MAIN = '#0F172A';
+const TEXT_MUTED = '#64748B';
 
 interface VendorDetails {
   id: string;
@@ -66,6 +76,7 @@ interface ProductItem {
   images?: string[];
   thumbnailUrl?: string;
   type?: 'product' | 'service';
+  category_type?: 'product' | 'service';
   vendor?: any;
 }
 
@@ -242,10 +253,20 @@ export default function PublicVendorProfileScreen() {
     }
   };
 
+  const handleShare = async () => {
+    try {
+      const storeName = vendor?.business_name || vendor?.name || 'Vendor Store';
+      await Share.share({
+        message: `Discover products, services & reels from ${storeName} on BizReels! https://bizreels.in/vendor/${vendorId}`,
+        url: `https://bizreels.in/vendor/${vendorId}`,
+      });
+    } catch (err) {}
+  };
+
   if (loading) {
     return (
       <View style={[styles.centerContainer, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={YELLOW} />
+        <ActivityIndicator size="large" color={GOLD} />
         <Text style={styles.loadingText}>Loading Vendor Store...</Text>
       </View>
     );
@@ -254,9 +275,9 @@ export default function PublicVendorProfileScreen() {
   if (!vendor || !vendorId) {
     return (
       <View style={[styles.centerContainer, { paddingTop: insets.top }]}>
-        <Ionicons name="storefront-outline" size={48} color="rgba(255,255,255,0.3)" />
+        <Ionicons name="storefront-outline" size={48} color={TEXT_MUTED} />
         <Text style={styles.notFoundTitle}>Vendor Profile Not Found</Text>
-        <Text style={styles.notFoundSub}>The vendor profile you requested could not be located.</Text>
+        <Text style={styles.notFoundSub}>The vendor store you requested could not be located.</Text>
         <TouchableOpacity style={styles.backHomeBtn} onPress={() => router.back()}>
           <Text style={styles.backHomeBtnText}>Go Back</Text>
         </TouchableOpacity>
@@ -290,23 +311,24 @@ export default function PublicVendorProfileScreen() {
   const servicesList = products.filter((item: any) => (item.type || item.category_type) === 'service');
 
   return (
-    <View style={styles.container}>
-      {/* Sticky Header Bar */}
-      <View style={[styles.headerBar, { paddingTop: insets.top + Spacing.two }]}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header Bar */}
+      <View style={styles.headerBar}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
+          <Ionicons name="arrow-back" size={20} color={GOLD} />
         </TouchableOpacity>
-        <View style={{ flex: 1, paddingHorizontal: 8 }}>
+        <View style={{ flex: 1, paddingHorizontal: 6 }}>
+          <Text style={styles.headerBadge}>OFFICIAL VENDOR STORE ✦</Text>
           <Text style={styles.headerTitle} numberOfLines={1}>
             {vendor.business_name || vendor.name}
           </Text>
-          <Text style={styles.headerSub} numberOfLines={1}>
-            {vendor.category || (isVerified ? 'Verified Business Store' : 'Local Business Store')}
-          </Text>
         </View>
+        <TouchableOpacity style={styles.headerBtn} onPress={handleShare}>
+          <Ionicons name="share-social-outline" size={18} color={GOLD} />
+        </TouchableOpacity>
         {!hideCustomerActions && (
           <TouchableOpacity style={styles.headerBtn} onPress={handleChat}>
-            <Ionicons name="chatbubble-ellipses-outline" size={20} color={YELLOW} />
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color={GOLD} />
           </TouchableOpacity>
         )}
       </View>
@@ -314,14 +336,16 @@ export default function PublicVendorProfileScreen() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={YELLOW} />}>
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GOLD} colors={[GOLD]} />}>
+        
         {/* Cover Banner */}
         <View style={styles.coverBox}>
           <Image source={{ uri: bannerUri }} style={styles.coverImage} contentFit="cover" />
           <View style={styles.coverOverlay} />
         </View>
 
-        {/* Profile Header Info Card */}
+        {/* Floating Profile Header Card */}
         <View style={styles.profileHeaderCard}>
           <View style={styles.avatarRow}>
             <View style={styles.avatarBorder}>
@@ -329,27 +353,28 @@ export default function PublicVendorProfileScreen() {
             </View>
             <View style={styles.headerBtnGroup}>
               {hideCustomerActions ? (
-                <TouchableOpacity style={styles.chatBtn} onPress={() => router.push('/vendor/settings' as any)}>
-                  <Ionicons name="create-outline" size={14} color={BLACK} />
-                  <Text style={styles.chatBtnText}>Edit Profile</Text>
+                <TouchableOpacity style={styles.editBtn} onPress={() => router.push('/vendor/settings' as any)}>
+                  <Ionicons name="create-outline" size={14} color={GOLD} />
+                  <Text style={styles.editBtnText}>Edit Profile</Text>
                 </TouchableOpacity>
               ) : (
                 <>
                   <TouchableOpacity
                     style={[styles.followBtn, isFollowing && styles.followBtnActive]}
-                    onPress={handleToggleFollow}>
+                    onPress={handleToggleFollow}
+                    activeOpacity={0.88}>
                     <Ionicons
                       name={isFollowing ? 'checkmark-circle' : 'person-add-outline'}
                       size={14}
-                      color={isFollowing ? '#fff' : BLACK}
+                      color={isFollowing ? '#fff' : ESPRESSO}
                     />
                     <Text style={[styles.followBtnText, isFollowing && styles.followBtnTextActive]}>
                       {isFollowing ? 'Following' : 'Follow Store'}
                     </Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.chatBtn} onPress={handleChat}>
-                    <Ionicons name="chatbubble-ellipses" size={14} color={BLACK} />
+                  <TouchableOpacity style={styles.chatBtn} onPress={handleChat} activeOpacity={0.88}>
+                    <Ionicons name="chatbubble-ellipses" size={14} color={GOLD} />
                     <Text style={styles.chatBtnText}>Chat</Text>
                   </TouchableOpacity>
                 </>
@@ -359,50 +384,56 @@ export default function PublicVendorProfileScreen() {
 
           {/* Business Details */}
           <View style={styles.businessInfo}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <View style={styles.businessTitleRow}>
               <Text style={styles.businessTitle}>
                 {vendor.business_name || vendor.name}
               </Text>
               {isVerified ? (
                 <View style={styles.verifiedBadge}>
-                  <Ionicons name="shield-checkmark" size={12} color="#fff" />
-                  <Text style={styles.verifiedBadgeText}>VERIFIED STORE</Text>
+                  <Ionicons name="shield-checkmark" size={12} color="#059669" />
+                  <Text style={styles.verifiedBadgeText}>VERIFIED SUPPLIER</Text>
                 </View>
               ) : (
-                <View style={[styles.verifiedBadge, { backgroundColor: '#F59E0B' }]}>
-                  <Ionicons name="shield-outline" size={12} color="#fff" />
-                  <Text style={styles.verifiedBadgeText}>UNVERIFIED</Text>
+                <View style={styles.unverifiedBadge}>
+                  <Ionicons name="shield-outline" size={12} color="#D97706" />
+                  <Text style={styles.unverifiedBadgeText}>UNVERIFIED</Text>
                 </View>
               )}
             </View>
 
-            {/* Unverified Owner Alert Prompt */}
+            {/* Unverified Owner Alert Banner */}
             {isOwner && !isVerified && (
-              <View style={{ backgroundColor: '#241B15', borderWidth: 1, borderColor: '#D99A3D', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700', flex: 1, marginRight: 8 }}>
-                  ⚠️ Business Unverified: Complete KYC verification to earn your official 🟢 Verified Vendor badge.
+              <View style={styles.ownerAlertBox}>
+                <Ionicons name="warning-outline" size={16} color={GOLD} />
+                <Text style={styles.ownerAlertText}>
+                  Complete KYC verification to display your official Verified Supplier badge.
                 </Text>
-                <TouchableOpacity onPress={() => router.push('/vendor/verification' as any)} style={{ backgroundColor: YELLOW, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}>
-                  <Text style={{ color: BLACK, fontSize: 11, fontWeight: '900' }}>Verify Now</Text>
+                <TouchableOpacity onPress={() => router.push('/vendor/verification' as any)} style={styles.verifyBtn}>
+                  <Text style={styles.verifyBtnText}>Verify Now</Text>
                 </TouchableOpacity>
               </View>
             )}
 
-            <Text style={styles.categorySub}>
-              {vendor.category ? `${vendor.category}` : 'General Business'}
-              {vendor.subcategory ? ` • ${vendor.subcategory}` : ''}
-            </Text>
-
-            {!!vendor.address || !!vendor.city ? (
-              <View style={styles.locationRow}>
-                <Ionicons name="location-outline" size={14} color={YELLOW} />
-                <Text style={styles.locationText} numberOfLines={1}>
-                  {vendor.address || `${vendor.city || ''}, ${vendor.state || ''}`}
+            <View style={styles.categoryPillRow}>
+              <View style={styles.categoryPill}>
+                <Ionicons name="grid-outline" size={12} color={GOLD} />
+                <Text style={styles.categoryPillText}>
+                  {vendor.category ? vendor.category : 'General Business Store'}
+                  {vendor.subcategory ? ` • ${vendor.subcategory}` : ''}
                 </Text>
               </View>
-            ) : null}
+            </View>
 
-            {!!vendor.description && (
+            {(Boolean(vendor.address) || Boolean(vendor.city)) && (
+              <View style={styles.locationRow}>
+                <Ionicons name="location-outline" size={14} color={GOLD} />
+                <Text style={styles.locationText} numberOfLines={1}>
+                  {vendor.address || `${vendor.city || ''}${vendor.state ? `, ${vendor.state}` : ''}`}
+                </Text>
+              </View>
+            )}
+
+            {Boolean(vendor.description) && (
               <Text style={styles.descriptionText} numberOfLines={3}>
                 {vendor.description}
               </Text>
@@ -412,51 +443,63 @@ export default function PublicVendorProfileScreen() {
           {/* Action Row */}
           {!hideCustomerActions && (
             <View style={styles.contactActionRow}>
-              <TouchableOpacity style={styles.actionPill} onPress={handleCall}>
-                <Ionicons name="call-outline" size={14} color={YELLOW} />
-                <Text style={styles.actionPillText}>Call Store</Text>
+              <TouchableOpacity style={styles.actionPill} onPress={handleCall} activeOpacity={0.88}>
+                <Ionicons name="call-outline" size={14} color={GOLD} />
+                <Text style={styles.actionPillText}>Call Seller</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.actionPill} onPress={handleChat}>
-                <Ionicons name="paper-plane-outline" size={14} color={YELLOW} />
+              <TouchableOpacity style={styles.actionPill} onPress={handleChat} activeOpacity={0.88}>
+                <Ionicons name="paper-plane-outline" size={14} color={GOLD} />
                 <Text style={styles.actionPillText}>Send Inquiry</Text>
               </TouchableOpacity>
             </View>
           )}
 
-          {/* Metrics Grid */}
+          {/* Metrics Grid Cards */}
           <View style={styles.metricsRow}>
             <View style={styles.metricChip}>
-              <Text style={styles.metricVal}>{vendor.stats?.products ?? productsList.length}</Text>
+              <View style={styles.metricIconBoxEmerald}>
+                <Ionicons name="bag-handle-outline" size={15} color="#059669" />
+              </View>
+              <Text style={[styles.metricVal, { color: '#059669' }]}>{vendor.stats?.products ?? productsList.length}</Text>
               <Text style={styles.metricLabel}>Products</Text>
             </View>
-            <View style={styles.metricDivider} />
+            
             <View style={styles.metricChip}>
-              <Text style={styles.metricVal}>{vendor.stats?.services ?? servicesList.length}</Text>
+              <View style={styles.metricIconBoxBlue}>
+                <Ionicons name="construct-outline" size={15} color="#2563EB" />
+              </View>
+              <Text style={[styles.metricVal, { color: '#2563EB' }]}>{vendor.stats?.services ?? servicesList.length}</Text>
               <Text style={styles.metricLabel}>Services</Text>
             </View>
-            <View style={styles.metricDivider} />
+
             <View style={styles.metricChip}>
-              <Text style={styles.metricVal}>{vendor.stats?.posts ?? reels.length}</Text>
+              <View style={styles.metricIconBoxPurple}>
+                <Ionicons name="videocam-outline" size={15} color="#7C3AED" />
+              </View>
+              <Text style={[styles.metricVal, { color: '#7C3AED' }]}>{vendor.stats?.posts ?? reels.length}</Text>
               <Text style={styles.metricLabel}>Reels</Text>
             </View>
-            <View style={styles.metricDivider} />
+
             <View style={styles.metricChip}>
-              <Text style={styles.metricVal}>{(vendor.rating_avg || 4.9).toFixed(1)} ★</Text>
+              <View style={styles.metricIconBoxAmber}>
+                <Ionicons name="star" size={15} color="#D97706" />
+              </View>
+              <Text style={[styles.metricVal, { color: '#D97706' }]}>{(vendor.rating_avg || 4.9).toFixed(1)} ★</Text>
               <Text style={styles.metricLabel}>Rating</Text>
             </View>
           </View>
         </View>
 
-        {/* Tab Headers */}
+        {/* Tab Header Navigation */}
         <View style={styles.tabBar}>
           <TouchableOpacity
             style={[styles.tabBtn, activeTab === 'products' && styles.tabBtnActive]}
             onPress={() => setActiveTab('products')}>
             <Ionicons
               name="bag-handle-outline"
-              size={16}
-              color={activeTab === 'products' ? YELLOW : 'rgba(255,255,255,0.6)'}
+              size={15}
+              color={activeTab === 'products' ? GOLD : TEXT_MUTED}
             />
             <Text style={[styles.tabBtnText, activeTab === 'products' && styles.tabBtnTextActive]}>
               Products ({productsList.length})
@@ -468,8 +511,8 @@ export default function PublicVendorProfileScreen() {
             onPress={() => setActiveTab('services')}>
             <Ionicons
               name="construct-outline"
-              size={16}
-              color={activeTab === 'services' ? YELLOW : 'rgba(255,255,255,0.6)'}
+              size={15}
+              color={activeTab === 'services' ? GOLD : TEXT_MUTED}
             />
             <Text style={[styles.tabBtnText, activeTab === 'services' && styles.tabBtnTextActive]}>
               Services ({servicesList.length})
@@ -481,8 +524,8 @@ export default function PublicVendorProfileScreen() {
             onPress={() => setActiveTab('reels')}>
             <Ionicons
               name="videocam-outline"
-              size={16}
-              color={activeTab === 'reels' ? YELLOW : 'rgba(255,255,255,0.6)'}
+              size={15}
+              color={activeTab === 'reels' ? GOLD : TEXT_MUTED}
             />
             <Text style={[styles.tabBtnText, activeTab === 'reels' && styles.tabBtnTextActive]}>
               Reels ({reels.length})
@@ -494,11 +537,11 @@ export default function PublicVendorProfileScreen() {
             onPress={() => setActiveTab('about')}>
             <Ionicons
               name="information-circle-outline"
-              size={16}
-              color={activeTab === 'about' ? YELLOW : 'rgba(255,255,255,0.6)'}
+              size={15}
+              color={activeTab === 'about' ? GOLD : TEXT_MUTED}
             />
             <Text style={[styles.tabBtnText, activeTab === 'about' && styles.tabBtnTextActive]}>
-              About Store
+              About
             </Text>
           </TouchableOpacity>
         </View>
@@ -518,21 +561,22 @@ export default function PublicVendorProfileScreen() {
                     <TouchableOpacity
                       key={item._id || item.id}
                       style={styles.productCard}
-                      onPress={() => router.push(`/listing/${item._id || item.id}`)}>
+                      onPress={() => router.push(`/listing/${item._id || item.id}`)}
+                      activeOpacity={0.92}>
                       <Image source={{ uri: imgUri }} style={styles.productImage} contentFit="cover" />
                       <View style={styles.productInfo}>
                         <Text style={styles.productTitle} numberOfLines={2}>
                           {item.title}
                         </Text>
                         <View style={styles.productPriceRow}>
-                          <Text style={styles.productPrice}>₹{price}</Text>
+                          <Text style={styles.productPrice}>₹{price.toLocaleString('en-IN')}</Text>
                           {!hideCustomerActions && (
                             <TouchableOpacity
                               style={styles.addCartSmallBtn}
                               onPress={() =>
                                 addToCartMutation.mutate({ listing_id: (item._id || item.id || ''), quantity: 1 })
                               }>
-                              <Ionicons name="cart" size={14} color={BLACK} />
+                              <Ionicons name="cart" size={14} color={ESPRESSO} />
                             </TouchableOpacity>
                           )}
                         </View>
@@ -543,9 +587,9 @@ export default function PublicVendorProfileScreen() {
               </View>
             ) : (
               <View style={styles.emptyCard}>
-                <Ionicons name="basket-outline" size={36} color="rgba(255,255,255,0.3)" />
+                <Ionicons name="basket-outline" size={40} color={TEXT_MUTED} />
                 <Text style={styles.emptyTitle}>No Products Cataloged</Text>
-                <Text style={styles.emptySub}>This vendor has not published catalog products yet.</Text>
+                <Text style={styles.emptySub}>This vendor store has not published product listings yet.</Text>
               </View>
             )}
           </View>
@@ -566,22 +610,23 @@ export default function PublicVendorProfileScreen() {
                     <TouchableOpacity
                       key={service._id || service.id}
                       style={styles.productCard}
-                      onPress={() => router.push(`/listing/${service._id || service.id}`)}>
+                      onPress={() => router.push(`/listing/${service._id || service.id}`)}
+                      activeOpacity={0.92}>
                       <Image source={{ uri: imgUri }} style={styles.productImage} contentFit="cover" />
                       <View style={styles.productInfo}>
                         <Text style={styles.productTitle} numberOfLines={2}>
                           {service.title}
                         </Text>
-                        <Text style={{ color: YELLOW, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', marginTop: 2 }}>
+                        <Text style={styles.serviceMetaText}>
                           {sd.serviceMode || service.serviceMode || 'On-site'} • {sd.durationText || service.duration || '1 Hour'}
                         </Text>
                         <View style={styles.productPriceRow}>
-                          <Text style={styles.productPrice}>₹{price}</Text>
+                          <Text style={styles.productPrice}>₹{price.toLocaleString('en-IN')}</Text>
                           {!hideCustomerActions && (
                             <TouchableOpacity
                               style={styles.addCartSmallBtn}
                               onPress={() => handleChat()}>
-                              <Ionicons name="chatbubble-ellipses-outline" size={14} color={BLACK} />
+                              <Ionicons name="chatbubble-ellipses-outline" size={14} color={ESPRESSO} />
                             </TouchableOpacity>
                           )}
                         </View>
@@ -592,9 +637,9 @@ export default function PublicVendorProfileScreen() {
               </View>
             ) : (
               <View style={styles.emptyCard}>
-                <Ionicons name="construct-outline" size={36} color="rgba(255,255,255,0.3)" />
+                <Ionicons name="construct-outline" size={40} color={TEXT_MUTED} />
                 <Text style={styles.emptyTitle}>No Services Listed</Text>
-                <Text style={styles.emptySub}>This vendor has not published service offerings yet.</Text>
+                <Text style={styles.emptySub}>This vendor store has not published service offerings yet.</Text>
               </View>
             )}
           </View>
@@ -617,10 +662,11 @@ export default function PublicVendorProfileScreen() {
                           pathname: '/(tabs)',
                           params: { reelId: reel._id || (reel as any).id },
                         } as any)
-                      }>
+                      }
+                      activeOpacity={0.9}>
                       <Image source={{ uri: thumb }} style={styles.reelThumbImage} contentFit="cover" />
                       <View style={styles.reelPlayBadge}>
-                        <Ionicons name="play" size={12} color="#fff" />
+                        <Ionicons name="play" size={11} color="#fff" />
                         <Text style={styles.reelPlayText}>{(reel.views_count || 420).toLocaleString()}</Text>
                       </View>
                     </TouchableOpacity>
@@ -629,9 +675,9 @@ export default function PublicVendorProfileScreen() {
               </View>
             ) : (
               <View style={styles.emptyCard}>
-                <Ionicons name="videocam-outline" size={36} color="rgba(255,255,255,0.3)" />
+                <Ionicons name="videocam-outline" size={40} color={TEXT_MUTED} />
                 <Text style={styles.emptyTitle}>No Video Reels Yet</Text>
-                <Text style={styles.emptySub}>This vendor has not uploaded video reels yet.</Text>
+                <Text style={styles.emptySub}>This vendor store has not posted video reels yet.</Text>
               </View>
             )}
           </View>
@@ -641,28 +687,32 @@ export default function PublicVendorProfileScreen() {
           <View style={styles.tabContent}>
             <View style={styles.aboutCard}>
               <Text style={styles.aboutHeader}>STORE INFORMATION</Text>
+              
               <View style={styles.aboutRow}>
-                <Ionicons name="business-outline" size={16} color={YELLOW} />
+                <Ionicons name="business-outline" size={16} color={GOLD} />
                 <Text style={styles.aboutLabel}>Business Name:</Text>
                 <Text style={styles.aboutVal}>{vendor.business_name || vendor.name}</Text>
               </View>
+
               <View style={styles.aboutRow}>
-                <Ionicons name="grid-outline" size={16} color={YELLOW} />
+                <Ionicons name="grid-outline" size={16} color={GOLD} />
                 <Text style={styles.aboutLabel}>Category:</Text>
-                <Text style={styles.aboutVal}>{vendor.category || 'General Business'}</Text>
+                <Text style={styles.aboutVal}>{vendor.category || 'General Business Store'}</Text>
               </View>
+
               <View style={styles.aboutRow}>
-                <Ionicons name="location-outline" size={16} color={YELLOW} />
+                <Ionicons name="location-outline" size={16} color={GOLD} />
                 <Text style={styles.aboutLabel}>Location:</Text>
                 <Text style={styles.aboutVal}>
-                  {vendor.address || `${vendor.city || 'India'}, ${vendor.state || ''}`}
+                  {vendor.address || `${vendor.city || 'India'}${vendor.state ? `, ${vendor.state}` : ''}`}
                 </Text>
               </View>
+
               <View style={styles.aboutRow}>
-                <Ionicons name="shield-checkmark-outline" size={16} color={YELLOW} />
+                <Ionicons name="shield-checkmark-outline" size={16} color={GOLD} />
                 <Text style={styles.aboutLabel}>Verification Status:</Text>
-                <Text style={[styles.aboutVal, { color: isVerified ? '#10B981' : '#F59E0B', fontWeight: '900' }]}>
-                  {isVerified ? 'Verified Business' : 'Unverified Business'}
+                <Text style={[styles.aboutVal, { color: isVerified ? '#059669' : '#D97706', fontWeight: '900' }]}>
+                  {isVerified ? 'Verified Supplier' : 'Unverified Supplier'}
                 </Text>
               </View>
             </View>
@@ -673,96 +723,317 @@ export default function PublicVendorProfileScreen() {
   );
 }
 
-const YELLOW = '#F59E0B';
-const BLACK = '#0F0F12';
-const DARK_CARD = '#18181C';
-const BORDER = '#2D2D36';
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BLACK },
-  centerContainer: { flex: 1, backgroundColor: BLACK, alignItems: 'center', justifyContent: 'center', padding: Spacing.four },
-  loadingText: { color: '#fff', fontSize: FontSize.xs, marginTop: 12, fontWeight: '700' },
-  notFoundTitle: { color: '#fff', fontSize: FontSize.md, fontWeight: '900', marginTop: 12 },
-  notFoundSub: { color: 'rgba(255,255,255,0.6)', fontSize: FontSize.xs, textAlign: 'center', marginTop: 4, marginBottom: 16 },
-  backHomeBtn: { backgroundColor: YELLOW, paddingHorizontal: 16, paddingVertical: 10 },
-  backHomeBtnText: { color: BLACK, fontSize: FontSize.xs, fontWeight: '900' },
+  container: { flex: 1, backgroundColor: BG_MATTE },
+  centerContainer: { flex: 1, backgroundColor: BG_MATTE, alignItems: 'center', justifyContent: 'center', padding: Spacing.four, gap: 12 },
+  loadingText: { color: TEXT_MUTED, fontSize: FontSize.xs, fontWeight: '700' },
+  notFoundTitle: { color: TEXT_MAIN, fontSize: FontSize.md, fontWeight: '900' },
+  notFoundSub: { color: TEXT_MUTED, fontSize: FontSize.xs, textAlign: 'center' },
+  backHomeBtn: { backgroundColor: ESPRESSO, borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10, marginTop: 8 },
+  backHomeBtnText: { color: GOLD, fontSize: FontSize.xs, fontWeight: '900' },
+
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.four,
-    paddingBottom: Spacing.three,
-    backgroundColor: DARK_CARD,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    paddingVertical: Spacing.three,
+    backgroundColor: ESPRESSO,
+    borderBottomWidth: 2,
+    borderBottomColor: GOLD,
+    gap: Spacing.two,
   },
-  headerBtn: { width: 36, height: 36, backgroundColor: BLACK, borderWidth: 1, borderColor: BORDER, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: '#fff', fontSize: FontSize.sm, fontWeight: '900' },
-  headerSub: { color: YELLOW, fontSize: 10, fontWeight: '700' },
-  scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 40 },
-  coverBox: { height: 130, width: '100%', position: 'relative' },
-  coverImage: { width: '100%', height: '100%' },
-  coverOverlay: { position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
-  profileHeaderCard: {
-    backgroundColor: DARK_CARD,
-    marginHorizontal: Spacing.four,
-    marginTop: -30,
+  headerBtn: {
+    width: 38,
+    height: 38,
+    backgroundColor: '#1A1410',
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: '#3A2C22',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerBadge: { color: GOLD, fontSize: 9, fontWeight: '900', letterSpacing: 1.5 },
+  headerTitle: { color: '#FFFFFF', fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 0.3 },
+
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 60 },
+
+  coverBox: { height: 140, width: '100%', position: 'relative' },
+  coverImage: { width: '100%', height: '100%' },
+  coverOverlay: { position: 'absolute', inset: 0, backgroundColor: 'rgba(36, 27, 21, 0.45)' },
+
+  profileHeaderCard: {
+    backgroundColor: CARD_BG,
+    marginHorizontal: Spacing.four,
+    marginTop: -36,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 16,
     padding: Spacing.four,
     gap: Spacing.three,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
   },
   avatarRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  avatarBorder: { width: 70, height: 70, borderRadius: 35, borderWidth: 3, borderColor: YELLOW, overflow: 'hidden', backgroundColor: BLACK },
+  avatarBorder: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 3,
+    borderColor: GOLD,
+    overflow: 'hidden',
+    backgroundColor: CARD_BG,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
   avatarImage: { width: '100%', height: '100%' },
+
   headerBtnGroup: { flexDirection: 'row', gap: 8 },
-  followBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: YELLOW, paddingHorizontal: 12, paddingVertical: 8 },
-  followBtnActive: { backgroundColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderColor: BORDER },
-  followBtnText: { color: BLACK, fontSize: 11, fontWeight: '900' },
-  followBtnTextActive: { color: '#fff' },
-  chatBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#fff', paddingHorizontal: 12, paddingVertical: 8 },
-  chatBtnText: { color: BLACK, fontSize: 11, fontWeight: '900' },
-  businessInfo: { gap: 4 },
-  businessTitle: { color: '#fff', fontSize: FontSize.md, fontWeight: '900' },
-  verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#10B981', paddingHorizontal: 6, paddingVertical: 2 },
-  verifiedBadgeText: { color: '#fff', fontSize: 9, fontWeight: '900' },
-  categorySub: { color: YELLOW, fontSize: FontSize.xs, fontWeight: '700' },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  locationText: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '600' },
-  descriptionText: { color: 'rgba(255,255,255,0.8)', fontSize: FontSize.xs, lineHeight: 18, marginTop: 4 },
-  contactActionRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  actionPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: BLACK, borderWidth: 1, borderColor: BORDER, paddingHorizontal: 10, paddingVertical: 6, flex: 1, justifyContent: 'center' },
-  actionPillText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  metricsRow: { flexDirection: 'row', backgroundColor: BLACK, borderWidth: 1, borderColor: BORDER, paddingVertical: 10, marginTop: 4 },
-  metricChip: { flex: 1, alignItems: 'center' },
-  metricVal: { color: YELLOW, fontSize: FontSize.xs, fontWeight: '900' },
-  metricLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 9, fontWeight: '700', marginTop: 2 },
-  metricDivider: { width: 1, backgroundColor: BORDER },
-  tabBar: { flexDirection: 'row', backgroundColor: DARK_CARD, marginHorizontal: Spacing.four, marginTop: Spacing.three, borderWidth: 1, borderColor: BORDER },
-  tabBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabBtnActive: { borderBottomColor: YELLOW, backgroundColor: BLACK },
-  tabBtnText: { color: 'rgba(255,255,255,0.6)', fontSize: FontSize.xs, fontWeight: '700' },
-  tabBtnTextActive: { color: YELLOW, fontWeight: '900' },
+  followBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: GOLD,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  followBtnActive: { backgroundColor: ESPRESSO },
+  followBtnText: { color: ESPRESSO, fontSize: 11, fontWeight: '900' },
+  followBtnTextActive: { color: '#FFFFFF' },
+
+  chatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#1A1410',
+    borderWidth: 1,
+    borderColor: GOLD,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  chatBtnText: { color: GOLD, fontSize: 11, fontWeight: '900' },
+
+  editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#1A1410',
+    borderWidth: 1,
+    borderColor: GOLD,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  editBtnText: { color: GOLD, fontSize: 11, fontWeight: '900' },
+
+  businessInfo: { gap: 6 },
+  businessTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  businessTitle: { color: TEXT_MAIN, fontSize: FontSize.md, fontWeight: '900' },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#D1FAE5',
+    borderColor: '#A7F3D0',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  verifiedBadgeText: { color: '#059669', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.5 },
+
+  unverifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FEF3C7',
+    borderColor: '#FDE68A',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  unverifiedBadgeText: { color: '#D97706', fontSize: 9.5, fontWeight: '900' },
+
+  ownerAlertBox: {
+    backgroundColor: ESPRESSO,
+    borderWidth: 1,
+    borderColor: GOLD,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  ownerAlertText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700', flex: 1 },
+  verifyBtn: { backgroundColor: GOLD, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
+  verifyBtnText: { color: ESPRESSO, fontSize: 11, fontWeight: '900' },
+
+  categoryPillRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 2 },
+  categoryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#F3EAD8',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  categoryPillText: { color: ESPRESSO, fontSize: 11, fontWeight: '800' },
+
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
+  locationText: { color: TEXT_MUTED, fontSize: 11, fontWeight: '600' },
+  descriptionText: { color: TEXT_MAIN, fontSize: FontSize.xs, lineHeight: 18, marginTop: 4 },
+
+  contactActionRow: { flexDirection: 'row', gap: Spacing.two, marginTop: 6 },
+  actionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: BG_MATTE,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  actionPillText: { color: ESPRESSO, fontSize: 11, fontWeight: '800' },
+
+  metricsRow: { flexDirection: 'row', gap: Spacing.two, marginTop: 6 },
+  metricChip: {
+    flex: 1,
+    backgroundColor: BG_MATTE,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 12,
+    padding: Spacing.two,
+    alignItems: 'center',
+    gap: 2,
+  },
+  metricIconBoxEmerald: { width: 26, height: 26, borderRadius: 8, backgroundColor: '#D1FAE5', alignItems: 'center', justifyContent: 'center' },
+  metricIconBoxBlue: { width: 26, height: 26, borderRadius: 8, backgroundColor: '#DBEAFE', alignItems: 'center', justifyContent: 'center' },
+  metricIconBoxPurple: { width: 26, height: 26, borderRadius: 8, backgroundColor: '#EDE9FE', alignItems: 'center', justifyContent: 'center' },
+  metricIconBoxAmber: { width: 26, height: 26, borderRadius: 8, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center' },
+  metricVal: { fontSize: FontSize.xs, fontWeight: '900', marginTop: 2 },
+  metricLabel: { color: TEXT_MUTED, fontSize: 9.5, fontWeight: '700' },
+
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: CARD_BG,
+    marginHorizontal: Spacing.four,
+    marginTop: Spacing.four,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 12,
+    padding: 3,
+  },
+  tabBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 10,
+    borderRadius: 9,
+  },
+  tabBtnActive: { backgroundColor: ESPRESSO },
+  tabBtnText: { color: TEXT_MUTED, fontSize: 11, fontWeight: '700' },
+  tabBtnTextActive: { color: GOLD, fontWeight: '900' },
+
   tabContent: { paddingHorizontal: Spacing.four, marginTop: Spacing.three },
+
   productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.three },
-  productCard: { width: COLUMN_WIDTH, backgroundColor: DARK_CARD, borderWidth: 1, borderColor: BORDER, overflow: 'hidden' },
-  productImage: { width: '100%', height: 130 },
-  productInfo: { padding: 8, gap: 4 },
-  productTitle: { color: '#fff', fontSize: 11, fontWeight: '700', lineHeight: 15 },
+  productCard: {
+    width: COLUMN_WIDTH,
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  productImage: { width: '100%', height: 135, backgroundColor: BG_MATTE },
+  productInfo: { padding: Spacing.two, gap: 4 },
+  productTitle: { color: TEXT_MAIN, fontSize: 11, fontWeight: '800', lineHeight: 15 },
+  serviceMetaText: { color: GOLD, fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
   productPriceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
-  productPrice: { color: YELLOW, fontSize: FontSize.xs, fontWeight: '900' },
-  addCartSmallBtn: { backgroundColor: YELLOW, padding: 4 },
+  productPrice: { color: ESPRESSO, fontSize: FontSize.xs, fontWeight: '900' },
+  addCartSmallBtn: {
+    backgroundColor: GOLD,
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   reelsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  reelThumbCard: { width: (SCREEN_WIDTH - Spacing.four * 2 - 16) / 3, height: 160, backgroundColor: '#000', borderWidth: 1, borderColor: BORDER, position: 'relative' },
+  reelThumbCard: {
+    width: (SCREEN_WIDTH - Spacing.four * 2 - 16) / 3,
+    height: 160,
+    backgroundColor: ESPRESSO,
+    borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
+  },
   reelThumbImage: { width: '100%', height: '100%' },
-  reelPlayBadge: { position: 'absolute', bottom: 6, left: 6, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 6, paddingVertical: 2 },
-  reelPlayText: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  emptyCard: { backgroundColor: DARK_CARD, borderWidth: 1, borderColor: BORDER, padding: Spacing.six, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  emptyTitle: { color: '#fff', fontSize: FontSize.xs, fontWeight: '900' },
-  emptySub: { color: 'rgba(255,255,255,0.6)', fontSize: 11, textAlign: 'center' },
-  aboutCard: { backgroundColor: DARK_CARD, borderWidth: 1, borderColor: BORDER, padding: Spacing.four, gap: Spacing.three },
-  aboutHeader: { color: YELLOW, fontSize: FontSize.xs, fontWeight: '900', letterSpacing: 1 },
+  reelPlayBadge: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  reelPlayText: { color: '#FFFFFF', fontSize: 9.5, fontWeight: '800' },
+
+  emptyCard: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 14,
+    padding: Spacing.six,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  emptyTitle: { color: TEXT_MAIN, fontSize: FontSize.xs, fontWeight: '900' },
+  emptySub: { color: TEXT_MUTED, fontSize: 11, textAlign: 'center' },
+
+  aboutCard: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 14,
+    padding: Spacing.four,
+    gap: Spacing.three,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  aboutHeader: { color: ESPRESSO, fontSize: FontSize.xs, fontWeight: '900', letterSpacing: 1 },
   aboutRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  aboutLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '700', width: 130 },
-  aboutVal: { flex: 1, color: '#fff', fontSize: 11, fontWeight: '700' },
+  aboutLabel: { color: TEXT_MUTED, fontSize: 11, fontWeight: '700', width: 130 },
+  aboutVal: { flex: 1, color: TEXT_MAIN, fontSize: 11, fontWeight: '800' },
 });
