@@ -20,7 +20,7 @@
     },
     "android": {
       "package": "in.bizreels.app",
-      "versionCode": 19,
+      "versionCode": 21,
       "allowBackup": false,
       "permissions": [
         "android.permission.INTERNET",
@@ -89,9 +89,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "d542cfb7-3422-4289-baf5-16993d35aa6f"
+        "projectId": "94512816-6ad3-44e1-80c9-40a43b44ccd4"
       }
     },
-    "owner": "rajeshexpo1"
+    "owner": "rajeshexpo2"
   }
 }
