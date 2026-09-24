@@ -60,7 +60,7 @@ class ListingController {
       distance,
       search,
       page = 1,
-      limit = 10,
+      limit = 50,
     } = req.query;
 
     const vendorFilter = (my_listings === 'true' || my_listings === true)

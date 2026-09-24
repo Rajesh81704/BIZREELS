@@ -33,17 +33,19 @@ export function useCategories() {
 export const LISTINGS_QUERY_KEY = (params: ListingsParams) =>
   ['search', 'listings', params] as const;
 
-export const LISTINGS_PAGE_LIMIT = 10;
+export const LISTINGS_PAGE_LIMIT = 50;
 
 /**
  * Fetches listings filtered by search text and/or category.
- * @param params  - search, category, page
+ * @param params  - search, category, page, limit
  * @param enabled - only run when the user has entered a query or selected a category
  */
 export function useListings(params: ListingsParams, enabled: boolean) {
+  const effectiveLimit = params.limit || LISTINGS_PAGE_LIMIT;
+  const effectiveParams = { ...params, limit: effectiveLimit };
   return useQuery({
-    queryKey: LISTINGS_QUERY_KEY({ ...params, limit: LISTINGS_PAGE_LIMIT }),
-    queryFn: () => fetchListings({ ...params, limit: LISTINGS_PAGE_LIMIT }),
+    queryKey: LISTINGS_QUERY_KEY(effectiveParams),
+    queryFn: () => fetchListings(effectiveParams),
     enabled,
     staleTime: 1000 * 60 * 2, // 2 min
     gcTime: 1000 * 60 * 10,   // 10 min

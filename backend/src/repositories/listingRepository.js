@@ -88,7 +88,7 @@ class ListingRepository {
     distanceKm,
     search,
     page = 1,
-    limit = 10,
+    limit = 50,
   }) {
     const skip = (page - 1) * limit;
     const match = { isDeleted: false };

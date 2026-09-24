@@ -308,7 +308,7 @@ export default function SearchScreen() {
 
   const listingsParams = {
     page: 1,
-    limit: 30,
+    limit: 50,
     search: deferredSearch || undefined,
     category: selectedCategory?.name || undefined,
     subcategory: selectedSubcategory || undefined,
