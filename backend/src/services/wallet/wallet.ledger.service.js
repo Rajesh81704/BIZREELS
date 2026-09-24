@@ -45,12 +45,60 @@ class WalletLedgerService {
     const parsedPage = Math.max(1, parseInt(page, 10) || 1);
     const parsedLimit = Math.max(1, parseInt(limit, 10) || 50);
     const skip = (parsedPage - 1) * parsedLimit;
+    const roleLower = (role || '').toLowerCase().trim();
+
+    let v2Query = { user_id: uid };
+    if (roleLower === 'creator') {
+      v2Query = {
+        user_id: uid,
+        $or: [
+          { user_role: 'creator' },
+          { transaction_type: { $in: ['campaign_payment', 'commission_payout', 'withdrawal'] } }
+        ]
+      };
+    } else if (roleLower === 'vendor') {
+      v2Query = {
+        user_id: uid,
+        user_role: { $ne: 'creator' }
+      };
+    }
 
     // Fetch from both IsolatedTransaction and WalletTransactionV2 in parallel
     const [isoItems, v2Items] = await Promise.all([
-      IsolatedTransaction.find({ userId: uid, role }).lean(),
-      WalletTransactionV2.find({ user_id: uid }).lean(),
+      IsolatedTransaction.find({ userId: uid, role: roleLower }).lean(),
+      WalletTransactionV2.find(v2Query).lean(),
     ]);
+
+    const VENDOR_TX_TYPES = new Set([
+      'reel_boost', 'publish_post', 'publish_listing', 'bid_fee', 'bid_deduction',
+      'requirement_bid', 'lead_purchase', 'boost_purchase', 'inquiry_lead',
+      'whatsapp_lead', 'call_connected', 'first_chat_message', 'signup_bonus',
+      'vendor_welcome_bonus', 'plan_recharge', 'plan_purchase', 'order_refund',
+      'order_payment', 'promotional_credit', 'penalty_debit'
+    ]);
+
+    const isVendorTx = (t) => {
+      if (t.user_role === 'vendor' || t.role === 'vendor') return true;
+      if (VENDOR_TX_TYPES.has(t.transaction_type)) return true;
+      const desc = (t.description || t.admin_remarks || t.title || '').toLowerCase();
+      if (
+        desc.includes('reel boost') ||
+        desc.includes('boost reel') ||
+        desc.includes('credits deducted') ||
+        desc.includes('publishing a pro') ||
+        desc.includes('publishing a listing') ||
+        desc.includes('cancelled order') ||
+        desc.includes('lead unlock') ||
+        desc.includes('whatsapp lead')
+      ) {
+        return true;
+      }
+      return false;
+    };
+
+    const filteredV2Items = roleLower === 'creator'
+      ? v2Items.filter(t => !isVendorTx(t))
+      : v2Items;
 
     const seenRefs = new Set();
     const seenTimeKeys = new Set();
@@ -86,7 +134,7 @@ class WalletLedgerService {
       merged.push({
         _id: t._id ? t._id.toString() : `tx_${Date.now()}_${Math.random()}`,
         userId: uid,
-        role: t.role || role,
+        role: t.role || roleLower,
         type: typeStr,
         credit_debit: typeStr,
         transaction_type: t.transaction_type || t.type || 'transaction',
@@ -104,7 +152,7 @@ class WalletLedgerService {
 
     // Prioritize IsolatedTransaction, then append any additional WalletTransactionV2 records
     isoItems.forEach(addTx);
-    v2Items.forEach(addTx);
+    filteredV2Items.forEach(addTx);
 
     // Sort descending by date
     merged.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
