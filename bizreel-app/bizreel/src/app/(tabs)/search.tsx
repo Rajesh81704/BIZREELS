@@ -637,7 +637,7 @@ export default function SearchScreen() {
       <FlatList
         data={filteredListings}
         keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.resultsList}
+        contentContainerStyle={[styles.resultsList, { paddingBottom: Math.max(120, insets.bottom + 100) }]}
         refreshControl={
           <RefreshControl refreshing={listingsRefetching} onRefresh={handleRefresh} tintColor={YELLOW} />
         }
