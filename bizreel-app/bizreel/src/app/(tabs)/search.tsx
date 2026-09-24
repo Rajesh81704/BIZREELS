@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useDeferredValue, useEffect, useState } from 'react';
+import React, { useCallback, useDeferredValue, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -189,6 +189,10 @@ export default function SearchScreen() {
   const [uploadDate, setUploadDate] = useState<'all' | 'today' | 'this_week' | 'this_month'>('all');
   const [sortBy, setSortBy] = useState<'latest' | 'price_low' | 'price_high' | 'rating_high' | 'popular' | 'nearest'>('latest');
 
+  // Pagination State (50 items per page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const flatListRef = useRef<FlatList>(null);
+
   // Modal Visibility
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [postReqModalVisible, setPostReqModalVisible] = useState(false);
@@ -307,7 +311,7 @@ export default function SearchScreen() {
       : undefined;
 
   const listingsParams = {
-    page: 1,
+    page: currentPage,
     limit: 50,
     search: deferredSearch || undefined,
     category: selectedCategory?.name || undefined,
@@ -344,6 +348,46 @@ export default function SearchScreen() {
   const rawListings = Array.isArray(listingsData)
     ? listingsData
     : (listingsData as any)?.data || (listingsData as any)?.listings || [];
+
+  const metaData = (listingsData as any)?.meta || {};
+  const totalItemsCount = metaData.total ?? rawListings.length;
+  const totalPagesCount = metaData.totalPages || (totalItemsCount > 0 ? Math.ceil(totalItemsCount / 50) : 1);
+  const hasNextPage = metaData.hasNextPage ?? (currentPage < totalPagesCount || rawListings.length === 50);
+  const hasPrevPage = metaData.hasPrevPage ?? (currentPage > 1);
+
+  const handleNextPage = () => {
+    if (hasNextPage) {
+      setCurrentPage((prev) => prev + 1);
+      flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => Math.max(1, prev - 1));
+      flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    }
+  };
+
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    deferredSearch,
+    selectedCategory,
+    selectedCity,
+    selectedRadius,
+    selectedPricePreset,
+    minPriceInput,
+    maxPriceInput,
+    activeTypeFilter,
+    selectedSubcategory,
+    selectedRating,
+    verifiedOnly,
+    itemCondition,
+    uploadDate,
+    sortBy,
+  ]);
 
   // Filter & Sort results locally fallback
   const filteredListings = rawListings.filter((item: any) => {
@@ -635,6 +679,7 @@ export default function SearchScreen() {
 
       {/* Search Results & Dropdown Filter View */}
       <FlatList
+        ref={flatListRef}
         data={filteredListings}
         keyExtractor={(item) => item._id}
         contentContainerStyle={[styles.resultsList, { paddingBottom: Math.max(120, insets.bottom + 100) }]}
@@ -680,10 +725,12 @@ export default function SearchScreen() {
               </TouchableOpacity>
             )}
 
-            <Text style={styles.resultsCountText}>
-              FOUND {filteredListings.length} RESULTS{' '}
-              {selectedRadius > 0 && isGpsActive ? `WITHIN ${selectedRadius}KM` : 'NATIONWIDE'}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={styles.resultsCountText}>
+                SEARCH RESULTS{' '}
+                {selectedRadius > 0 && isGpsActive ? `WITHIN ${selectedRadius}KM` : 'NATIONWIDE'}
+              </Text>
+            </View>
           </View>
         }
         ListEmptyComponent={
@@ -826,6 +873,39 @@ export default function SearchScreen() {
             </TouchableOpacity>
           );
         }}
+        ListFooterComponent={
+          filteredListings.length > 0 ? (
+            <View style={[styles.paginationRow, { marginTop: 16 }]}>
+              <TouchableOpacity
+                style={[styles.pageBtn, (currentPage <= 1 || !hasPrevPage) && styles.pageBtnDisabled]}
+                onPress={handlePrevPage}
+                disabled={currentPage <= 1 || !hasPrevPage}
+                activeOpacity={0.8}>
+                <Ionicons name="chevron-back" size={16} color={currentPage > 1 && hasPrevPage ? '#0F172A' : '#94A3B8'} />
+                <Text style={[styles.pageBtnText, (currentPage <= 1 || !hasPrevPage) && styles.pageBtnTextDisabled]}>
+                  Previous
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.pageCenterBox}>
+                <Text style={styles.pageCenterText}>
+                  Page <Text style={{ color: YELLOW, fontWeight: '900' }}>{currentPage}</Text>
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.pageBtn, !hasNextPage && styles.pageBtnDisabled]}
+                onPress={handleNextPage}
+                disabled={!hasNextPage}
+                activeOpacity={0.8}>
+                <Text style={[styles.pageBtnText, !hasNextPage && styles.pageBtnTextDisabled]}>
+                  Next
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={hasNextPage ? '#0F172A' : '#94A3B8'} />
+              </TouchableOpacity>
+            </View>
+          ) : null
+        }
       />
 
       {/* WEB-STYLE COMPREHENSIVE FILTER DRAWER MODAL */}
@@ -1750,5 +1830,50 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   filterBadgeText: { color: '#fff', fontSize: 10, fontWeight: '900' },
+  paginationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginVertical: 8,
+  },
+  pageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: YELLOW,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  pageBtnDisabled: {
+    backgroundColor: '#334155',
+  },
+  pageBtnText: {
+    color: '#0F172A',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  pageBtnTextDisabled: {
+    color: '#94A3B8',
+  },
+  pageCenterBox: {
+    alignItems: 'center',
+  },
+  pageCenterText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  pageCenterSub: {
+    color: '#94A3B8',
+    fontSize: 9.5,
+    marginTop: 2,
+  },
 });
 

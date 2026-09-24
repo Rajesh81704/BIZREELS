@@ -362,52 +362,7 @@ export default function VendorWalletScreen() {
               </View>
             </View>
 
-            {/* Dynamic Top-Up Packs Preview */}
-            <View style={styles.sectionContainer}>
-              <View style={styles.sectionHeaderRow}>
-                <Ionicons name="flash" size={18} color={GOLD} />
-                <Text style={styles.sectionTitleText}>AVAILABLE TOP-UP PACKS</Text>
-              </View>
 
-              {packsLoading ? (
-                <ActivityIndicator size="small" color={GOLD} style={{ marginVertical: 12 }} />
-              ) : (
-                <View style={styles.packsGrid}>
-                  {packsList.map((pack: any, idx: number) => {
-                    const amtVal = typeof pack === 'number' ? pack : pack.amount || pack.price || 1000;
-                    const labelStr = pack.title || pack.label || `Pack ₹${amtVal}`;
-                    const bonusStr = pack.bonus ? `+${pack.bonus} Bonus` : null;
-
-                    return (
-                      <View key={pack.id || idx} style={styles.packCard}>
-                        <View style={styles.packHeaderRow}>
-                          <Text style={styles.packLabel} numberOfLines={1}>{labelStr}</Text>
-                          {bonusStr && (
-                            <View style={styles.bonusBadge}>
-                              <Text style={styles.bonusBadgeText}>{bonusStr}</Text>
-                            </View>
-                          )}
-                        </View>
-
-                        <Text style={styles.packPrice}>₹{Number(amtVal).toLocaleString('en-IN')}</Text>
-
-                        <TouchableOpacity
-                          style={styles.packSelectBtn}
-                          onPress={() => {
-                            setSelectedPackAmount(amtVal);
-                            setRechargeAmountStr(String(amtVal));
-                            setTopupModalVisible(true);
-                          }}
-                        >
-                          <Ionicons name="add" size={14} color={GOLD} />
-                          <Text style={styles.packSelectBtnText}>Select Pack</Text>
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-            </View>
 
             {/* Wallet Transaction Ledger */}
             <View style={styles.sectionContainer}>
