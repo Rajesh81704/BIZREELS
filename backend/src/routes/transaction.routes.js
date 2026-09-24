@@ -27,7 +27,7 @@ router.get('/vendor', authenticate, roleMiddleware('vendor'), asyncHandler(async
 }));
 
 // GET /api/v1/transactions/creator — Creator-only transaction history
-router.get('/creator', authenticate, roleMiddleware('creator'), asyncHandler(async (req, res) => {
+router.get('/creator', authenticate, asyncHandler(async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page || 1, 10));
   const limit = Math.max(1, Math.min(100, parseInt(req.query.limit || 20, 10)));
 
