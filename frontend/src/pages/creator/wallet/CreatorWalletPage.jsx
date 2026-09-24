@@ -13,38 +13,9 @@ export default function CreatorWalletPage() {
   const { data: walletData } = useGetCreatorWalletQuery(undefined, { pollingInterval: 300000 });
   const { data: txData, isFetching: isFetchingTx } = useGetCreatorTransactionsQuery(undefined, { pollingInterval: 300000 });
   const [requestPayout] = useRequestPayoutMutation();
-
   const balance = walletData?.data?.balance ?? walletData?.data?.walletBalance ?? walletData?.balance ?? walletData?.walletBalance ?? 0;
   const rawList = Array.isArray(txData?.data) ? txData.data : Array.isArray(txData?.transactions) ? txData.transactions : Array.isArray(txData) ? txData : [];
-
-  const VENDOR_TX_TYPES = [
-    'reel_boost', 'publish_post', 'publish_listing', 'bid_fee', 'bid_deduction',
-    'requirement_bid', 'lead_purchase', 'boost_purchase', 'inquiry_lead',
-    'whatsapp_lead', 'call_connected', 'first_chat_message', 'signup_bonus',
-    'vendor_welcome_bonus', 'plan_recharge', 'plan_purchase', 'order_refund',
-    'order_payment', 'promotional_credit', 'penalty_debit'
-  ];
-
-  const payouts = rawList.filter((tx) => {
-    if (tx.user_role === 'vendor' || tx.role === 'vendor') return false;
-    const tt = (tx.transaction_type || tx.type || '').toLowerCase();
-    if (VENDOR_TX_TYPES.includes(tt)) return false;
-    const desc = (tx.description || tx.title || tx.admin_remarks || tx.project || '').toLowerCase();
-    if (
-      desc.includes('reel boost') ||
-      desc.includes('boost reel') ||
-      desc.includes('credits deducted') ||
-      desc.includes('publishing a pro') ||
-      desc.includes('publishing a listing') ||
-      desc.includes('cancelled order') ||
-      desc.includes('welcome free') ||
-      desc.includes('onboarding credits') ||
-      desc.includes('whatsapp lead')
-    ) {
-      return false;
-    }
-    return true;
-  });
+  const payouts = rawList;
 
   const pendingAmount = payouts
     .filter((p) => p.status === 'pending' || p.status === 'processing')

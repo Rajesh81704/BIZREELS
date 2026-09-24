@@ -52,34 +52,7 @@ export default function CreatorWalletScreen() {
 
       const tData = txRes.data?.data?.items || txRes.data?.data || txRes.data?.items || txRes.data?.transactions || txRes.data || [];
       const rawList = Array.isArray(tData) ? tData : [];
-
-      const VENDOR_TX_TYPES = [
-        'reel_boost', 'publish_post', 'publish_listing', 'bid_fee', 'bid_deduction',
-        'requirement_bid', 'lead_purchase', 'boost_purchase', 'inquiry_lead',
-        'whatsapp_lead', 'call_connected', 'first_chat_message', 'signup_bonus',
-        'vendor_welcome_bonus', 'plan_recharge', 'plan_purchase', 'order_refund'
-      ];
-
-      const creatorOnly = rawList.filter((tx: any) => {
-        if (tx.user_role === 'vendor' || tx.role === 'vendor') return false;
-        const tt = (tx.transaction_type || tx.type || '').toLowerCase();
-        if (VENDOR_TX_TYPES.includes(tt)) return false;
-        const desc = (tx.description || tx.title || tx.admin_remarks || '').toLowerCase();
-        if (
-          desc.includes('reel boost') ||
-          desc.includes('boost reel') ||
-          desc.includes('credits deducted') ||
-          desc.includes('publishing a pro') ||
-          desc.includes('publishing a listing') ||
-          desc.includes('cancelled order') ||
-          desc.includes('whatsapp lead')
-        ) {
-          return false;
-        }
-        return true;
-      });
-
-      setTransactions(creatorOnly);
+      setTransactions(rawList);
     } catch (err) {
       console.warn('Failed to load creator wallet:', err);
     } finally {
