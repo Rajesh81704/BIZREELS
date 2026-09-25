@@ -259,36 +259,133 @@ class AnalyticsController {
   // ── Get Creator Dashboard Analytics ───────────────────────
   getCreatorAnalytics = asyncHandler(async (req, res) => {
     const userId = req.user._id;
+    const userIdStr = userId.toString();
+
     const Analytics = require('../models/Analytics');
     const Order = require('../models/Order');
-
-    const IsolatedWallet = require('../models/IsolatedWallet.model');
+    const Reel = require('../models/Reel');
+    const Listing = require('../models/Listing');
+    const HireRequest = require('../models/HireRequest');
     const Campaign = require('../models/Campaign');
+    const Interaction = require('../models/Interaction');
+    const IsolatedWallet = require('../models/IsolatedWallet.model');
+    const IsolatedTransaction = require('../models/IsolatedTransaction.model');
+
+    const startOfThisMonth = new Date();
+    startOfThisMonth.setDate(1);
+    startOfThisMonth.setHours(0, 0, 0, 0);
+
+    const startOfLastMonth = new Date();
+    startOfLastMonth.setMonth(startOfLastMonth.getMonth() - 1);
+    startOfLastMonth.setDate(1);
+    startOfLastMonth.setHours(0, 0, 0, 0);
+
+    const targetUserMatch = { $in: [userIdStr, userId] };
+
     const [
       profileViews,
+      reels,
+      likesFromInteractions,
+      sharesFromInteractions,
+      savedReelsCount,
       hireRequestsCount,
+      pendingRequests,
       completedCampaignsCount,
+      campaignsCount,
+      portfolioReelsCount,
+      portfolioImagesCount,
+      activeClientsList,
       creatorWallet,
       activeCampaigns,
+      thisMonthTx,
+      lastMonthTx,
+      thisMonthHires,
+      lastMonthHires,
+      thisMonthCampaigns,
+      lastMonthCampaigns,
     ] = await Promise.all([
-      Analytics.countDocuments({ targetId: userId, type: 'view_creator_profile' }).catch(() => 0),
-      Order.countDocuments({ creator: userId, status: 'pending' }).catch(() => 0),
-      Order.countDocuments({ creator: userId, status: 'completed' }).catch(() => 0),
-      IsolatedWallet.findOne({ userId: userId.toString(), role: 'creator' }).lean().catch(() => null),
+      Analytics.countDocuments({ targetId: userId, type: { $in: ['view_creator_profile', 'view_creator'] } }).catch(() => 0),
+      Reel.find({ creator: userId }).select('views likesCount sharesCount').lean().catch(() => []),
+      Interaction.countDocuments({ target_user_id: targetUserMatch, type: 'like_reel' }).catch(() => 0),
+      Interaction.countDocuments({ target_user_id: targetUserMatch, type: 'share_reel' }).catch(() => 0),
+      Interaction.countDocuments({ target_user_id: targetUserMatch, type: 'save_reel' }).catch(() => 0),
+      HireRequest.countDocuments({ creator: userId }).catch(() => 0),
+      HireRequest.countDocuments({ creator: userId, status: 'pending' }).catch(() => 0),
+      Campaign.countDocuments({ creator: userId, status: 'completed' }).catch(() => 0),
+      Campaign.countDocuments({ creator: userId, hireRequest: { $exists: false } }).catch(() => 0),
+      Reel.countDocuments({ creator: userId }).catch(() => 0),
+      Listing.countDocuments({ vendor: userId, category: 'Portfolio' }).catch(() => 0),
+      HireRequest.distinct('vendor', { creator: userId, status: { $in: ['accepted', 'completed'] } }).catch(() => []),
+      IsolatedWallet.findOne({ userId: userIdStr, role: 'creator' }).lean().catch(() => null),
       Campaign.find({ creator: userId, status: 'accepted' }).select('budget netCreatorAmount').lean().catch(() => []),
+      IsolatedTransaction.find({
+        userId: userIdStr,
+        role: 'creator',
+        type: 'credit',
+        status: 'success',
+        created_at: { $gte: startOfThisMonth },
+      }).lean().catch(() => []),
+      IsolatedTransaction.find({
+        userId: userIdStr,
+        role: 'creator',
+        type: 'credit',
+        status: 'success',
+        created_at: { $gte: startOfLastMonth, $lt: startOfThisMonth },
+      }).lean().catch(() => []),
+      HireRequest.countDocuments({ creator: userId, createdAt: { $gte: startOfThisMonth } }).catch(() => 0),
+      HireRequest.countDocuments({ creator: userId, createdAt: { $gte: startOfLastMonth, $lt: startOfThisMonth } }).catch(() => 0),
+      Campaign.countDocuments({ creator: userId, hireRequest: { $exists: false }, createdAt: { $gte: startOfThisMonth } }).catch(() => 0),
+      Campaign.countDocuments({ creator: userId, hireRequest: { $exists: false }, createdAt: { $gte: startOfLastMonth, $lt: startOfThisMonth } }).catch(() => 0),
     ]);
 
+    const totalReelViews = reels.reduce((acc, r) => acc + (r.views || 0), 0);
+    const totalLikes = Math.max(reels.reduce((acc, r) => acc + (r.likesCount || 0), 0), likesFromInteractions);
+    const totalShares = Math.max(reels.reduce((acc, r) => acc + (r.sharesCount || 0), 0), sharesFromInteractions);
+
+    const totalProjects = hireRequestsCount + campaignsCount;
+    const activeClients = Array.isArray(activeClientsList) ? activeClientsList.length : 0;
     const totalEarnings = creatorWallet?.lifetime_earned || creatorWallet?.balance || 0;
     const escrowInReview = (activeCampaigns || []).reduce((acc, c) => acc + (c.netCreatorAmount || c.budget || 0), 0);
 
+    const monthlyEarnings = thisMonthTx.reduce((acc, tx) => acc + (tx.amount || 0), 0);
+    const lastMonthEarnings = lastMonthTx.reduce((acc, tx) => acc + (tx.amount || 0), 0);
+    const earningsTrend = lastMonthEarnings > 0
+      ? Math.round(((monthlyEarnings - lastMonthEarnings) / lastMonthEarnings) * 100)
+      : (monthlyEarnings > 0 ? 100 : 0);
+
+    const thisMonthProjects = thisMonthHires + thisMonthCampaigns;
+    const lastMonthProjects = lastMonthHires + lastMonthCampaigns;
+    const projectsTrend = lastMonthProjects > 0
+      ? Math.round(((thisMonthProjects - lastMonthProjects) / lastMonthProjects) * 100)
+      : (thisMonthProjects > 0 ? 100 : 0);
+
     return ApiResponse.ok(res, 'Creator analytics loaded.', {
       profileViews,
+      profileImpressions: profileViews,
+      totalReelViews,
+      views: totalReelViews,
+      portfolioViews: totalReelViews,
+      totalLikes,
+      likes: totalLikes,
+      totalShares,
+      shares: totalShares,
+      savedReelsCount,
       hireRequestsCount,
+      pendingRequests,
       completedCampaignsCount,
+      totalProjects,
+      activeClients,
       totalEarnings,
+      netEarnings: totalEarnings,
+      monthlyEarnings,
+      lastMonthEarnings,
       escrowInReview,
+      portfolioReels: portfolioReelsCount,
+      portfolioImages: portfolioImagesCount,
       rating: req.user.rating_avg || 5.0,
       reviewCount: req.user.rating_count || 0,
+      earningsTrend,
+      projectsTrend,
     });
   });
 }
