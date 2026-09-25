@@ -42,11 +42,29 @@ export default function ChatInboxScreen() {
 
   const { data: conversations = [], isLoading, isRefetching, refetch } = useConversations();
 
-  // Process threads for active view
-  const processedThreads = conversations.map((c) => {
+  // Process threads for active view & deduplicate by recipient ID
+  const processedThreads: any[] = [];
+  const seenKeys = new Set<string>();
+
+  const sortedConversations = [...conversations].sort((a, b) => {
+    const timeA = new Date(a.updatedAt || a.lastMessage?.createdAt || 0).getTime();
+    const timeB = new Date(b.updatedAt || b.lastMessage?.createdAt || 0).getTime();
+    return timeB - timeA;
+  });
+
+  for (const c of sortedConversations) {
     const participants = c.participants || [];
     const other: any = participants.find((p: any) => (p._id || p.id || p) !== currentUserId) || {};
-    const recipientId = other._id || other.id || (typeof other === 'string' ? other : '');
+    const recipientId = String(other._id || other.id || (typeof other === 'string' ? other : ''));
+    const dedupKey = recipientId || c._id || c.id;
+
+    if (dedupKey && seenKeys.has(dedupKey)) {
+      continue;
+    }
+    if (dedupKey) {
+      seenKeys.add(dedupKey);
+    }
+
     const name = other.name || other.shopName || other.businessName || 'BizReels User';
     const avatar = other.avatarUrl || other.profile_pic || other.vendorProfile?.logo || null;
     const isCreator = other.roles?.includes('creator') || false;
@@ -55,7 +73,7 @@ export default function ChatInboxScreen() {
       ? new Date(c.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : 'Recently';
 
-    return {
+    processedThreads.push({
       id: c._id || c.id || Math.random().toString(),
       name,
       avatar,
@@ -64,8 +82,8 @@ export default function ChatInboxScreen() {
       unread: c.unreadCount || 0,
       recipientId,
       role: isCreator ? 'creators' : 'customers',
-    };
-  });
+    });
+  }
 
   const filteredThreads = processedThreads.filter((t) => {
     const matchesTab = t.role === activeTab;

@@ -29,11 +29,10 @@ class ChatRepository {
 
     let conversation = await Conversation.findOne(query);
 
-    if (!conversation && roleContext === 'vendor') {
-      // Fallback check for legacy threads without roleContext
+    if (!conversation) {
+      // Fallback check for any existing thread between participantA and participantB
       conversation = await Conversation.findOne({
         participants: { $all: [participantA, participantB] },
-        roleContext: { $exists: false }
       });
     }
 
@@ -106,7 +105,7 @@ class ChatRepository {
       .sort({ updatedAt: -1 })
       .lean();
 
-    return list.map((c) => {
+    const processedList = list.map((c) => {
       if (c.lastMessage && c.lastMessage.deletedFor) {
         const isDeletedForMe = c.lastMessage.deletedFor.some(
           (id) => id.toString() === userId.toString()
@@ -124,6 +123,25 @@ class ChatRepository {
       }
       return c;
     });
+
+    // Deduplicate threads by recipient/peer user ID so duplicate conversation items aren't returned
+    const deduplicated = [];
+    const seenPeerIds = new Set();
+
+    for (const conv of processedList) {
+      const participants = conv.participants || [];
+      const peer = participants.find(
+        (p) => (p._id || p.id || p)?.toString() !== userId.toString()
+      );
+      const peerId = peer ? (peer._id || peer.id || peer).toString() : conv._id.toString();
+
+      if (!seenPeerIds.has(peerId)) {
+        seenPeerIds.add(peerId);
+        deduplicated.push(conv);
+      }
+    }
+
+    return deduplicated;
   }
 
   /**
