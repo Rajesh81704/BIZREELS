@@ -74,6 +74,17 @@ class ChatController {
     await chatService.deleteMessageForEveryone(messageId, req.user._id);
     return ApiResponse.ok(res, 'Message deleted for everyone.');
   });
+
+  // ── Get Total Unread Messages Count ──────────────────────
+  getUnreadTotal = asyncHandler(async (req, res) => {
+    const total = await chatService.unreadTotal(req.user._id);
+    return res.status(200).json({
+      success: true,
+      unread_total: total,
+      unreadTotal: total,
+      data: { unread_total: total, unreadTotal: total },
+    });
+  });
 }
 
 module.exports = new ChatController();

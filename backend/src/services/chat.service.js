@@ -215,7 +215,30 @@ class ChatService {
   }
 
   async unreadTotal(userId) {
-    return 0;
+    if (!userId) return 0;
+    try {
+      const Conversation = require('../models/Conversation');
+      const uid = userId.toString();
+      const conversations = await Conversation.find({
+        participants: userId,
+        isDeletedBy: { $ne: userId },
+      }).select('unreadCount').lean();
+
+      let total = 0;
+      for (const c of conversations) {
+        if (c.unreadCount) {
+          if (c.unreadCount instanceof Map) {
+            total += Number(c.unreadCount.get(uid) || 0);
+          } else if (typeof c.unreadCount === 'object') {
+            total += Number(c.unreadCount[uid] || 0);
+          }
+        }
+      }
+      return total;
+    } catch (err) {
+      logger.warn('Failed to calculate unreadTotal:', err);
+      return 0;
+    }
   }
 }
 

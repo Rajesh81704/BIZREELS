@@ -13,7 +13,9 @@ export default function PlanCard({
 }) {
   const { bi } = useLanguage();
   const hasCredits = Number(plan.wallet_credits || 0) > 0;
-  const badgeLabel = plan.badge_text || (isCurrent ? null : (plan.title.toLowerCase().includes('growth') || isPopular ? bi('Most Popular', 'सर्वाधिक लोकप्रिय') : plan.title.toLowerCase().includes('business') ? bi('Best Value', 'सर्वोत्तम मूल्य') : null));
+  const isPopular = Boolean(plan.is_popular || plan.isPopular || plan.popular);
+  const planTitle = (plan.title || '').toLowerCase();
+  const badgeLabel = plan.badge_text || (isCurrent ? null : (planTitle.includes('growth') || isPopular ? bi('Most Popular', 'सर्वाधिक लोकप्रिय') : planTitle.includes('business') ? bi('Best Value', 'सर्वोत्तम मूल्य') : null));
   const addOnsCount = Array.isArray(plan.add_ons) ? plan.add_ons.filter((a) => a.is_active !== false).length : 0;
 
   return (
