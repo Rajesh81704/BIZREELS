@@ -21,6 +21,8 @@ import { FontSize, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/context';
 import { useInquiries, useReplyInquiry } from '@/features/inquiries/queries';
 import type { Inquiry } from '@/features/inquiries/types';
+import type { Requirement } from '@/features/requirements/api';
+import { useMyRequirements, useSubmitQuote } from '@/features/requirements/queries';
 import { resolveImageUrl } from '@/utils/image';
 
 // Theme Design System Tokens matching Web & App
@@ -72,7 +74,9 @@ export default function InquiriesScreen() {
   const { user, status: authStatus } = useAuth();
 
   const { data: inquiriesData, isLoading, refetch, isRefetching } = useInquiries();
+  const { data: requirementsData, isLoading: isLoadingReqs, refetch: refetchReqs } = useMyRequirements();
   const replyMutation = useReplyInquiry();
+  const submitQuoteMutation = useSubmitQuote();
 
   const [activeCategoryTab, setActiveCategoryTab] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,9 +85,17 @@ export default function InquiriesScreen() {
   const [closedIds, setClosedIds] = useState<string[]>([]);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
 
+  // Proposal & Detail Modals State for Custom Requirements
+  const [quoteModalReq, setQuoteModalReq] = useState<Requirement | null>(null);
+  const [detailModalReq, setDetailModalReq] = useState<Requirement | null>(null);
+  const [quotePriceInput, setQuotePriceInput] = useState('');
+  const [quoteDaysInput, setQuoteDaysInput] = useState('1');
+  const [quoteMsgInput, setQuoteMsgInput] = useState('');
+
   const rawInquiries = (Array.isArray(inquiriesData) ? inquiriesData : []).filter(
     (item) => !deletedIds.includes(item._id || (item as any).id)
   );
+  const customRequirementsList: Requirement[] = Array.isArray(requirementsData) ? requirementsData : [];
 
   // Metrics computation matching web dashboard
   const totalCount = rawInquiries.length;
@@ -93,6 +105,34 @@ export default function InquiriesScreen() {
   const repliedCount = rawInquiries.filter(
     (i) => i.status === 'replied' || i.status === 'closed' || closedIds.includes(i._id || (i as any).id)
   ).length;
+
+  const productEnquiries = rawInquiries.filter((e) => {
+    const isService = (e.listing as any)?.type === 'service';
+    const isQuote = (e.subject || e.message || '').toLowerCase().includes('quote');
+    return !isService && !isQuote;
+  });
+
+  const serviceEnquiries = rawInquiries.filter((e) => {
+    const isService = (e.listing as any)?.type === 'service';
+    const isQuote = (e.subject || e.message || '').toLowerCase().includes('quote');
+    return isService && !isQuote;
+  });
+
+  const quoteRequests = rawInquiries.filter((e) => {
+    const msgStr = (e.subject || e.message || '').toLowerCase();
+    return msgStr.includes('quote') || msgStr.includes('callback') || msgStr.includes('rfq');
+  });
+
+  const filteredCustomRequirements = customRequirementsList.filter((req) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (req.title || '').toLowerCase().includes(q) ||
+      (req.category || '').toLowerCase().includes(q) ||
+      (req.description || '').toLowerCase().includes(q) ||
+      (req.city || '').toLowerCase().includes(q)
+    );
+  });
 
   const walletCredits = (user as any)?.walletBalance ?? 26066.0;
 
@@ -341,7 +381,7 @@ export default function InquiriesScreen() {
             style={[styles.catPill, activeCategoryTab === 'product' && styles.catPillActive]}
             onPress={() => setActiveCategoryTab('product')}>
             <Text style={[styles.catPillText, activeCategoryTab === 'product' && styles.catPillTextActive]}>
-              Product Enquiries (0)
+              Product Enquiries ({productEnquiries.length})
             </Text>
           </TouchableOpacity>
 
@@ -349,7 +389,7 @@ export default function InquiriesScreen() {
             style={[styles.catPill, activeCategoryTab === 'service' && styles.catPillActive]}
             onPress={() => setActiveCategoryTab('service')}>
             <Text style={[styles.catPillText, activeCategoryTab === 'service' && styles.catPillTextActive]}>
-              Service Enquiries (0)
+              Service Enquiries ({serviceEnquiries.length})
             </Text>
           </TouchableOpacity>
 
@@ -357,7 +397,15 @@ export default function InquiriesScreen() {
             style={[styles.catPill, activeCategoryTab === 'quote' && styles.catPillActive]}
             onPress={() => setActiveCategoryTab('quote')}>
             <Text style={[styles.catPillText, activeCategoryTab === 'quote' && styles.catPillTextActive]}>
-              Quote Requests ({totalCount})
+              Quote Requests ({quoteRequests.length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.catPill, activeCategoryTab === 'custom_requirements' && styles.catPillActive]}
+            onPress={() => setActiveCategoryTab('custom_requirements')}>
+            <Text style={[styles.catPillText, activeCategoryTab === 'custom_requirements' && styles.catPillTextActive]}>
+              Custom Requirements ({customRequirementsList.length})
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -367,7 +415,7 @@ export default function InquiriesScreen() {
           <Ionicons name="search-outline" size={16} color={TEXT_MUTED} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by customer name, message, or listing title..."
+            placeholder={activeCategoryTab === 'custom_requirements' ? "Search custom requirements..." : "Search by customer name, message, or listing title..."}
             placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -379,8 +427,126 @@ export default function InquiriesScreen() {
           )}
         </View>
 
-        {/* Inquiry Cards List matching Web 1:1 */}
-        {isLoading ? (
+        {/* ── CUSTOM REQUIREMENTS (BUYER BROADCAST RFQs) TAB VIEW ── */}
+        {activeCategoryTab === 'custom_requirements' ? (
+          isLoadingReqs ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="large" color={GOLD} />
+              <Text style={styles.loadingText}>Loading live custom requirements...</Text>
+            </View>
+          ) : filteredCustomRequirements.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Ionicons name="clipboard-outline" size={44} color={TEXT_MUTED} />
+              <Text style={styles.emptyTitle}>
+                {searchQuery ? 'No matching custom requirements' : 'No Custom Requirements Yet'}
+              </Text>
+              <Text style={styles.emptySub}>
+                {searchQuery
+                  ? 'Try adjusting your search keywords.'
+                  : 'Broadcast customer requirements from local buyers matching your business categories will automatically appear here in real-time.'}
+              </Text>
+            </View>
+          ) : (
+            filteredCustomRequirements.map((req) => {
+              const reqId = req._id || req.id || '';
+              const budgetDisplay = req.budget_min && req.budget_max
+                ? `₹${req.budget_min} - ₹${req.budget_max}`
+                : req.budget
+                ? `₹${req.budget}`
+                : 'Negotiable';
+
+              const isService = req.type === 'service' || req.requirementType === 'service';
+              const urgencyText = req.urgency === 'urgent' ? 'Urgent' : req.urgency === '1week' ? '1 Week' : 'Flexible';
+              const urgencyColor = req.urgency === 'urgent' ? '#EF4444' : req.urgency === '1week' ? AMBER : EMERALD;
+
+              const isQuoted = req.hasResponded || Boolean(req.myQuote);
+
+              return (
+                <View key={reqId} style={styles.reqCard}>
+                  {/* Top Bar: Title & Category Badges */}
+                  <View style={styles.reqCardHeader}>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+                        <View style={styles.catTagBadge}>
+                          <Text style={styles.catTagBadgeText}>{req.category || 'General'}</Text>
+                        </View>
+                        <View style={[styles.typeBadge, isService ? { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' } : { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
+                          <Text style={[styles.typeBadgeText, isService ? { color: '#1D4ED8' } : { color: '#B45309' }]}>
+                            {isService ? 'SERVICE REQUIREMENT' : 'PRODUCT REQUIREMENT'}
+                          </Text>
+                        </View>
+                        <View style={[styles.urgencyBadge, { borderColor: urgencyColor }]}>
+                          <Text style={[styles.urgencyBadgeText, { color: urgencyColor }]}>
+                            ⏱ {urgencyText}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.reqTitleText}>{req.title}</Text>
+                    </View>
+                  </View>
+
+                  {/* Metrics Row: Budget, Quantity, Location, Expected Date */}
+                  <View style={styles.reqMetricsGrid}>
+                    <View style={styles.reqMetricCol}>
+                      <Text style={styles.reqMetricLabel}>TARGET BUDGET</Text>
+                      <Text style={styles.reqMetricValHighlight}>{budgetDisplay}</Text>
+                    </View>
+
+                    <View style={styles.reqMetricCol}>
+                      <Text style={styles.reqMetricLabel}>QUANTITY</Text>
+                      <Text style={styles.reqMetricVal}>{req.quantity || 1} {isService ? 'service(s)' : 'unit(s)'}</Text>
+                    </View>
+
+                    <View style={styles.reqMetricCol}>
+                      <Text style={styles.reqMetricLabel}>LOCATION</Text>
+                      <Text style={styles.reqMetricVal} numberOfLines={1}>
+                        📍 {req.city || req.district || 'Local Area'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Specification Snippet */}
+                  {Boolean(req.description) && (
+                    <View style={styles.reqDescBox}>
+                      <Text style={styles.reqDescTitle}>BUYER NOTES & SPECIFICATIONS</Text>
+                      <Text style={styles.reqDescText} numberOfLines={3}>
+                        {req.description}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Action Buttons Row */}
+                  <View style={styles.reqCardActionsRow}>
+                    <TouchableOpacity
+                      style={styles.viewDetailBtn}
+                      onPress={() => setDetailModalReq(req)}>
+                      <Ionicons name="eye-outline" size={14} color={TEXT_MAIN} />
+                      <Text style={styles.viewDetailBtnText}>View Details</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.quoteBidBtn, isQuoted && { backgroundColor: '#10B981' }]}
+                      onPress={() => {
+                        if (isQuoted) {
+                          Alert.alert('Proposal Submitted', 'You have already submitted a proposal for this requirement.');
+                        } else {
+                          setQuoteModalReq(req);
+                          setQuotePriceInput(req.budget_max ? String(req.budget_max) : req.budget ? String(req.budget) : '');
+                          setQuoteDaysInput('1');
+                          setQuoteMsgInput('');
+                        }
+                      }}>
+                      <Ionicons name={isQuoted ? 'checkmark-circle' : 'paper-plane-outline'} size={14} color="#FFF" />
+                      <Text style={styles.quoteBidBtnText}>
+                        {isQuoted ? 'QUOTATION SUBMITTED' : 'SUBMIT PROPOSAL'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })
+          )
+        ) : isLoading ? (
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color={GOLD} />
             <Text style={styles.loadingText}>Loading buyer inquiries...</Text>
@@ -647,6 +813,174 @@ export default function InquiriesScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ── SUBMIT PROPOSAL / QUOTE BID MODAL ── */}
+      <Modal visible={Boolean(quoteModalReq)} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setQuoteModalReq(null)} />
+          <View style={[styles.modalContent, { maxHeight: 560 }]}>
+            {quoteModalReq && (
+              <>
+                <View style={styles.modalHeader}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <Text style={styles.modalBadge}>PROPOSAL BID ✦</Text>
+                    <Text style={styles.modalTitle} numberOfLines={1}>{quoteModalReq.title}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setQuoteModalReq(null)} style={styles.deleteIconBtn}>
+                    <Ionicons name="close" size={16} color={TEXT_MAIN} />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 14, paddingVertical: 10 }}>
+                  <View style={{ backgroundColor: '#FEF3C7', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#FDE68A' }}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E' }}>
+                      Target Budget: {quoteModalReq.budget_min ? `₹${quoteModalReq.budget_min} - ₹${quoteModalReq.budget_max}` : quoteModalReq.budget ? `₹${quoteModalReq.budget}` : 'Negotiable'}
+                    </Text>
+                    <Text style={{ fontSize: 10, color: '#B45309', marginTop: 2 }}>
+                      Category: {quoteModalReq.category} • {quoteModalReq.quantity || 1} units required
+                    </Text>
+                  </View>
+
+                  {/* Quoted Price Input */}
+                  <View style={{ gap: 4 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: TEXT_MAIN }}>Your Quoted Price (₹) *</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: BG_MATTE, borderWidth: 1, borderColor: BORDER_COLOR, borderRadius: 10, paddingHorizontal: 12, height: 46 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '900', color: GOLD, marginRight: 6 }}>₹</Text>
+                      <TextInput
+                        style={{ flex: 1, fontSize: 14, fontWeight: '700', color: TEXT_MAIN }}
+                        placeholder="e.g. 2500"
+                        placeholderTextColor="#94A3B8"
+                        keyboardType="numeric"
+                        value={quotePriceInput}
+                        onChangeText={setQuotePriceInput}
+                      />
+                    </View>
+                  </View>
+
+                  {/* Delivery Days Input */}
+                  <View style={{ gap: 4 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: TEXT_MAIN }}>Estimated Delivery Time (Days)</Text>
+                    <TextInput
+                      style={{ backgroundColor: BG_MATTE, borderWidth: 1, borderColor: BORDER_COLOR, borderRadius: 10, paddingHorizontal: 12, height: 44, fontSize: 13, color: TEXT_MAIN }}
+                      placeholder="e.g. 2"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="numeric"
+                      value={quoteDaysInput}
+                      onChangeText={setQuoteDaysInput}
+                    />
+                  </View>
+
+                  {/* Message / Proposal Pitch */}
+                  <View style={{ gap: 4 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: TEXT_MAIN }}>Proposal Message / Special Terms</Text>
+                    <TextInput
+                      style={{ backgroundColor: BG_MATTE, borderWidth: 1, borderColor: BORDER_COLOR, borderRadius: 10, paddingHorizontal: 12, paddingTop: 10, height: 90, fontSize: 12, color: TEXT_MAIN, textAlignVertical: 'top' }}
+                      placeholder="Describe product specs, warranty, delivery terms or custom discount..."
+                      placeholderTextColor="#94A3B8"
+                      multiline
+                      numberOfLines={3}
+                      value={quoteMsgInput}
+                      onChangeText={setQuoteMsgInput}
+                    />
+                  </View>
+                </ScrollView>
+
+                <TouchableOpacity
+                  style={{ backgroundColor: GOLD, borderRadius: 12, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' }}
+                  onPress={() => {
+                    if (!quotePriceInput || parseFloat(quotePriceInput) <= 0) {
+                      Alert.alert('Invalid Price', 'Please enter a valid quoted price amount.');
+                      return;
+                    }
+                    submitQuoteMutation.mutate(
+                      {
+                        requirementId: quoteModalReq._id || quoteModalReq.id || '',
+                        price: parseFloat(quotePriceInput),
+                        message: quoteMsgInput,
+                        deliveryTimeDays: parseInt(quoteDaysInput, 10) || 1,
+                      },
+                      {
+                        onSuccess: () => {
+                          Alert.alert('Quotation Submitted! 🎉', 'Your quote has been sent to the buyer.');
+                          setQuoteModalReq(null);
+                          refetchReqs();
+                        },
+                        onError: (err: any) => {
+                          Alert.alert('Error', err?.message || 'Failed to submit quote proposal.');
+                        },
+                      }
+                    );
+                  }}
+                  disabled={submitQuoteMutation.isPending}>
+                  {submitQuoteMutation.isPending ? (
+                    <ActivityIndicator color="#FFF" />
+                  ) : (
+                    <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '900' }}>SUBMIT QUOTE NOW</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── REQUIREMENT DETAIL MODAL ── */}
+      <Modal visible={Boolean(detailModalReq)} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setDetailModalReq(null)} />
+          <View style={[styles.modalContent, { maxHeight: '85%' }]}>
+            {detailModalReq && (
+              <>
+                <View style={styles.modalHeader}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <Text style={styles.modalBadge}>CUSTOMER REQUIREMENT BRIEF</Text>
+                    <Text style={styles.modalTitle}>{detailModalReq.title}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setDetailModalReq(null)} style={styles.deleteIconBtn}>
+                    <Ionicons name="close" size={16} color={TEXT_MAIN} />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 12, paddingVertical: 10 }}>
+                  <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                    <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
+                      <Text style={{ color: GOLD_DARK, fontSize: 11, fontWeight: '800' }}>Category: {detailModalReq.category}</Text>
+                    </View>
+                    {Boolean(detailModalReq.subcategory) && (
+                      <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
+                        <Text style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: '700' }}>{detailModalReq.subcategory}</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={{ backgroundColor: BG_MATTE, borderRadius: 10, padding: 12, gap: 6, borderWidth: 1, borderColor: BORDER_COLOR }}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: TEXT_MAIN }}>Target Budget: {detailModalReq.budget_min ? `₹${detailModalReq.budget_min} - ₹${detailModalReq.budget_max}` : detailModalReq.budget ? `₹${detailModalReq.budget}` : 'Negotiable'}</Text>
+                    <Text style={{ fontSize: 11, color: TEXT_MUTED }}>Quantity Needed: {detailModalReq.quantity || 1} units</Text>
+                    <Text style={{ fontSize: 11, color: TEXT_MUTED }}>Location: {detailModalReq.city || 'Local Area'} {detailModalReq.pincode ? `(${detailModalReq.pincode})` : ''}</Text>
+                    {Boolean(detailModalReq.expectedDeliveryDate) && (
+                      <Text style={{ fontSize: 11, color: EMERALD, fontWeight: '700' }}>Expected Date: {detailModalReq.expectedDeliveryDate}</Text>
+                    )}
+                  </View>
+
+                  {Boolean(detailModalReq.description) && (
+                    <View style={{ gap: 4 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: TEXT_MAIN }}>Description &amp; Notes</Text>
+                      <Text style={{ fontSize: 12, color: TEXT_MUTED, lineHeight: 18 }}>{detailModalReq.description}</Text>
+                    </View>
+                  )}
+
+                  {Boolean(detailModalReq.detailedSpecifications) && (
+                    <View style={{ gap: 4 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: TEXT_MAIN }}>Technical Specifications</Text>
+                      <Text style={{ fontSize: 12, color: TEXT_MUTED, lineHeight: 18 }}>{detailModalReq.detailedSpecifications}</Text>
+                    </View>
+                  )}
+                </ScrollView>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -659,6 +993,40 @@ const styles = StyleSheet.create({
   authSub: { color: TEXT_MUTED, fontSize: FontSize.xs, textAlign: 'center', lineHeight: 18 },
   authBtn: { backgroundColor: ESPRESSO, borderWidth: 1, borderColor: GOLD, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
   authBtnText: { color: GOLD, fontSize: FontSize.xs, fontWeight: '900' },
+
+  reqCard: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 16,
+    padding: Spacing.four,
+    gap: 12,
+    marginBottom: 12,
+  },
+  reqCardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  catTagBadge: { backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#CBD5E1', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  catTagBadgeText: { color: '#334155', fontSize: 9.5, fontWeight: '900' },
+  typeBadge: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  typeBadgeText: { fontSize: 9, fontWeight: '900' },
+  urgencyBadge: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: '#FFF' },
+  urgencyBadgeText: { fontSize: 9, fontWeight: '800' },
+  reqTitleText: { color: TEXT_MAIN, fontSize: 14, fontWeight: '900', lineHeight: 20 },
+
+  reqMetricsGrid: { flexDirection: 'row', backgroundColor: '#FBF9F5', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: BORDER_COLOR, gap: 10 },
+  reqMetricCol: { flex: 1, gap: 2 },
+  reqMetricLabel: { color: TEXT_MUTED, fontSize: 8.5, fontWeight: '900', letterSpacing: 0.5 },
+  reqMetricValHighlight: { color: GOLD_DARK, fontSize: 13, fontWeight: '900' },
+  reqMetricVal: { color: TEXT_MAIN, fontSize: 11, fontWeight: '800' },
+
+  reqDescBox: { backgroundColor: '#FEFCE8', borderWidth: 1, borderColor: '#FEF08A', borderRadius: 10, padding: 10, gap: 4 },
+  reqDescTitle: { color: GOLD_DARK, fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
+  reqDescText: { color: '#2D261E', fontSize: 11.5, lineHeight: 16 },
+
+  reqCardActionsRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  viewDetailBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: BORDER_COLOR, borderRadius: 10, paddingVertical: 10 },
+  viewDetailBtnText: { color: TEXT_MAIN, fontSize: 11, fontWeight: '800' },
+  quoteBidBtn: { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: GOLD, borderRadius: 10, paddingVertical: 10 },
+  quoteBidBtnText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
 
   headerBar: {
     flexDirection: 'row',

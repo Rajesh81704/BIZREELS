@@ -42,14 +42,51 @@ export interface CreateRequirementPayload {
 
 export interface Requirement {
   _id: string;
+  id?: string;
   title: string;
   description: string;
   category: string;
+  subcategory?: string;
+  type?: 'product' | 'service';
+  requirementType?: 'product' | 'service';
   budget?: number;
+  budget_min?: number;
+  budget_max?: number;
   quantity?: number;
+  is_negotiable?: boolean;
+  urgency?: string;
   city?: string;
+  district?: string;
+  state?: string;
+  pincode?: string;
+  address?: string;
+  detailedSpecifications?: string;
+  expectedDeliveryDate?: string;
+  expectedDeliveryTime?: string;
+  photos?: string[];
+  video?: string;
   status: string;
   createdAt: string;
+  customer?: {
+    _id?: string;
+    name?: string;
+    avatarUrl?: string;
+    phone?: string;
+  };
+  hasResponded?: boolean;
+  myQuote?: {
+    _id?: string;
+    price?: number;
+    message?: string;
+    status?: string;
+  };
+}
+
+export interface SubmitQuotePayload {
+  requirementId: string;
+  price: number;
+  message?: string;
+  deliveryTimeDays?: number;
 }
 
 export async function createRequirement(payload: CreateRequirementPayload): Promise<Requirement> {
@@ -58,6 +95,25 @@ export async function createRequirement(payload: CreateRequirementPayload): Prom
 }
 
 export async function fetchMyRequirements(): Promise<Requirement[]> {
-  const response = await api.get<{ success: boolean; data: Requirement[] }>('/requirements');
-  return response.data.data || [];
+  const response = await api.get('/requirements');
+  const data = response.data?.data || response.data;
+  const list = Array.isArray(data?.requirements)
+    ? data.requirements
+    : Array.isArray(data)
+    ? data
+    : [];
+  return list;
+}
+
+export async function submitQuoteApi(payload: SubmitQuotePayload): Promise<any> {
+  const response = await api.post('/requirements/quotes', {
+    requirementId: payload.requirementId,
+    requirement: payload.requirementId,
+    price: payload.price,
+    amount: payload.price,
+    message: payload.message || '',
+    notes: payload.message || '',
+    deliveryTimeDays: payload.deliveryTimeDays || 1,
+  });
+  return response.data;
 }
