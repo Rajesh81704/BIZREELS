@@ -72,11 +72,16 @@ export function VendorDrawerModal({ isOpen, onClose }: VendorDrawerModalProps) {
   }
 
   const isVendor = user?.activeRole === 'vendor';
+  const isCreator = user?.activeRole === 'creator';
+  const activeRole = user?.activeRole || user?.current_role || (isVendor ? 'vendor' : isCreator ? 'creator' : 'customer');
+
   const displayName = isVendor
     ? (user as any)?.vendorProfile?.storeName || (user as any)?.vendorProfile?.businessName || user?.name || 'Vendor Store'
+    : isCreator
+    ? (user as any)?.creatorProfile?.displayName || (user as any)?.creatorProfile?.handle || user?.name || 'Creator Studio'
     : user?.name || 'Customer';
   const displayEmail = user?.email || 'user@bizreels.com';
-  const subtitleRole = isVendor ? 'VENDOR PORTAL' : 'CUSTOMER MENU';
+  const subtitleRole = activeRole === 'vendor' ? 'VENDOR PORTAL' : activeRole === 'creator' ? 'CREATOR PORTAL' : 'CUSTOMER MENU';
 
   const CUSTOMER_SECTIONS: DrawerSection[] = [
     {
@@ -181,13 +186,11 @@ export function VendorDrawerModal({ isOpen, onClose }: VendorDrawerModalProps) {
       key: 'FINANCE_ACCOUNT',
       title: 'FINANCE & ACCOUNT',
       items: [
-        { title: 'Subscription', route: '/creator/subscription', icon: 'card-outline' },
         { title: 'Wallet & Earnings', route: '/creator/wallet', icon: 'wallet-outline' },
       ],
     },
   ];
 
-  const activeRole = user?.activeRole || user?.current_role || (isVendor ? 'vendor' : 'customer');
   const NAV_SECTIONS = activeRole === 'creator' ? CREATOR_SECTIONS : activeRole === 'vendor' ? VENDOR_SECTIONS : CUSTOMER_SECTIONS;
 
   const { data: notificationsList = [] } = useNotifications(activeRole);

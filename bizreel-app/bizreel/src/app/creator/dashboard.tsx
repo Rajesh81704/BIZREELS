@@ -313,9 +313,9 @@ export default function CreatorDashboardScreen({ embedded }: { embedded?: boolea
           <Ionicons name="wallet-outline" size={16} color={ESPRESSO} />
           <Text style={styles.actionChipText}>Wallet</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionChip} onPress={() => router.push('/creator/subscription')}>
-          <Ionicons name="card-outline" size={16} color={ESPRESSO} />
-          <Text style={styles.actionChipText}>Subscription</Text>
+        <TouchableOpacity style={styles.actionChip} onPress={() => router.push('/creator/analytics')}>
+          <Ionicons name="stats-chart-outline" size={16} color={ESPRESSO} />
+          <Text style={styles.actionChipText}>Analytics</Text>
         </TouchableOpacity>
       </ScrollView>
 

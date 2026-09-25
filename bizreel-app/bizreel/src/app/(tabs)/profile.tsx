@@ -244,7 +244,6 @@ export default function ProfileScreen() {
   ];
 
   const CREATOR_FINANCE_MENU = [
-    { label: 'Creator Subscription Plan', route: '/creator/subscription', icon: 'card-outline' },
     { label: 'Wallet & Payout Earnings', route: '/creator/wallet', icon: 'wallet-outline' },
   ];
 
