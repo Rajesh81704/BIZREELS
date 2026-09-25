@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -337,9 +338,11 @@ export default function CustomerPostRequirementScreen() {
   const [areaModalOpen, setAreaModalOpen] = useState(false);
   const [catSearch, setCatSearch] = useState('');
 
-  // Product / Service condition
+  // Product / Service condition & Custom options
   const [productCondition, setProductCondition] = useState<'new' | 'used' | 'refurbished' | 'other'>('new');
+  const [customProductCondition, setCustomProductCondition] = useState('');
   const [serviceModel, setServiceModel] = useState<'onsite' | 'remote' | 'hybrid' | 'other'>('onsite');
+  const [customServiceModel, setCustomServiceModel] = useState('');
 
   // Pricing & Quantity
   const [minBudget, setMinBudget] = useState('');
@@ -350,18 +353,126 @@ export default function CustomerPostRequirementScreen() {
   // Location & Pincode Auto Fetching
   const [pincode, setPincode] = useState('');
   const [city, setCity] = useState('');
+  const [district, setDistrict] = useState('');
   const [state, setState] = useState('');
+  const [address, setAddress] = useState('');
   const [area, setArea] = useState('');
   const [fetchedAreas, setFetchedAreas] = useState<string[]>([]);
   const [fetchingPincode, setFetchingPincode] = useState(false);
   const [pincodeMessage, setPincodeMessage] = useState<string | null>(null);
   const [targetDistance, setTargetDistance] = useState('50');
 
-  // Timeline & Specs
+  // Timeline, Media & Detailed Specs
   const [urgency, setUrgency] = useState<'urgent' | '1week' | 'flexible'>('flexible');
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('');
+  const [expectedDeliveryTime, setExpectedDeliveryTime] = useState<'anytime' | 'morning' | 'afternoon' | 'evening'>('anytime');
   const [description, setDescription] = useState('');
+  const [detailedSpecifications, setDetailedSpecifications] = useState('');
   const [otherConditions, setOtherConditions] = useState('');
+
+  // Media attachments
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [video, setVideo] = useState<string | null>(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+
+  const handlePickImage = async () => {
+    if (photos.length >= 5) {
+      Alert.alert('Limit Reached', 'Maximum 5 reference images allowed.');
+      return;
+    }
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission Required', 'Please grant photo library access to pick reference images.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.8,
+      allowsMultipleSelection: true,
+      selectionLimit: 5 - photos.length,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setUploadingMedia(true);
+      try {
+        const uploadedUrls: string[] = [];
+        for (const asset of result.assets) {
+          const formData = new FormData();
+          formData.append('file', {
+            uri: asset.uri,
+            name: asset.fileName || 'requirement_photo.jpg',
+            type: asset.mimeType || 'image/jpeg',
+          } as any);
+          formData.append('folder', 'requirements');
+          formData.append('resource_type', 'image');
+
+          const res = await api.post('/media/upload', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          }).catch(() => null);
+
+          const url = res?.data?.secure_url || res?.data?.url || res?.data?.path || asset.uri;
+          if (url) uploadedUrls.push(url);
+        }
+        if (uploadedUrls.length > 0) {
+          setPhotos((prev) => [...prev, ...uploadedUrls].slice(0, 5));
+        }
+      } catch (err) {
+        console.warn('Failed to upload image', err);
+      } finally {
+        setUploadingMedia(false);
+      }
+    }
+  };
+
+  const handlePickVideo = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission Required', 'Please grant media access to pick a reference video.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['videos'],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets?.[0]) {
+      const asset = result.assets[0];
+      if (asset.duration && asset.duration > 30000) {
+        Alert.alert('Video Too Long', 'Maximum allowed video duration is 30 seconds.');
+        return;
+      }
+      setUploadingMedia(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', {
+          uri: asset.uri,
+          name: asset.fileName || 'requirement_video.mp4',
+          type: asset.mimeType || 'video/mp4',
+        } as any);
+        formData.append('folder', 'requirements');
+        formData.append('resource_type', 'video');
+
+        const res = await api.post('/media/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        }).catch(() => null);
+
+        const url = res?.data?.secure_url || res?.data?.url || res?.data?.path || asset.uri;
+        if (url) setVideo(url);
+      } catch (err) {
+        console.warn('Failed to upload video', err);
+      } finally {
+        setUploadingMedia(false);
+      }
+    }
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleRemoveVideo = () => {
+    setVideo(null);
+  };
 
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -738,7 +849,9 @@ export default function CustomerPostRequirementScreen() {
       await api.post('/requirements', {
         title: safeTruncateText(title.trim(), 120),
         description: safeTruncateText(description.trim(), 1400),
-        detailedSpecifications: safeTruncateText(description.trim(), 2800),
+        detailedSpecifications: detailedSpecifications.trim()
+          ? safeTruncateText(detailedSpecifications.trim(), 2800)
+          : safeTruncateText(description.trim(), 2800),
         category: catName,
         subcategory: subCatName,
         customCategory: selectedCategory.name === 'Other' ? customCategory : undefined,
@@ -746,7 +859,9 @@ export default function CustomerPostRequirementScreen() {
         type: reqType,
         requirementType: reqType,
         productCondition: reqType === 'product' ? productCondition : undefined,
+        customProductCondition: reqType === 'product' && productCondition === 'other' ? customProductCondition : undefined,
         serviceModel: reqType === 'service' ? serviceModel : undefined,
+        customServiceModel: reqType === 'service' && serviceModel === 'other' ? customServiceModel : undefined,
         budget: maxB || minB,
         budget_min: minB,
         budget_max: maxB,
@@ -754,15 +869,23 @@ export default function CustomerPostRequirementScreen() {
         is_negotiable: isNegotiable,
         urgency,
         expectedDeliveryDate: expectedDeliveryDate ? expectedDeliveryDate.trim() : undefined,
+        expectedDeliveryTime: expectedDeliveryTime || undefined,
+        address: address.trim() ? safeTruncateText(address.trim(), 500) : undefined,
+        city: city.trim() || undefined,
+        district: district.trim() || area.trim() || undefined,
+        state: state.trim() || undefined,
+        pincode: pincode.trim() || undefined,
         location: {
           city: city.trim() || 'All Cities',
           area: area.trim() || 'City Wide',
+          district: district.trim() || undefined,
           state: state.trim() || undefined,
           pincode: pincode.trim() || undefined,
         },
-        pincode: pincode.trim() || undefined,
         targetDistance: targetDistance ? parseFloat(targetDistance) : undefined,
-        otherConditions: otherConditions.trim() || undefined,
+        otherConditions: otherConditions.trim() ? safeTruncateText(otherConditions.trim(), 500) : undefined,
+        photos: photos.length > 0 ? photos : undefined,
+        video: video || undefined,
       });
 
       Alert.alert(
@@ -774,6 +897,7 @@ export default function CustomerPostRequirementScreen() {
       // Reset Form
       setTitle('');
       setDescription('');
+      setDetailedSpecifications('');
       setSelectedCategory(null);
       setSelectedSubcategory(null);
       setCustomCategory('');
@@ -782,6 +906,18 @@ export default function CustomerPostRequirementScreen() {
       setMaxBudget('');
       setQuantity('1');
       setPincode('');
+      setCity('');
+      setDistrict('');
+      setState('');
+      setAddress('');
+      setArea('');
+      setPhotos([]);
+      setVideo(null);
+      setCustomProductCondition('');
+      setCustomServiceModel('');
+      setExpectedDeliveryDate('');
+      setExpectedDeliveryTime('anytime');
+      setOtherConditions('');
       setCity('');
       setState('');
       setArea('');
@@ -1045,37 +1181,69 @@ export default function CustomerPostRequirementScreen() {
               </Text>
 
               {reqType === 'product' ? (
-                <View style={styles.optionsWrap}>
-                  {PRODUCT_CONDITIONS.map((cond) => {
-                    const active = productCondition === cond.id;
-                    return (
-                      <TouchableOpacity
-                        key={cond.id}
-                        style={[styles.optChip, active && styles.optChipActive]}
-                        onPress={() => setProductCondition(cond.id as any)}>
-                        <Text style={[styles.optChipText, active && styles.optChipTextActive]}>
-                          {cond.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                <>
+                  <View style={styles.optionsWrap}>
+                    {PRODUCT_CONDITIONS.map((cond) => {
+                      const active = productCondition === cond.id;
+                      return (
+                        <TouchableOpacity
+                          key={cond.id}
+                          style={[styles.optChip, active && styles.optChipActive]}
+                          onPress={() => setProductCondition(cond.id as any)}>
+                          <Text style={[styles.optChipText, active && styles.optChipTextActive]}>
+                            {cond.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  {productCondition === 'other' && (
+                    <View style={[styles.fieldGroup, { marginTop: 10 }]}>
+                      <Text style={styles.label}>Specify Custom Condition</Text>
+                      <View style={styles.inputRow}>
+                        <TextInput
+                          style={styles.input}
+                          placeholder="e.g. Open Box, Discontinued, Vintage..."
+                          placeholderTextColor="rgba(255,255,255,0.4)"
+                          value={customProductCondition}
+                          onChangeText={setCustomProductCondition}
+                        />
+                      </View>
+                    </View>
+                  )}
+                </>
               ) : (
-                <View style={styles.optionsWrap}>
-                  {SERVICE_MODELS.map((model) => {
-                    const active = serviceModel === model.id;
-                    return (
-                      <TouchableOpacity
-                        key={model.id}
-                        style={[styles.optChip, active && styles.optChipActive]}
-                        onPress={() => setServiceModel(model.id as any)}>
-                        <Text style={[styles.optChipText, active && styles.optChipTextActive]}>
-                          {model.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                <>
+                  <View style={styles.optionsWrap}>
+                    {SERVICE_MODELS.map((model) => {
+                      const active = serviceModel === model.id;
+                      return (
+                        <TouchableOpacity
+                          key={model.id}
+                          style={[styles.optChip, active && styles.optChipActive]}
+                          onPress={() => setServiceModel(model.id as any)}>
+                          <Text style={[styles.optChipText, active && styles.optChipTextActive]}>
+                            {model.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  {serviceModel === 'other' && (
+                    <View style={[styles.fieldGroup, { marginTop: 10 }]}>
+                      <Text style={styles.label}>Specify Custom Service Model</Text>
+                      <View style={styles.inputRow}>
+                        <TextInput
+                          style={styles.input}
+                          placeholder="e.g. Turnkey, AMC, Doorstep Visit..."
+                          placeholderTextColor="rgba(255,255,255,0.4)"
+                          value={customServiceModel}
+                          onChangeText={setCustomServiceModel}
+                        />
+                      </View>
+                    </View>
+                  )}
+                </>
               )}
             </View>
 
@@ -1225,6 +1393,21 @@ export default function CustomerPostRequirementScreen() {
                 )}
               </View>
 
+              {/* Full Street Address */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.label}>Full Street Address (Optional)</Text>
+                <View style={styles.inputRow}>
+                  <Ionicons name="home-outline" size={16} color={YELLOW} style={styles.icon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. Plot 42, Building A, Main Road"
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    value={address}
+                    onChangeText={setAddress}
+                  />
+                </View>
+              </View>
+
               {/* Target Broadcast Radius */}
               <View style={styles.fieldGroup}>
                 <Text style={styles.label}>Vendor Broadcast Radius</Text>
@@ -1295,19 +1478,121 @@ export default function CustomerPostRequirementScreen() {
                 </View>
               </View>
 
-              {/* Expected Delivery Date */}
-              <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Expected Required Date (Optional)</Text>
-                <View style={styles.inputRow}>
-                  <Ionicons name="calendar" size={16} color={YELLOW} style={styles.icon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. DD/MM/YYYY or Next Monday"
-                    placeholderTextColor="rgba(255,255,255,0.4)"
-                    value={expectedDeliveryDate}
-                    onChangeText={setExpectedDeliveryDate}
-                  />
+              {/* Expected Delivery Date & Time Slot */}
+              <View style={styles.rowTwo}>
+                <View style={[styles.fieldGroup, { flex: 1 }]}>
+                  <Text style={styles.label}>Expected Date (Optional)</Text>
+                  <View style={styles.inputRow}>
+                    <Ionicons name="calendar" size={16} color={YELLOW} style={styles.icon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="e.g. DD/MM/YYYY"
+                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      value={expectedDeliveryDate}
+                      onChangeText={setExpectedDeliveryDate}
+                    />
+                  </View>
                 </View>
+
+                <View style={[styles.fieldGroup, { flex: 1 }]}>
+                  <Text style={styles.label}>Time Slot Preference</Text>
+                  <View style={styles.optionsWrap}>
+                    {[
+                      { id: 'anytime', label: 'Anytime' },
+                      { id: 'morning', label: 'Morning' },
+                      { id: 'afternoon', label: 'Afternoon' },
+                      { id: 'evening', label: 'Evening' },
+                    ].map((slot) => (
+                      <TouchableOpacity
+                        key={slot.id}
+                        style={[
+                          styles.optChip,
+                          expectedDeliveryTime === slot.id && styles.optChipActive,
+                          { paddingHorizontal: 8, paddingVertical: 4 },
+                        ]}
+                        onPress={() => setExpectedDeliveryTime(slot.id as any)}>
+                        <Text
+                          style={[
+                            styles.optChipText,
+                            expectedDeliveryTime === slot.id && styles.optChipTextActive,
+                            { fontSize: 10 },
+                          ]}>
+                          {slot.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
+
+              {/* Reference Images & Video Attachments Upload */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.label}>Reference Photos & Video (Optional)</Text>
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
+                  <TouchableOpacity
+                    style={[styles.dropdownBtn, { flex: 1, justifyContent: 'center' }]}
+                    onPress={handlePickImage}
+                    disabled={uploadingMedia || photos.length >= 5}>
+                    {uploadingMedia ? (
+                      <ActivityIndicator size="small" color={YELLOW} />
+                    ) : (
+                      <>
+                        <Ionicons name="images-outline" size={16} color={YELLOW} />
+                        <Text style={styles.dropdownBtnText}>
+                          Add Images ({photos.length}/5)
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.dropdownBtn, { flex: 1, justifyContent: 'center' }]}
+                    onPress={handlePickVideo}
+                    disabled={uploadingMedia || !!video}>
+                    {uploadingMedia ? (
+                      <ActivityIndicator size="small" color={YELLOW} />
+                    ) : (
+                      <>
+                        <Ionicons name="videocam-outline" size={16} color={video ? '#10B981' : YELLOW} />
+                        <Text style={styles.dropdownBtnText}>
+                          {video ? 'Video Added' : 'Add 30s Video'}
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                {/* Media Previews */}
+                {(photos.length > 0 || !!video) && (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 6 }}>
+                    <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                      {photos.map((url, idx) => {
+                        const imgUri = resolveImageUrl(url) || url;
+                        return (
+                          <View key={idx} style={{ position: 'relative', width: 60, height: 60, borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: YELLOW }}>
+                            <Image source={{ uri: imgUri }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                            <TouchableOpacity
+                              onPress={() => handleRemovePhoto(idx)}
+                              style={{ position: 'absolute', top: 2, right: 2, backgroundColor: '#EF4444', borderRadius: 10, width: 18, height: 18, alignItems: 'center', justifyContent: 'center' }}>
+                              <Ionicons name="close" size={12} color="#FFF" />
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      })}
+
+                      {video && (
+                        <View style={{ position: 'relative', width: 60, height: 60, borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#10B981', backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' }}>
+                          <Ionicons name="videocam" size={24} color="#10B981" />
+                          <TouchableOpacity
+                            onPress={handleRemoveVideo}
+                            style={{ position: 'absolute', top: 2, right: 2, backgroundColor: '#EF4444', borderRadius: 10, width: 18, height: 18, alignItems: 'center', justifyContent: 'center' }}>
+                            <Ionicons name="close" size={12} color="#FFF" />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  </ScrollView>
+                )}
               </View>
 
               {/* Detailed Description with AI Specs Generator */}
@@ -1341,6 +1626,22 @@ export default function CustomerPostRequirementScreen() {
                       setDescription(v);
                       setFormError(null);
                     }}
+                  />
+                </View>
+              </View>
+
+              {/* Extended Specifications (Optional) */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.label}>Extended Technical Specifications (Optional)</Text>
+                <View style={[styles.inputRow, { height: 80, alignItems: 'flex-start', paddingTop: 8 }]}>
+                  <TextInput
+                    style={[styles.input, { height: '100%', textAlignVertical: 'top' }]}
+                    placeholder="Detailed dimensions, power ratings, custom terms, or technical specs..."
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    multiline
+                    numberOfLines={3}
+                    value={detailedSpecifications}
+                    onChangeText={setDetailedSpecifications}
                   />
                 </View>
               </View>

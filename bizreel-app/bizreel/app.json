@@ -20,7 +20,7 @@
     },
     "android": {
       "package": "in.bizreels.app",
-      "versionCode": 27,
+      "versionCode": 30,
       "allowBackup": false,
       "permissions": [
         "android.permission.INTERNET",
