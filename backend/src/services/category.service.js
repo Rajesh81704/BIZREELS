@@ -5,64 +5,76 @@ const logger = require('../utils/logger');
 
 const SEED_TREE = [
   {
-    name: 'Electronics',
+    name: 'Electronics & Tech',
     icon: '📱',
     category_type: 'product',
-    children: ['Mobile', 'Laptop', 'TV', 'Home Appliances', 'Accessories'],
+    children: ['Mobile Phones', 'Laptops & Computers', 'TV & Audio', 'Home Appliances', 'Cameras & Accessories'],
   },
   {
-    name: 'Fashion',
+    name: 'Fashion & Apparel',
     icon: '👗',
     category_type: 'product',
-    children: ['Men', 'Women', 'Kids', 'Footwear', 'Accessories'],
+    children: ['Men Clothing', 'Women Clothing', 'Kids Wear', 'Footwear', 'Jewelry & Watches'],
+  },
+  {
+    name: 'AI & Technology Services',
+    icon: '✨',
+    category_type: 'service',
+    children: ['AI Video Generation & Editing', 'AI Content Writing & Copywriting', 'AI Graphic Design & Logos', 'AI Chatbot & Automation Setup', 'AI Voiceover & Audio'],
   },
   {
     name: 'Home & Furniture',
     icon: '🛋️',
     category_type: 'product',
-    children: ['Furniture', 'Kitchen', 'Decor', 'Bedding'],
+    children: ['Living Room Furniture', 'Bedroom Furniture', 'Kitchen & Dining', 'Home Decor', 'Bedding & Furnishings'],
   },
   {
-    name: 'Vehicles',
+    name: 'Vehicles & Automotive',
     icon: '🏍️',
     category_type: 'product',
-    children: ['Car', 'Bike', 'Scooter', 'Commercial'],
-  },
-  {
-    name: 'Real Estate',
-    icon: '🏠',
-    category_type: 'service',
-    children: ['Rent', 'Buy', 'Sell', 'PG/Hostel'],
-  },
-  {
-    name: 'Services',
-    icon: '🛠️',
-    category_type: 'service',
-    children: ['Plumber', 'Electrician', 'Carpenter', 'AC Repair', 'Cleaning', 'Painter'],
-  },
-  {
-    name: 'Food & Grocery',
-    icon: '🍲',
-    category_type: 'product',
-    children: ['Restaurants', 'Grocery', 'Bakery', 'Sweets'],
+    children: ['Cars', 'Bikes & Scooters', 'Commercial Vehicles', 'Auto Parts & Accessories'],
   },
   {
     name: 'Beauty & Salon',
     icon: '💇',
     category_type: 'service',
-    children: ['Men Salon', 'Women Salon', 'Spa', 'Makeup'],
+    children: ['Men Salon & Grooming', 'Women Beauty & Makeup', 'Bridal Packages', 'Spa & Wellness'],
   },
   {
-    name: 'Health & Fitness',
-    icon: '🏋️',
+    name: 'IT, Design & Marketing',
+    icon: '💻',
     category_type: 'service',
-    children: ['Gym', 'Yoga', 'Doctor', 'Medical Store'],
+    children: ['Website & App Development', 'Graphic & Logo Design', 'Social Media & Digital Marketing', 'Reels & Video Content Shoot'],
+  },
+  {
+    name: 'Real Estate & Property',
+    icon: '🏠',
+    category_type: 'service',
+    children: ['Property for Rent', 'Property for Sale', 'PG & Shared Hostels', 'Commercial Spaces'],
+  },
+  {
+    name: 'Food & Grocery',
+    icon: '🍲',
+    category_type: 'product',
+    children: ['Restaurants & Cafes', 'Fresh Grocery', 'Bakery & Sweets', 'Packaged Foods'],
+  },
+  {
+    name: 'Repair & Maintenance',
+    icon: '🛠️',
+    category_type: 'service',
+    children: ['AC & Appliance Repair', 'Plumbing Services', 'Electrical Repair', 'Carpentry', 'Painting & Cleaning'],
+  },
+  {
+    name: 'Events & Wedding Services',
+    icon: '🎬',
+    category_type: 'service',
+    children: ['Catering & Food Counter', 'Event Photography & Videography', 'Decoration & Stage Setup', 'DJ & Sound System'],
   },
   {
     name: 'Education & Coaching',
     icon: '📚',
     category_type: 'service',
-    children: ['School', 'Coaching', 'Tuition', 'Skill Courses'],
+    children: ['School & College Tuitions', 'Competitive Exam Coaching', 'Language & Skill Courses', 'Music & Arts'],
   },
 ];
 
@@ -83,12 +95,13 @@ const serializeCategory = (cat) => {
 };
 
 const seedCategories = async () => {
-  const count = await Category.countDocuments({ is_deleted: { $ne: true } });
-  if (count === 0) {
-    for (let idx = 0; idx < SEED_TREE.length; idx++) {
-      const group = SEED_TREE[idx];
-      const parentSlug = slugify(group.name, { lower: true });
-      const parent = await Category.create({
+  for (let idx = 0; idx < SEED_TREE.length; idx++) {
+    const group = SEED_TREE[idx];
+    const parentSlug = slugify(group.name, { lower: true });
+    
+    let parent = await Category.findOne({ name: group.name, parent_id: null, is_deleted: { $ne: true } });
+    if (!parent) {
+      parent = await Category.create({
         name: group.name,
         slug: parentSlug,
         icon_url: group.icon,
@@ -96,10 +109,18 @@ const seedCategories = async () => {
         sort_order: idx,
         category_type: group.category_type,
       });
-      const parentId = parent._id.toString();
-      for (let cidx = 0; cidx < group.children.length; cidx++) {
-        const childName = group.children[cidx];
-        const childSlug = slugify(`${group.name}-${childName}`, { lower: true });
+    } else {
+      parent.category_type = group.category_type;
+      parent.icon_url = group.icon || parent.icon_url;
+      await parent.save();
+    }
+    const parentId = parent._id.toString();
+
+    for (let cidx = 0; cidx < group.children.length; cidx++) {
+      const childName = group.children[cidx];
+      const childSlug = slugify(`${group.name}-${childName}`, { lower: true });
+      let child = await Category.findOne({ name: childName, parent_id: parentId, is_deleted: { $ne: true } });
+      if (!child) {
         await Category.create({
           name: childName,
           slug: childSlug,
@@ -110,24 +131,8 @@ const seedCategories = async () => {
         });
       }
     }
-    logger.info(`Seeded ${SEED_TREE.length} category groups`);
-  } else {
-    // If they already exist, update any missing category_type
-    for (const group of SEED_TREE) {
-      const parent = await Category.findOneAndUpdate(
-        { name: group.name, parent_id: null },
-        { $set: { category_type: group.category_type } },
-        { returnDocument: 'after' }
-      );
-      if (parent) {
-        await Category.updateMany(
-          { parent_id: parent._id.toString() },
-          { $set: { category_type: group.category_type } }
-        );
-      }
-    }
-    logger.info("Validated and updated existing categories' types.");
   }
+  logger.info(`Validated and updated ${SEED_TREE.length} category groups.`);
 };
 
 const cache = require('../utils/cache');

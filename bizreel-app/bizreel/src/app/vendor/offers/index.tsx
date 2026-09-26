@@ -322,6 +322,27 @@ export default function VendorOffersScreen() {
             const meta = OFFER_CATEGORIES[item.category || 'discount'] || OFFER_CATEGORIES.discount;
             const highlight = getOfferHighlightText(item);
             const isActive = item.is_active !== false && item.status !== 'Disabled';
+            const redemptionsCount =
+              typeof item.usedCount === 'number'
+                ? item.usedCount
+                : typeof item.usesCount === 'number'
+                ? item.usesCount
+                : typeof item.usageCount === 'number'
+                ? item.usageCount
+                : Array.isArray(item.redemptions)
+                ? item.redemptions.length
+                : typeof item.redemptions === 'number'
+                ? item.redemptions
+                : 0;
+
+            const viewsCount =
+              typeof item.analytics?.viewsCount === 'number'
+                ? item.analytics.viewsCount
+                : typeof item.viewsCount === 'number'
+                ? item.viewsCount
+                : typeof item.views === 'number'
+                ? item.views
+                : 0;
 
             return (
               <View style={styles.offerCard}>
@@ -367,6 +388,11 @@ export default function VendorOffersScreen() {
                   <View style={styles.couponCodePill}>
                     <Ionicons name="pricetag" size={12} color={YELLOW} />
                     <Text style={styles.couponCodeText}>{item.code || item.couponCode || 'BIZPROMO'}</Text>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Text style={styles.validText}>👁️ {viewsCount.toLocaleString('en-IN')}</Text>
+                    <Text style={styles.validText}>🎟️ {redemptionsCount.toLocaleString('en-IN')} Uses</Text>
                   </View>
 
                   <Text style={styles.validText}>

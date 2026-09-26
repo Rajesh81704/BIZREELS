@@ -469,7 +469,27 @@ export default function VendorCatalogScreen() {
             const catKey = item.category || 'discount';
             const meta = OFFER_CATEGORIES[catKey] || OFFER_CATEGORIES.discount;
             const isActive = (item.status || 'Active').toLowerCase() === 'active';
-            const redemptions = item.usesCount || item.redemptions || 0;
+            const redemptionsCount =
+              typeof item.usedCount === 'number'
+                ? item.usedCount
+                : typeof item.usesCount === 'number'
+                ? item.usesCount
+                : typeof item.usageCount === 'number'
+                ? item.usageCount
+                : Array.isArray(item.redemptions)
+                ? item.redemptions.length
+                : typeof item.redemptions === 'number'
+                ? item.redemptions
+                : 0;
+
+            const viewsCount =
+              typeof item.analytics?.viewsCount === 'number'
+                ? item.analytics.viewsCount
+                : typeof item.viewsCount === 'number'
+                ? item.viewsCount
+                : typeof item.views === 'number'
+                ? item.views
+                : 0;
 
             return (
               <View style={[styles.offerCard, !isActive && styles.cardHidden]}>
@@ -501,15 +521,20 @@ export default function VendorCatalogScreen() {
 
                 <View style={styles.offerMetaRow}>
                   <View style={styles.metaItem}>
-                    <Ionicons name="calendar-outline" size={12} color={TEXT_MUTED} />
-                    <Text style={styles.metaItemText}>
-                      Till {formatDate(item.validTill || item.endTime)}
-                    </Text>
+                    <Ionicons name="eye-outline" size={12} color="#3B82F6" />
+                    <Text style={styles.metaItemText}>{viewsCount.toLocaleString('en-IN')} Views</Text>
                   </View>
 
                   <View style={styles.metaItem}>
                     <Ionicons name="ticket-outline" size={12} color={GOLD} />
-                    <Text style={styles.metaItemText}>{redemptions} Redemptions</Text>
+                    <Text style={styles.metaItemText}>{redemptionsCount.toLocaleString('en-IN')} Uses</Text>
+                  </View>
+
+                  <View style={styles.metaItem}>
+                    <Ionicons name="calendar-outline" size={12} color={TEXT_MUTED} />
+                    <Text style={styles.metaItemText}>
+                      Till {formatDate(item.validTill || item.endTime)}
+                    </Text>
                   </View>
 
                   <TouchableOpacity

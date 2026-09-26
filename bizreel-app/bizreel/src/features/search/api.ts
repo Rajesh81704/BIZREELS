@@ -4,8 +4,9 @@ import { api } from '@/lib/api';
 import type { CategoriesResponse, Category, ListingsParams, ListingsResponse } from './types';
 
 export async function fetchCategories(): Promise<Category[]> {
-  const response = await api.get<CategoriesResponse>('/categories');
-  return response.data.items;
+  const response = await api.get<CategoriesResponse>('/categories?tree=true');
+  const items = response.data.items || (response.data as any).data || (Array.isArray(response.data) ? response.data : []);
+  return items;
 }
 
 export async function fetchListings(params: ListingsParams): Promise<ListingsResponse> {

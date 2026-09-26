@@ -42,6 +42,40 @@ const POPULAR_SEARCHES = [
   'Electronics',
 ];
 
+const DEFAULT_SUBCATEGORIES_MAP: Record<string, string[]> = {
+  'Electronics': ['Mobile Phones', 'Laptops & Computers', 'TV & Audio', 'Home Appliances', 'Accessories'],
+  'Electronics & Tech': ['Mobile Phones', 'Laptops & Computers', 'TV & Audio', 'Home Appliances', 'Cameras & Accessories'],
+  'Fashion': ['Men Clothing', 'Women Clothing', 'Kids Wear', 'Footwear', 'Accessories'],
+  'Fashion & Apparel': ['Men Clothing', 'Women Clothing', 'Kids Wear', 'Footwear', 'Jewelry & Watches'],
+  'Home & Furniture': ['Living Room Furniture', 'Bedroom Furniture', 'Kitchen & Dining', 'Home Decor', 'Bedding & Furnishings'],
+  'Vehicles': ['Cars', 'Bikes & Scooters', 'Commercial Vehicles', 'Auto Parts & Accessories'],
+  'Vehicles & Automotive': ['Cars', 'Bikes & Scooters', 'Commercial Vehicles', 'Auto Parts & Accessories'],
+  'Real Estate': ['Property for Rent', 'Property for Sale', 'PG & Shared Hostels', 'Commercial Spaces'],
+  'Real Estate & Property': ['Property for Rent', 'Property for Sale', 'PG & Shared Hostels', 'Commercial Spaces'],
+  'Services': ['Website & App Development', 'Graphic & Logo Design', 'Social Media & Digital Marketing', 'Plumbing', 'Electrician', 'AC Repair'],
+  'IT, Design & Marketing': ['Website & App Development', 'Graphic & Logo Design', 'Social Media & Digital Marketing', 'Reels & Video Content Shoot'],
+  'Repair & Maintenance': ['AC & Appliance Repair', 'Plumbing Services', 'Electrical Repair', 'Carpentry', 'Painting & Cleaning'],
+  'Beauty & Salon': ['Men Salon & Grooming', 'Women Beauty & Makeup', 'Bridal Packages', 'Spa & Wellness'],
+  'Food & Grocery': ['Restaurants & Cafes', 'Fresh Grocery', 'Bakery & Sweets', 'Packaged Foods'],
+  'Events & Wedding Services': ['Catering & Food Counter', 'Event Photography & Videography', 'Decoration & Stage Setup', 'DJ & Sound System'],
+  'Education & Coaching': ['School & College Tuitions', 'Competitive Exam Coaching', 'Language & Skill Courses', 'Music & Arts'],
+  'AI & Technology Services': ['AI Video Generation & Editing', 'AI Content Writing & Copywriting', 'AI Graphic Design & Logos', 'AI Chatbot & Automation Setup'],
+};
+
+export function getSubcategoriesList(cat: any): string[] {
+  if (!cat) return [];
+  if (Array.isArray(cat.children) && cat.children.length > 0) {
+    return cat.children.map((c: any) => (typeof c === 'string' ? c : c.name));
+  }
+  const name = cat.name || '';
+  if (DEFAULT_SUBCATEGORIES_MAP[name]) return DEFAULT_SUBCATEGORIES_MAP[name];
+
+  const foundKey = Object.keys(DEFAULT_SUBCATEGORIES_MAP).find(
+    (k) => k.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(k.toLowerCase())
+  );
+  return foundKey ? DEFAULT_SUBCATEGORIES_MAP[foundKey] : [];
+}
+
 const POPULAR_CITIES = [
   'Near Me (GPS)',
   'All Cities',
@@ -198,6 +232,7 @@ export default function SearchScreen() {
   const [postReqModalVisible, setPostReqModalVisible] = useState(false);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [categorySearchQuery, setCategorySearchQuery] = useState('');
+  const [expandedCategoryIds, setExpandedCategoryIds] = useState<Record<string, boolean>>({});
 
   // GPS Location State
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
@@ -710,18 +745,59 @@ export default function SearchScreen() {
               }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
                 <Ionicons name="grid" size={16} color={YELLOW} />
-                <Text style={styles.categoryDropdownLabelInline}>Category Filter:</Text>
+                <Text style={styles.categoryDropdownLabelInline}>CATEGORY FILTER:</Text>
                 <Text style={styles.categoryDropdownValueInline} numberOfLines={1}>
-                  {selectedCategory ? selectedCategory.name : 'All Categories (Tap to Change ▾)'}
+                  {selectedCategory
+                    ? selectedSubcategory
+                      ? `${selectedCategory.name} › ${selectedSubcategory}`
+                      : selectedCategory.name
+                    : 'All Categories (Tap to Change ▾)'}
                 </Text>
               </View>
               <Ionicons name="chevron-down" size={16} color={YELLOW} />
             </TouchableOpacity>
 
+            {/* Subcategories Horizontal Scroll Chip Bar */}
             {selectedCategory && (
-              <TouchableOpacity style={styles.clearCategoryBtn} onPress={() => setSelectedCategory(null)}>
+              <View style={styles.subcategoryBarContainer}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.subcategoryScroll}>
+                  <TouchableOpacity
+                    style={[styles.subChip, selectedSubcategory === null && styles.subChipActive]}
+                    onPress={() => setSelectedSubcategory(null)}>
+                    <Text style={[styles.subChipText, selectedSubcategory === null && styles.subChipTextActive]}>
+                      All {selectedCategory.name}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {getSubcategoriesList(selectedCategory).map((subName) => {
+                    const isSubSelected = selectedSubcategory === subName;
+                    return (
+                      <TouchableOpacity
+                        key={subName}
+                        style={[styles.subChip, isSubSelected && styles.subChipActive]}
+                        onPress={() => setSelectedSubcategory(isSubSelected ? null : subName)}>
+                        <Text style={[styles.subChipText, isSubSelected && styles.subChipTextActive]}>
+                          {subName}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
+            {selectedCategory && (
+              <TouchableOpacity
+                style={styles.clearCategoryBtn}
+                onPress={() => {
+                  setSelectedCategory(null);
+                  setSelectedSubcategory(null);
+                }}>
                 <Ionicons name="close-circle" size={14} color="#EF4444" />
-                <Text style={styles.clearCategoryText}>Clear Category Filter ({selectedCategory.name})</Text>
+                <Text style={styles.clearCategoryText}>
+                  Clear Category Filter ({selectedCategory.name}
+                  {selectedSubcategory ? ` › ${selectedSubcategory}` : ''})
+                </Text>
               </TouchableOpacity>
             )}
 
@@ -1260,30 +1336,96 @@ export default function SearchScreen() {
                 {selectedCategory === null && <Ionicons name="checkmark-circle" size={18} color={BLACK} />}
               </TouchableOpacity>
 
-              {/* Category List */}
+              {/* Category List with Subcategories */}
               {parentCategories
-                .filter((c: any) =>
-                  !categorySearchQuery.trim() ||
-                  c.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
-                )
+                .filter((c: any) => {
+                  if (!categorySearchQuery.trim()) return true;
+                  const q = categorySearchQuery.toLowerCase().trim();
+                  const matchParent = c.name.toLowerCase().includes(q);
+                  const matchSub = getSubcategoriesList(c).some((sub) => sub.toLowerCase().includes(q));
+                  return matchParent || matchSub;
+                })
                 .map((cat: any) => {
-                  const isSelected = selectedCategory?.id === cat.id || selectedCategory?._id === cat._id || selectedCategory?.name === cat.name;
+                  const isSelected =
+                    selectedCategory?.id === cat.id ||
+                    selectedCategory?._id === cat._id ||
+                    selectedCategory?.name === cat.name;
+                  const subs = getSubcategoriesList(cat);
+                  const isExpanded =
+                    !!expandedCategoryIds[cat.name || cat.id] || !!categorySearchQuery.trim();
+
                   return (
-                    <TouchableOpacity
-                      key={cat.id || cat._id || cat.name}
-                      style={[styles.categoryDropdownItem, isSelected && styles.categoryDropdownItemActive]}
-                      onPress={() => {
-                        setSelectedCategory(cat);
-                        setCategoryModalVisible(false);
-                      }}>
-                      <View style={styles.catDropdownIconWrap}>
-                        {renderCategoryIcon(cat.name, cat.icon_url)}
-                      </View>
-                      <Text style={[styles.categoryDropdownItemText, isSelected && styles.categoryDropdownItemTextActive]}>
-                        {cat.name}
-                      </Text>
-                      {isSelected && <Ionicons name="checkmark-circle" size={18} color={BLACK} />}
-                    </TouchableOpacity>
+                    <View key={cat.id || cat._id || cat.name} style={styles.categoryCardGroup}>
+                      <TouchableOpacity
+                        style={[styles.categoryDropdownItem, isSelected && styles.categoryDropdownItemActive]}
+                        onPress={() => {
+                          setSelectedCategory(cat);
+                          setSelectedSubcategory(null);
+                          setCategoryModalVisible(false);
+                        }}>
+                        <View style={styles.catDropdownIconWrap}>
+                          {renderCategoryIcon(cat.name, cat.icon_url)}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.categoryDropdownItemText, isSelected && styles.categoryDropdownItemTextActive]}>
+                            {cat.name}
+                          </Text>
+                          {subs.length > 0 && (
+                            <Text style={[styles.subCountText, isSelected && { color: 'rgba(15,23,42,0.7)' }]}>
+                              {subs.length} subcategories
+                            </Text>
+                          )}
+                        </View>
+
+                        {subs.length > 0 && (
+                          <TouchableOpacity
+                            style={styles.expandToggleBtn}
+                            onPress={() => {
+                              const key = cat.name || cat.id;
+                              setExpandedCategoryIds((prev) => ({ ...prev, [key]: !prev[key] }));
+                            }}>
+                            <Ionicons
+                              name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                              size={16}
+                              color={isSelected ? BLACK : YELLOW}
+                            />
+                          </TouchableOpacity>
+                        )}
+
+                        {isSelected && !selectedSubcategory && (
+                          <Ionicons name="checkmark-circle" size={18} color={BLACK} style={{ marginLeft: 6 }} />
+                        )}
+                      </TouchableOpacity>
+
+                      {/* Expanded Subcategories List */}
+                      {isExpanded && subs.length > 0 && (
+                        <View style={styles.subItemsContainer}>
+                          {subs.map((subName) => {
+                            const isSubSelected = isSelected && selectedSubcategory === subName;
+                            return (
+                              <TouchableOpacity
+                                key={subName}
+                                style={[styles.subItemRow, isSubSelected && styles.subItemRowActive]}
+                                onPress={() => {
+                                  setSelectedCategory(cat);
+                                  setSelectedSubcategory(subName);
+                                  setCategoryModalVisible(false);
+                                }}>
+                                <Ionicons
+                                  name="return-down-forward"
+                                  size={13}
+                                  color={isSubSelected ? BLACK : YELLOW}
+                                />
+                                <Text style={[styles.subItemText, isSubSelected && styles.subItemTextActive]}>
+                                  {subName}
+                                </Text>
+                                {isSubSelected && <Ionicons name="checkmark-circle" size={16} color={BLACK} />}
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      )}
+                    </View>
                   );
                 })}
             </ScrollView>
@@ -1744,6 +1886,80 @@ const styles = StyleSheet.create({
   },
   categoryDropdownItemTextActive: {
     color: PRIMARY,
+    fontWeight: '900',
+  },
+  subcategoryBarContainer: {
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  subcategoryScroll: {
+    paddingHorizontal: 2,
+    gap: 6,
+    alignItems: 'center',
+  },
+  subChip: {
+    backgroundColor: '#1E293B',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  subChipActive: {
+    backgroundColor: YELLOW,
+    borderColor: YELLOW,
+  },
+  subChipText: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  subChipTextActive: {
+    color: BLACK,
+    fontWeight: '900',
+  },
+  categoryCardGroup: {
+    marginBottom: 8,
+  },
+  subCountText: {
+    color: TEXT_MUTED,
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  expandToggleBtn: {
+    padding: 6,
+    borderRadius: Radius.sm,
+  },
+  subItemsContainer: {
+    marginLeft: 20,
+    marginTop: -4,
+    marginBottom: 6,
+    gap: 4,
+    borderLeftWidth: 2,
+    borderLeftColor: 'rgba(217,154,61,0.3)',
+    paddingLeft: 8,
+  },
+  subItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(30,41,59,0.5)',
+    borderRadius: Radius.md,
+  },
+  subItemRowActive: {
+    backgroundColor: YELLOW,
+  },
+  subItemText: {
+    color: '#CBD5E1',
+    fontSize: 11,
+    fontWeight: '700',
+    flex: 1,
+  },
+  subItemTextActive: {
+    color: BLACK,
     fontWeight: '900',
   },
 

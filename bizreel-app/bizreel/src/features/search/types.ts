@@ -6,6 +6,7 @@
 
 export interface Category {
   id: string;
+  _id?: string;
   name: string;
   slug: string;
   /** Emoji or URL — null when not set */
@@ -15,6 +16,7 @@ export interface Category {
   parent_id: string | null;
   sort_order: number;
   is_active: boolean;
+  children?: Category[];
 }
 
 export interface CategoriesResponse {

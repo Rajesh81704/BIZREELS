@@ -44,6 +44,9 @@ router.get(['/', '/me/offers', '/offers'], requireAuth, catchAsync(async (req, r
   const mappedItems = items.map(o => ({
     ...o,
     id: o._id.toString(),
+    usedCount: typeof o.usedCount === 'number' ? o.usedCount : (Array.isArray(o.redemptions) ? o.redemptions.length : 0),
+    viewsCount: typeof o.analytics?.viewsCount === 'number' ? o.analytics.viewsCount : (o.viewsCount || 0),
+    totalSales: typeof o.analytics?.totalSales === 'number' ? o.analytics.totalSales : 0,
   }));
 
   res.json({
