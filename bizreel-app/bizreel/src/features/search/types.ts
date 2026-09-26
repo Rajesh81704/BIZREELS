@@ -78,11 +78,19 @@ export interface ListingsParams {
   search?: string;
   category?: string;
   subcategory?: string;
-  type?: 'product' | 'service';
+  type?: 'product' | 'service' | string;
   minPrice?: number;
   maxPrice?: number;
   lat?: number;
   lng?: number;
-  distance?: number;
+  distance?: number | string;
   sort?: string;
+  vendor?: string;
+  condition?: string;
+  sellerType?: string;
+  minRating?: number | string;
+  has_offer?: boolean | string;
+  shopName?: string;
+  openNow?: boolean | string;
+  deliveryType?: string;
 }
