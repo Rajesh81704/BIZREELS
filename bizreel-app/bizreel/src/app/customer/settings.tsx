@@ -131,17 +131,35 @@ export default function CustomerSettingsScreen() {
   const handlePincodeLookup = async (val: string) => {
     setPincode(val);
     setPincodeMsg(null);
-    if (val.length === 6) {
+    const cleanPin = val.replace(/\D/g, '');
+    if (cleanPin.length === 6) {
       setFetchingPincode(true);
       try {
-        const res = await fetch(`https://api.postalpincode.in/pincode/${val}`);
-        const data = await res.json();
-        if (data?.[0]?.Status === 'Success' && data[0].PostOffice?.length > 0) {
-          const po = data[0].PostOffice[0];
-          setDistrict(po.District || '');
-          setState(po.State || '');
-          if (!city) setCity(po.Block !== 'NA' ? po.Block : po.District);
-          setPincodeMsg(`✓ Auto-filled: ${po.District}, ${po.State}`);
+        let resData: any = null;
+        try {
+          const { data } = await api.post('/location/pincode-lookup', { pincode: cleanPin });
+          resData = data?.data || data;
+        } catch (e1) {
+          const res = await fetch(`https://api.postalpincode.in/pincode/${cleanPin}`);
+          const json = await res.json();
+          if (json?.[0]?.Status === 'Success' && json[0].PostOffice?.[0]) {
+            const po = json[0].PostOffice[0];
+            resData = {
+              city: po.District,
+              district: po.District,
+              state: po.State,
+              area: po.Block !== 'NA' ? po.Block : po.Name,
+            };
+          }
+        }
+
+        if (resData && (resData.city || resData.district || resData.state)) {
+          const dName = resData.district || resData.city || '';
+          const sName = resData.state || '';
+          setDistrict(dName);
+          setState(sName);
+          setCity(resData.city || dName);
+          setPincodeMsg(`✓ Auto-filled: ${dName}, ${sName}`);
         } else {
           setPincodeMsg('⚠️ Invalid Pincode or location data not found');
         }
@@ -152,6 +170,7 @@ export default function CustomerSettingsScreen() {
       }
     }
   };
+
 
   const handleSaveProfile = async () => {
     if (!name.trim()) {

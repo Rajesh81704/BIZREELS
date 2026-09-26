@@ -94,6 +94,36 @@ export default function CreatorOnboardingScreen() {
   const [district, setDistrict] = useState(user?.city || 'Raipur');
   const [pincode, setPincode] = useState((user as any)?.creatorProfile?.pincode || '');
 
+  const handlePincodeLookup = async (val: string) => {
+    setPincode(val);
+    const cleanPin = val.replace(/\D/g, '');
+    if (cleanPin.length === 6) {
+      try {
+        const { data } = await api
+          .post('/location/pincode-lookup', { pincode: cleanPin })
+          .catch(() => api.get(`/location/pincode/${cleanPin}`));
+        const resData = data.data || data;
+        if (resData.city || resData.district) setCity(resData.city || resData.district);
+        if (resData.district || resData.city) setDistrict(resData.district || resData.city);
+        if (resData.state) setStateName(resData.state);
+      } catch (err) {
+        try {
+          const res = await fetch(`https://api.postalpincode.in/pincode/${cleanPin}`);
+          const json = await res.json();
+          if (json?.[0]?.Status === 'Success' && json[0].PostOffice?.[0]) {
+            const po = json[0].PostOffice[0];
+            if (po.District) {
+              setCity(po.District);
+              setDistrict(po.District);
+            }
+            if (po.State) setStateName(po.State);
+          }
+        } catch (e) {}
+      }
+    }
+  };
+
+
   // Step 3: Categories & Skills
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     (user as any)?.creatorProfile?.categories || ['Product Reel Creator']
@@ -296,7 +326,8 @@ export default function CreatorOnboardingScreen() {
             <TextInput style={styles.input} value={district} onChangeText={setDistrict} placeholder="e.g. Raipur" placeholderTextColor={TEXT_PLACEHOLDER} />
 
             <Text style={styles.label}>Pincode</Text>
-            <TextInput style={styles.input} value={pincode} onChangeText={setPincode} keyboardType="number-pad" placeholder="492001" placeholderTextColor={TEXT_PLACEHOLDER} />
+            <TextInput style={styles.input} value={pincode} onChangeText={handlePincodeLookup} keyboardType="number-pad" maxLength={6} placeholder="492001" placeholderTextColor={TEXT_PLACEHOLDER} />
+
           </View>
         )}
 

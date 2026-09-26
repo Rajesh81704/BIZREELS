@@ -108,7 +108,34 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
 
   const initialPrice = extractModalPrice(targetProduct);
 
-  // If price is 0 from initial item, fetch listing details from API
+  const handlePincodeLookup = async (val: string) => {
+    setPincode(val);
+    const cleanPin = val.replace(/\D/g, '');
+    if (cleanPin.length === 6) {
+      try {
+        const { data } = await api
+          .post('/location/pincode-lookup', { pincode: cleanPin })
+          .catch(() => api.get(`/location/pincode/${cleanPin}`));
+        const resData = data.data || data;
+        const foundCity = resData.city || resData.district || resData.area;
+        const foundState = resData.state;
+        if (foundCity) setCity(foundCity);
+        if (foundState) setStateVal(foundState);
+      } catch (err) {
+        try {
+          const res = await fetch(`https://api.postalpincode.in/pincode/${cleanPin}`);
+          const json = await res.json();
+          if (json?.[0]?.Status === 'Success' && json[0].PostOffice?.[0]) {
+            const po = json[0].PostOffice[0];
+            if (po.District) setCity(po.District);
+            if (po.State) setStateVal(po.State);
+          }
+        } catch (e) {}
+      }
+    }
+  };
+
+  // Prefill user profile address details
   useEffect(() => {
     if (visible) {
       setOrderPlaced(false);
@@ -130,6 +157,7 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
           .catch(() => null);
       }
 
+
       // Prefill user profile address details
       api.get('/users/me')
         .then(({ data }) => {
@@ -138,14 +166,23 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
             setCustomerName(u.name || '');
             setCustomerPhone(u.phone || u.mobile || u.mobileNumber || '');
             setStreetAddress(u.location?.address || u.customerProfile?.address || u.address || '');
-            setCity(u.location?.city || u.city || '');
-            setStateVal(u.location?.state || u.state || '');
-            setPincode(u.location?.pincode || u.pincode || '');
+            const initialCity = u.location?.city || u.city || '';
+            const initialState = u.location?.state || u.state || '';
+            const initialPin = u.location?.pincode || u.pincode || '';
+
+            setCity(initialCity);
+            setStateVal(initialState);
+            setPincode(initialPin);
+
+            if (initialPin && initialPin.length === 6) {
+              handlePincodeLookup(initialPin);
+            }
           }
         })
         .catch(() => null);
     }
   }, [visible, item, listingIdStr]);
+
 
   const targetItem = fetchedListing || targetProduct;
   const activePrice = fetchedPrice > 0 ? fetchedPrice : extractModalPrice(targetItem);
@@ -368,8 +405,9 @@ export default function DirectBuyModal({ visible, onClose, item, onSuccess }: Di
                       keyboardType="number-pad"
                       maxLength={6}
                       value={pincode}
-                      onChangeText={setPincode}
+                      onChangeText={handlePincodeLookup}
                     />
+
                   </View>
                 </View>
               </View>

@@ -384,18 +384,32 @@ export default function VendorOnboardingScreen() {
     if (!targetCode || targetCode.length !== 6) return;
     setPincodeLoading(true);
     try {
-      const res = await api
-        .post('/v1/location/pincode-lookup', { pincode: targetCode })
-        .catch(() => api.get(`/v1/location/pincode/${targetCode}`))
-        .catch(() => api.get(`/location/pincode/${targetCode}`));
+      let resData: any = null;
+      try {
+        const res = await api
+          .post('/v1/location/pincode-lookup', { pincode: targetCode })
+          .catch(() => api.get(`/v1/location/pincode/${targetCode}`))
+          .catch(() => api.get(`/location/pincode/${targetCode}`));
+        resData = res?.data?.data || res?.data;
+      } catch (e1) {
+        const res = await fetch(`https://api.postalpincode.in/pincode/${targetCode}`);
+        const json = await res.json();
+        if (json?.[0]?.Status === 'Success' && json[0].PostOffice?.[0]) {
+          const po = json[0].PostOffice[0];
+          resData = {
+            city: po.District,
+            district: po.District,
+            state: po.State,
+            area: po.Block !== 'NA' ? po.Block : po.Name,
+          };
+        }
+      }
 
-      const data = res?.data?.data || res?.data;
-      if (data) {
-        if (data.city || data.district) setCity(data.city || data.district);
-        if (data.district || data.city) setDistrict(data.district || data.city);
-        if (data.state) setStateName(data.state);
-        if (data.area && !areaLocality) setAreaLocality(data.area);
-        Alert.alert('📍 Location Found', `Auto-fetched: ${data.city || data.district || data.area}, ${data.state}`);
+      if (resData) {
+        if (resData.city || resData.district) setCity(resData.city || resData.district);
+        if (resData.district || resData.city) setDistrict(resData.district || resData.city);
+        if (resData.state) setStateName(resData.state);
+        if (resData.area && !areaLocality) setAreaLocality(resData.area);
       } else {
         Alert.alert('Notice', 'No location data found for this PIN code. Please enter address details manually.');
       }
@@ -405,6 +419,7 @@ export default function VendorOnboardingScreen() {
       setPincodeLoading(false);
     }
   };
+
 
   // GPS Auto-detect location
   const handleDetectGps = async () => {
