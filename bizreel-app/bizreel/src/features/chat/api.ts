@@ -17,7 +17,7 @@ export interface Conversation {
   id?: string;
   participants: ChatParticipant[];
   lastMessage?: { text?: string; content?: string; createdAt?: string };
-  unreadCount?: number;
+  unreadCount?: number | Record<string, number> | any;
   updatedAt?: string;
 }
 

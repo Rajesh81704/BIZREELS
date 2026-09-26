@@ -210,10 +210,14 @@ export default function HomeScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={styles.chatIconBtn}
+                  style={[styles.chatIconBtn, unreadMsgCount > 0 && styles.chatIconBtnActive]}
                   onPress={() => router.push('/messages' as any)}
                   accessibilityLabel="Messages Inbox">
-                  <Ionicons name="chatbubble-ellipses-outline" size={20} color={YELLOW} />
+                  <Ionicons
+                    name={unreadMsgCount > 0 ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+                    size={20}
+                    color={unreadMsgCount > 0 ? '#EF4444' : YELLOW}
+                  />
                   {unreadMsgCount > 0 && (
                     <View style={styles.chatBadge}>
                       <Text style={styles.chatBadgeText}>
@@ -1017,6 +1021,10 @@ const styles = StyleSheet.create({
     borderColor: BORDER,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  chatIconBtnActive: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#EF4444',
   },
   cartBadge: {
     position: 'absolute',

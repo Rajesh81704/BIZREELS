@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Radius } from '@/constants/theme';
 import { useAuth } from '@/features/auth/context';
 import { useCart } from '@/features/cart/queries';
+import { useUnreadMessageCount } from '@/features/chat/queries';
 
 export interface BottomTabBarProps {
   state: any;
@@ -35,6 +36,7 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { data: cart } = useCart();
+  const { data: unreadMsgCount = 0 } = useUnreadMessageCount();
   const cartTotalItems = cart?.total_items || 0;
 
   const activeRole = user?.activeRole || user?.current_role || 'customer';
@@ -104,6 +106,14 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 
                 {tab.name === 'search' && cartTotalItems > 0 && (
                   <View style={styles.badge} />
+                )}
+
+                {tab.name === 'profile' && unreadMsgCount > 0 && (
+                  <View style={styles.unreadMsgBadge}>
+                    <Text style={styles.unreadMsgBadgeText}>
+                      {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
+                    </Text>
+                  </View>
                 )}
               </View>
 
@@ -197,6 +207,25 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     borderWidth: 1,
     borderColor: BG_MATTE,
+  },
+  unreadMsgBadge: {
+    position: 'absolute',
+    top: -3,
+    right: -5,
+    backgroundColor: '#EF4444',
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: BG_MATTE,
+  },
+  unreadMsgBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 8.5,
+    fontWeight: '900',
   },
 });
 

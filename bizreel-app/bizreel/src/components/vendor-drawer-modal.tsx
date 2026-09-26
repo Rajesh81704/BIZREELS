@@ -258,16 +258,27 @@ export function VendorDrawerModal({ isOpen, onClose }: VendorDrawerModalProps) {
                               : String(unreadNotificationsCount)
                             : item.badge;
 
+                        const hasUnreadMessages = item.route === '/messages' && unreadMsgCount > 0;
+                        const iconName = hasUnreadMessages ? 'chatbubble-ellipses' : item.icon;
+
                         return (
                           <TouchableOpacity
                             key={idx}
-                            style={[styles.menuItemRow, isActive && styles.menuItemRowActive]}
+                            style={[
+                              styles.menuItemRow,
+                              isActive && styles.menuItemRowActive,
+                              hasUnreadMessages && !isActive && { backgroundColor: '#FEF2F2' },
+                            ]}
                             onPress={() => handleNavigate(item.route)}>
-                            <View style={[styles.iconBox, isActive && styles.iconBoxActive]}>
+                            <View style={[
+                              styles.iconBox,
+                              isActive && styles.iconBoxActive,
+                              hasUnreadMessages && { backgroundColor: '#FEE2E2' },
+                            ]}>
                               <Ionicons
-                                name={item.icon as any}
+                                name={iconName as any}
                                 size={13}
-                                color="#1A1A1A"
+                                color={hasUnreadMessages ? '#EF4444' : '#1A1A1A'}
                               />
                             </View>
 

@@ -74,12 +74,13 @@ export default function ChatInboxScreen() {
       : 'Recently';
 
     let unreadCount = 0;
-    if (typeof c.unreadCount === 'number') {
-      unreadCount = c.unreadCount;
-    } else if (c.unreadCount && typeof c.unreadCount === 'object') {
-      const u = c.unreadCount instanceof Map
-        ? c.unreadCount.get(String(currentUserId))
-        : (c.unreadCount as any)[String(currentUserId)] || Object.values(c.unreadCount)[0];
+    const rawUnread = c.unreadCount as any;
+    if (typeof rawUnread === 'number') {
+      unreadCount = rawUnread;
+    } else if (rawUnread && typeof rawUnread === 'object') {
+      const u = rawUnread instanceof Map
+        ? rawUnread.get(String(currentUserId))
+        : rawUnread[String(currentUserId)] || Object.values(rawUnread)[0];
       unreadCount = Number(u || 0);
     }
 

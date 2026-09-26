@@ -12,10 +12,10 @@ const razorpayService = require('../services/razorpay.service');
 
 const ALLOWED_ORDER_TRANSITIONS = {
   pending: ['accepted', 'cancelled', 'rejected'],
-  accepted: ['processing', 'shipped', 'completed', 'cancelled', 'rejected'],
-  processing: ['shipped', 'completed', 'cancelled'],
-  shipped: ['out_for_delivery', 'delivered'],
-  out_for_delivery: ['delivered', 'cancelled'],
+  accepted: ['processing', 'shipped', 'delivered', 'completed', 'cancelled', 'rejected'],
+  processing: ['shipped', 'delivered', 'completed', 'cancelled'],
+  shipped: ['out_for_delivery', 'delivered', 'completed', 'cancelled'],
+  out_for_delivery: ['delivered', 'completed', 'cancelled'],
   delivered: ['completed', 'refunded'],
   completed: ['refunded'],
   cancelled: [],

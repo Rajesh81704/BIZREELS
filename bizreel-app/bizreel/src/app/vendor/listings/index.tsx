@@ -23,6 +23,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ProductFormModal } from '@/components/vendor/ProductFormModal';
+import { ServiceFormModal } from '@/components/vendor/ServiceFormModal';
 import { OFFER_CATEGORIES } from '@/constants/offerCategories';
 import { FontSize, Shadows, Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/context';
@@ -98,39 +100,31 @@ export default function VendorCatalogScreen() {
   const [stockInput, setStockInput] = useState('');
   const [updatingStock, setUpdatingStock] = useState(false);
 
+  // Listing Creation/Edit Modal States
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [editingListing, setEditingListing] = useState<any>(null);
+
   function handleAddItem() {
     if (activeTab === 'offers') {
       router.push('/vendor/offers/create' as any);
       return;
     }
 
-    const targetType = activeTab === 'services' ? 'service' : 'product';
-    if (!isVerified) {
-      Alert.alert(
-        'Business Verification Required ⚠️',
-        'Please verify your business to get 5x more leads & maximum buyer trust!',
-        [
-          {
-            text: 'Proceed Anyway',
-            style: 'cancel',
-            onPress: () =>
-              router.push({
-                pathname: '/vendor/listings/create' as any,
-                params: { initialType: targetType },
-              } as any),
-          },
-          {
-            text: 'Verify Now',
-            style: 'default',
-            onPress: () => router.push('/vendor/verification' as any),
-          },
-        ]
-      );
+    setEditingListing(null);
+    if (activeTab === 'services') {
+      setShowServiceModal(true);
     } else {
-      router.push({
-        pathname: '/vendor/listings/create' as any,
-        params: { initialType: targetType },
-      } as any);
+      setShowProductModal(true);
+    }
+  }
+
+  function handleEditListing(item: any) {
+    setEditingListing(item);
+    if ((item.type || item.category_type) === 'service') {
+      setShowServiceModal(true);
+    } else {
+      setShowProductModal(true);
     }
   }
 
@@ -913,6 +907,31 @@ export default function VendorCatalogScreen() {
           })()}
         </View>
       </Modal>
+
+      {/* Product & Service Listing Modals */}
+      <ProductFormModal
+        visible={showProductModal}
+        onClose={() => {
+          setShowProductModal(false);
+          setEditingListing(null);
+        }}
+        editData={editingListing}
+        onSubmitSuccess={() => {
+          refetchListings();
+        }}
+      />
+
+      <ServiceFormModal
+        visible={showServiceModal}
+        onClose={() => {
+          setShowServiceModal(false);
+          setEditingListing(null);
+        }}
+        editData={editingListing}
+        onSubmitSuccess={() => {
+          refetchListings();
+        }}
+      />
     </View>
   );
 }

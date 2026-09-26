@@ -319,10 +319,14 @@ export default function ProfileScreen() {
         <Text style={styles.headerTitle}>My Profile</Text>
         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
           <TouchableOpacity
-            style={styles.logoutIconBtn}
+            style={[styles.logoutIconBtn, unreadMsgCount > 0 && styles.chatIconBtnActive]}
             onPress={() => router.push('/messages' as any)}
             accessibilityLabel="Chat Inbox">
-            <Ionicons name="chatbubble-ellipses-outline" size={18} color={GOLD} />
+            <Ionicons
+              name={unreadMsgCount > 0 ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+              size={18}
+              color={unreadMsgCount > 0 ? '#EF4444' : GOLD}
+            />
             {unreadMsgCount > 0 && (
               <View style={styles.chatBadge}>
                 <Text style={styles.chatBadgeText}>
@@ -664,6 +668,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+  },
+  chatIconBtnActive: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#EF4444',
   },
   chatBadge: {
     position: 'absolute',

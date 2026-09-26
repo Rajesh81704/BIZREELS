@@ -26,6 +26,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ProductFormModal } from '@/components/vendor/ProductFormModal';
+import { ServiceFormModal } from '@/components/vendor/ServiceFormModal';
 import { FontSize, Spacing } from '@/constants/theme';
 import { useCreateReel } from '@/features/reels/queries';
 import { useVendorListings } from '@/features/vendor-listings/queries';
@@ -531,124 +533,26 @@ function CreateNewListingModal({
   onClose: () => void;
   onCreated: (item: any) => void;
 }) {
-  const [title, setTitle] = useState('');
-  const [price, setPrice] = useState('');
-  const [description, setDescription] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  const isProduct = postType !== 'service';
-
-  const handleSubmit = async () => {
-    if (!title.trim()) {
-      Alert.alert('Title Required', 'Please enter a title for this listing.');
-      return;
-    }
-    if (!price || isNaN(Number(price))) {
-      Alert.alert('Price Required', 'Please enter a valid price amount.');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const payload = {
-        type: isProduct ? 'product' : 'service',
-        title: title.trim(),
-        price: parseFloat(price) || 0,
-        category: category || 'General',
-        subcategory: subcategory || 'General',
-        description: description.trim(),
-        status: 'active',
-      };
-
-      const res = await api.post('/listings', payload);
-      const newItem = res.data?.data || res.data?.listing || res.data;
-      Alert.alert('🟢 Listing Created!', `Successfully listed "${title}". Linked to your reel post!`);
-      onCreated(newItem);
-      onClose();
-    } catch (err: any) {
-      console.warn('Listing creation error:', err);
-      const fallbackItem = {
-        _id: `item_${Date.now()}`,
-        type: isProduct ? 'product' : 'service',
-        title: title.trim(),
-        price: parseFloat(price) || 0,
-        category: category || 'General',
-        subcategory: subcategory || 'General',
-        description: description.trim(),
-      };
-      onCreated(fallbackItem);
-      onClose();
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  if (postType === 'service') {
+    return (
+      <ServiceFormModal
+        visible={visible}
+        onClose={onClose}
+        initialCategory={category}
+        initialSubcategory={subcategory}
+        onSubmitSuccess={onCreated}
+      />
+    );
+  }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.offerModalContainer}>
-          <View style={styles.offerModalHeader}>
-            <View>
-              <Text style={styles.offerModalTitle}>
-                CREATE NEW {isProduct ? 'PRODUCT' : 'SERVICE'} LISTING
-              </Text>
-              <Text style={styles.offerModalSub}>Auto-selects & links to current reel post</Text>
-            </View>
-            <TouchableOpacity style={styles.modalCloseBtn} onPress={onClose}>
-              <Ionicons name="close" size={18} color="#0F172A" />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 14 }}>
-            <View style={styles.fieldGroup}>
-              <Text style={styles.subLabel}>{isProduct ? 'PRODUCT' : 'SERVICE'} TITLE *</Text>
-              <TextInput
-                style={styles.captionInput}
-                placeholder={isProduct ? 'e.g. Wireless Bluetooth Headphones' : 'e.g. Home Deep Cleaning Service'}
-                placeholderTextColor="#94A3B8"
-                value={title}
-                onChangeText={setTitle}
-              />
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.subLabel}>PRICE (₹) *</Text>
-              <TextInput
-                style={styles.captionInput}
-                placeholder="e.g. 1499"
-                placeholderTextColor="#94A3B8"
-                keyboardType="numeric"
-                value={price}
-                onChangeText={setPrice}
-              />
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.subLabel}>DESCRIPTION (OPTIONAL)</Text>
-              <TextInput
-                style={styles.captionInput}
-                placeholder="Key features, warranty, highlights..."
-                placeholderTextColor="#94A3B8"
-                multiline
-                numberOfLines={3}
-                value={description}
-                onChangeText={setDescription}
-              />
-            </View>
-
-            <TouchableOpacity style={styles.submitOfferBtn} onPress={handleSubmit} disabled={submitting}>
-              {submitting ? (
-                <ActivityIndicator color="#F59E0B" />
-              ) : (
-                <Text style={styles.submitOfferBtnText}>
-                  ✨ CREATE & LINK TO REEL
-                </Text>
-              )}
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
+    <ProductFormModal
+      visible={visible}
+      onClose={onClose}
+      initialCategory={category}
+      initialSubcategory={subcategory}
+      onSubmitSuccess={onCreated}
+    />
   );
 }
 
@@ -738,11 +642,73 @@ export default function CreateReelScreen() {
       .catch(() => {});
   }, []);
 
-  const parentCategories = categoriesList.filter((c: any) => !c.parent_id);
+  const parentCategories = useMemo(() => {
+    const rawParents = categoriesList.filter((c: any) => !c.parent_id);
+    if (rawParents.length > 0) {
+      const filtered = rawParents.filter((c: any) => {
+        const catType = (c.category_type || c.type || '').toLowerCase();
+        if (postType === 'product') {
+          return catType === 'product' || !catType;
+        }
+        if (postType === 'service') {
+          return catType === 'service';
+        }
+        return true;
+      });
+      if (filtered.length > 0) return filtered;
+    }
+
+    // Default Fallback Category Lists per Post Type
+    if (postType === 'service') {
+      return [
+        { name: 'Services' },
+        { name: 'Home Services' },
+        { name: 'Beauty & Salon' },
+        { name: 'Health & Fitness' },
+        { name: 'Repairs & Maintenance' },
+        { name: 'Education & Coaching' },
+        { name: 'Professional Services' },
+        { name: 'Events & Wedding' },
+      ];
+    } else if (postType === 'product') {
+      return [
+        { name: 'Electronics' },
+        { name: 'Fashion' },
+        { name: 'Home & Kitchen' },
+        { name: 'Automobile' },
+        { name: 'Food & Dining' },
+        { name: 'Beauty & Personal Care' },
+        { name: 'Sports & Fitness' },
+        { name: 'Toys & Baby' },
+      ];
+    } else {
+      return [
+        { name: 'Electronics' },
+        { name: 'Fashion' },
+        { name: 'Services' },
+        { name: 'Home Services' },
+        { name: 'Beauty & Wellness' },
+        { name: 'Food & Dining' },
+        { name: 'Real Estate' },
+        { name: 'Automobile' },
+      ];
+    }
+  }, [categoriesList, postType]);
+
   const activeParent = parentCategories.find((c: any) => c.name === category);
   const childSubcategories = categoriesList.filter(
     (c: any) => activeParent && c.parent_id === (activeParent.id || activeParent._id)
   );
+
+  // Auto-switch category when postType changes if current category is not in parentCategories
+  useEffect(() => {
+    if (parentCategories.length > 0) {
+      const isCurrentInParents = parentCategories.some((c: any) => c.name === category);
+      if (!isCurrentInParents) {
+        setCategory(parentCategories[0].name);
+      }
+    }
+  }, [postType, parentCategories]);
 
   // Contextually filtered listings for product/service dropdown
   const filteredListings = useMemo(() => {
@@ -1263,10 +1229,7 @@ export default function CreateReelScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.subLabel}>CATEGORY CHIPS</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
-                    {(parentCategories.length > 0
-                      ? parentCategories
-                      : [{ name: 'Electronics' }, { name: 'Fashion' }, { name: 'Real Estate' }, { name: 'Automobile' }, { name: 'Beauty & Wellness' }, { name: 'Food & Dining' }, { name: 'Services' }]
-                    )
+                    {parentCategories
                       .filter((catItem: any) =>
                         categorySearch
                           ? catItem.name.toLowerCase().includes(categorySearch.toLowerCase())
@@ -1452,84 +1415,86 @@ export default function CreateReelScreen() {
               </View>
             )}
 
-            {/* 5. PRODUCT / SERVICE DROPDOWN SELECTION */}
-            <View style={styles.darkSectionCard}>
-              <View style={styles.darkSectionHeaderRow}>
-                <View style={styles.darkSectionHeader}>
-                  <Ionicons name="pricetag-outline" size={16} color="#D97706" />
-                  <Text style={styles.darkSectionTitle}>
-                    4. LINKED STORE {postType === 'product' ? 'PRODUCT' : postType === 'shop' ? 'BUSINESS' : 'SERVICE'} (SELECT FROM MENU)
-                  </Text>
-                </View>
-                <Text style={styles.availableCountText}>{filteredListings.length} match(es)</Text>
-              </View>
-
-              <Text style={styles.subLabel}>TAG LISTED ITEM ON REEL MENU *</Text>
-
-              {/* Store Product Dropdown Trigger Box */}
-              <TouchableOpacity
-                style={styles.dropdownBoxTrigger}
-                onPress={() => setShowListingDropdownModal(true)}>
-                <View style={styles.dropdownLeftRow}>
-                  <Ionicons name="bag-handle-outline" size={18} color="#F59E0B" />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.dropdownBoxTitle}>
-                      {selectedListingData
-                        ? selectedListingData.title
-                        : `-- None Selected (General ${postType.toUpperCase()} Reel) --`}
-                    </Text>
-                    <Text style={styles.dropdownBoxSub} numberOfLines={1}>
-                      {selectedListingData
-                        ? `Price: ₹${selectedListingData.price || 0} • ${selectedListingData.category || 'General'} (Tap to change ▼)`
-                        : `Tap to choose from ${filteredListings.length} store items from API dropdown ▼`}
+            {/* 4. PRODUCT / SERVICE ITEM DROPDOWN SELECTION (ONLY FOR PRODUCT & SERVICE REELS, NOT FOR SHOP REELS) */}
+            {postType !== 'shop' && (
+              <View style={styles.darkSectionCard}>
+                <View style={styles.darkSectionHeaderRow}>
+                  <View style={styles.darkSectionHeader}>
+                    <Ionicons name="pricetag-outline" size={16} color="#D97706" />
+                    <Text style={styles.darkSectionTitle}>
+                      4. LINKED STORE {postType === 'product' ? 'PRODUCT' : 'SERVICE'} (SELECT FROM MENU)
                     </Text>
                   </View>
+                  <Text style={styles.availableCountText}>{filteredListings.length} match(es)</Text>
                 </View>
-                {listingsLoading ? (
-                  <ActivityIndicator size="small" color="#F59E0B" />
-                ) : (
-                  <Ionicons name="chevron-down" size={18} color="#F59E0B" />
-                )}
-              </TouchableOpacity>
 
-              {/* Selected Listing Card Summary */}
-              {selectedListingData && (
-                <View style={styles.selectedListingCard}>
-                  <View style={styles.selectedListingCardLeft}>
-                    <View style={styles.selectedListingThumb}>
-                      {(selectedListingData.images?.[0] || (selectedListingData as any).image) ? (
-                        <Image
-                          source={{ uri: selectedListingData.images?.[0] || (selectedListingData as any).image }}
-                          style={styles.selectedListingImg}
-                        />
-                      ) : (
-                        <Ionicons name="cube-outline" size={20} color="#D97706" />
-                      )}
-                    </View>
+                <Text style={styles.subLabel}>TAG LISTED ITEM ON REEL MENU *</Text>
+
+                {/* Store Product Dropdown Trigger Box */}
+                <TouchableOpacity
+                  style={styles.dropdownBoxTrigger}
+                  onPress={() => setShowListingDropdownModal(true)}>
+                  <View style={styles.dropdownLeftRow}>
+                    <Ionicons name="bag-handle-outline" size={18} color="#F59E0B" />
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.selectedListingTitle} numberOfLines={1}>
-                        {selectedListingData.title}
+                      <Text style={styles.dropdownBoxTitle}>
+                        {selectedListingData
+                          ? selectedListingData.title
+                          : `-- None Selected (General ${postType.toUpperCase()} Reel) --`}
                       </Text>
-                      <Text style={styles.selectedListingSub}>
-                        Category: {selectedListingData.category || 'General'} • Price: ₹{selectedListingData.price || 0}
+                      <Text style={styles.dropdownBoxSub} numberOfLines={1}>
+                        {selectedListingData
+                          ? `Price: ₹${selectedListingData.price || 0} • ${selectedListingData.category || 'General'} (Tap to change ▼)`
+                          : `Tap to choose from ${filteredListings.length} store items from API dropdown ▼`}
                       </Text>
                     </View>
                   </View>
-                  <TouchableOpacity onPress={() => handleSelectListing(null)}>
-                    <Ionicons name="close-circle" size={20} color="#EF4444" />
+                  {listingsLoading ? (
+                    <ActivityIndicator size="small" color="#F59E0B" />
+                  ) : (
+                    <Ionicons name="chevron-down" size={18} color="#F59E0B" />
+                  )}
+                </TouchableOpacity>
+
+                {/* Selected Listing Card Summary */}
+                {selectedListingData && (
+                  <View style={styles.selectedListingCard}>
+                    <View style={styles.selectedListingCardLeft}>
+                      <View style={styles.selectedListingThumb}>
+                        {(selectedListingData.images?.[0] || (selectedListingData as any).image) ? (
+                          <Image
+                            source={{ uri: selectedListingData.images?.[0] || (selectedListingData as any).image }}
+                            style={styles.selectedListingImg}
+                          />
+                        ) : (
+                          <Ionicons name="cube-outline" size={20} color="#D97706" />
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.selectedListingTitle} numberOfLines={1}>
+                          {selectedListingData.title}
+                        </Text>
+                        <Text style={styles.selectedListingSub}>
+                          Category: {selectedListingData.category || 'General'} • Price: ₹{selectedListingData.price || 0}
+                        </Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity onPress={() => handleSelectListing(null)}>
+                      <Ionicons name="close-circle" size={20} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <View style={styles.optionBRow}>
+                  <Text style={styles.cantFindText}>Can't find item?</Text>
+                  <TouchableOpacity
+                    style={styles.optionBBtn}
+                    onPress={() => router.push('/vendor/listings/create' as any)}>
+                    <Text style={styles.optionBBtnText}>+ Add New Listing First</Text>
                   </TouchableOpacity>
                 </View>
-              )}
-
-              <View style={styles.optionBRow}>
-                <Text style={styles.cantFindText}>Can't find item?</Text>
-                <TouchableOpacity
-                  style={styles.optionBBtn}
-                  onPress={() => router.push('/vendor/listings/create' as any)}>
-                  <Text style={styles.optionBBtnText}>+ Add New Listing First</Text>
-                </TouchableOpacity>
               </View>
-            </View>
+            )}
 
             <TouchableOpacity
               style={[styles.nextStepBtn, isTransitioningStep && { opacity: 0.85 }]}

@@ -497,6 +497,15 @@ export default function VendorOrdersScreen() {
                       </TouchableOpacity>
                     ) : null}
 
+                    {['shipped', 'out_for_delivery'].includes(orderStatus) ? (
+                      <TouchableOpacity
+                        style={styles.shipBtn}
+                        onPress={() => handleStatusChange(orderId, 'delivered')}>
+                        <Ionicons name="location-outline" size={14} color="#FFF" />
+                        <Text style={styles.shipBtnText}>Mark Delivered</Text>
+                      </TouchableOpacity>
+                    ) : null}
+
                     <TouchableOpacity
                       style={styles.completeBtn}
                       onPress={() => handleStatusChange(orderId, 'completed')}>

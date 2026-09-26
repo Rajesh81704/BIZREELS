@@ -318,7 +318,7 @@ export default function VendorOffersScreen() {
               colors={[YELLOW]}
             />
           }
-          renderItem={({ item }) => {
+          renderItem={({ item }: { item: any }) => {
             const meta = OFFER_CATEGORIES[item.category || 'discount'] || OFFER_CATEGORIES.discount;
             const highlight = getOfferHighlightText(item);
             const isActive = item.is_active !== false && item.status !== 'Disabled';
