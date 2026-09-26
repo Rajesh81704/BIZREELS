@@ -526,7 +526,16 @@ export default function SearchScreen() {
   };
 
   const parentCategories = useCallback(() => {
-    const topParents = catList.filter((c: any) => !c.parent_id);
+    let topParents = catList.filter((c: any) => !c.parent_id);
+    if (topParents.length === 0 && catList.length > 0) {
+      topParents = catList;
+    }
+    if (topParents.length === 0) {
+      topParents = Object.keys(DEFAULT_SUBCATEGORIES_MAP).map((name, i) => ({
+        id: `def-${i}`,
+        name,
+      }));
+    }
     if (activeTypeFilter === 'all') return topParents;
     return topParents.filter((c: any) => {
       if (c.category_type) return c.category_type === activeTypeFilter;
@@ -536,6 +545,7 @@ export default function SearchScreen() {
       return isProductCategoryName(c.name) || !isServiceCategoryName(c.name);
     });
   }, [catList, activeTypeFilter])();
+
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -736,7 +746,47 @@ export default function SearchScreen() {
               ))}
             </ScrollView>
 
+            {/* Horizontal Parent Category Chips Bar (Web Parity) */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.popularRow}>
+              <TouchableOpacity
+                style={[styles.subChip, selectedCategory === null && styles.subChipActive]}
+                onPress={() => {
+                  setSelectedCategory(null);
+                  setSelectedSubcategory(null);
+                }}>
+                <Text style={[styles.subChipText, selectedCategory === null && styles.subChipTextActive]}>
+                  All Categories
+                </Text>
+              </TouchableOpacity>
+
+              {parentCategories.map((cat: any) => {
+                const isCatSelected =
+                  selectedCategory?.id === cat.id ||
+                  selectedCategory?._id === cat._id ||
+                  selectedCategory?.name === cat.name;
+                return (
+                  <TouchableOpacity
+                    key={cat.id || cat.name}
+                    style={[styles.subChip, isCatSelected && styles.subChipActive]}
+                    onPress={() => {
+                      if (isCatSelected) {
+                        setSelectedCategory(null);
+                        setSelectedSubcategory(null);
+                      } else {
+                        setSelectedCategory(cat);
+                        setSelectedSubcategory(null);
+                      }
+                    }}>
+                    <Text style={[styles.subChipText, isCatSelected && styles.subChipTextActive]}>
+                      {cat.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
             {/* Expandable Category Selector Card */}
+
             <TouchableOpacity
               style={styles.categoryDropdownCard}
               onPress={() => {
@@ -1356,26 +1406,31 @@ export default function SearchScreen() {
 
                   return (
                     <View key={cat.id || cat._id || cat.name} style={styles.categoryCardGroup}>
-                      <TouchableOpacity
-                        style={[styles.categoryDropdownItem, isSelected && styles.categoryDropdownItemActive]}
-                        onPress={() => {
-                          setSelectedCategory(cat);
-                          setSelectedSubcategory(null);
-                          setCategoryModalVisible(false);
-                        }}>
-                        <View style={styles.catDropdownIconWrap}>
-                          {renderCategoryIcon(cat.name, cat.icon_url)}
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[styles.categoryDropdownItemText, isSelected && styles.categoryDropdownItemTextActive]}>
-                            {cat.name}
-                          </Text>
-                          {subs.length > 0 && (
-                            <Text style={[styles.subCountText, isSelected && { color: 'rgba(15,23,42,0.7)' }]}>
-                              {subs.length} subcategories
+                      <View style={[styles.categoryDropdownItem, isSelected && styles.categoryDropdownItemActive]}>
+                        <TouchableOpacity
+                          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+                          onPress={() => {
+                            setSelectedCategory(cat);
+                            setSelectedSubcategory(null);
+                            setCategoryModalVisible(false);
+                          }}>
+                          <View style={styles.catDropdownIconWrap}>
+                            {renderCategoryIcon(cat.name, cat.icon_url)}
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.categoryDropdownItemText, isSelected && styles.categoryDropdownItemTextActive]}>
+                              {cat.name}
                             </Text>
+                            {subs.length > 0 && (
+                              <Text style={[styles.subCountText, isSelected && { color: 'rgba(15,23,42,0.7)' }]}>
+                                {subs.length} subcategories
+                              </Text>
+                            )}
+                          </View>
+                          {isSelected && !selectedSubcategory && (
+                            <Ionicons name="checkmark-circle" size={18} color={BLACK} style={{ marginRight: 4 }} />
                           )}
-                        </View>
+                        </TouchableOpacity>
 
                         {subs.length > 0 && (
                           <TouchableOpacity
@@ -1386,16 +1441,13 @@ export default function SearchScreen() {
                             }}>
                             <Ionicons
                               name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                              size={16}
+                              size={18}
                               color={isSelected ? BLACK : YELLOW}
                             />
                           </TouchableOpacity>
                         )}
+                      </View>
 
-                        {isSelected && !selectedSubcategory && (
-                          <Ionicons name="checkmark-circle" size={18} color={BLACK} style={{ marginLeft: 6 }} />
-                        )}
-                      </TouchableOpacity>
 
                       {/* Expanded Subcategories List */}
                       {isExpanded && subs.length > 0 && (
