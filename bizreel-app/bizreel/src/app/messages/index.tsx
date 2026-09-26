@@ -73,17 +73,30 @@ export default function ChatInboxScreen() {
       ? new Date(c.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : 'Recently';
 
+    let unreadCount = 0;
+    if (typeof c.unreadCount === 'number') {
+      unreadCount = c.unreadCount;
+    } else if (c.unreadCount && typeof c.unreadCount === 'object') {
+      const u = c.unreadCount instanceof Map
+        ? c.unreadCount.get(String(currentUserId))
+        : (c.unreadCount as any)[String(currentUserId)] || Object.values(c.unreadCount)[0];
+      unreadCount = Number(u || 0);
+    }
+
     processedThreads.push({
       id: c._id || c.id || Math.random().toString(),
       name,
       avatar,
       lastMessage: c.lastMessage?.text || c.lastMessage?.content || 'Tap to view conversation...',
       time: timeStr,
-      unread: c.unreadCount || 0,
+      unread: unreadCount,
       recipientId,
       role: isCreator ? 'creators' : 'customers',
     });
   }
+
+  const customerUnread = processedThreads.filter(t => t.role === 'customers').reduce((sum, t) => sum + (t.unread || 0), 0);
+  const creatorUnread = processedThreads.filter(t => t.role === 'creators').reduce((sum, t) => sum + (t.unread || 0), 0);
 
   const filteredThreads = processedThreads.filter((t) => {
     const matchesTab = t.role === activeTab;
@@ -144,6 +157,11 @@ export default function ChatInboxScreen() {
           <Text style={[styles.tabText, activeTab === 'customers' && styles.tabTextActive]}>
             Customer Messages
           </Text>
+          {customerUnread > 0 && (
+            <View style={styles.tabBadge}>
+              <Text style={styles.tabBadgeText}>{customerUnread > 99 ? '99+' : customerUnread}</Text>
+            </View>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -157,6 +175,11 @@ export default function ChatInboxScreen() {
           <Text style={[styles.tabText, activeTab === 'creators' && styles.tabTextActive]}>
             Creator Chats
           </Text>
+          {creatorUnread > 0 && (
+            <View style={styles.tabBadge}>
+              <Text style={styles.tabBadgeText}>{creatorUnread > 99 ? '99+' : creatorUnread}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -428,13 +451,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   unreadBadge: {
-    backgroundColor: GOLD,
+    backgroundColor: '#EF4444',
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 10,
   },
   unreadText: {
-    color: ESPRESSO,
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '900',
+  },
+  tabBadge: {
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginLeft: 4,
+  },
+  tabBadgeText: {
+    color: '#FFFFFF',
     fontSize: 9,
     fontWeight: '900',
   },
