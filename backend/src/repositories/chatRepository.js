@@ -106,22 +106,37 @@ class ChatRepository {
       .lean();
 
     const processedList = list.map((c) => {
-      if (c.lastMessage && c.lastMessage.deletedFor) {
-        const isDeletedForMe = c.lastMessage.deletedFor.some(
-          (id) => id.toString() === userId.toString()
+      const uid = userId.toString();
+      let userUnread = 0;
+      if (c.unreadCount) {
+        if (c.unreadCount instanceof Map) {
+          userUnread = Number(c.unreadCount.get(uid) || 0);
+        } else if (typeof c.unreadCount === 'object') {
+          userUnread = Number(c.unreadCount[uid] || 0);
+        } else if (typeof c.unreadCount === 'number') {
+          userUnread = c.unreadCount;
+        }
+      }
+
+      let lastMsg = c.lastMessage;
+      if (lastMsg && lastMsg.deletedFor) {
+        const isDeletedForMe = lastMsg.deletedFor.some(
+          (id) => id.toString() === uid
         );
         if (isDeletedForMe) {
-          return {
-            ...c,
-            lastMessage: {
-              ...c.lastMessage,
-              text: 'Chat cleared',
-              media: null,
-            },
+          lastMsg = {
+            ...lastMsg,
+            text: 'Chat cleared',
+            media: null,
           };
         }
       }
-      return c;
+
+      return {
+        ...c,
+        unreadCount: userUnread,
+        lastMessage: lastMsg,
+      };
     });
 
     // Deduplicate threads by recipient/peer user ID so duplicate conversation items aren't returned

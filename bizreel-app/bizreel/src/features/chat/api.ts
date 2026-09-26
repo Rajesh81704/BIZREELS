@@ -56,3 +56,19 @@ export async function sendMessage(payload: {
   const { data } = await api.post('/chat/messages', payload);
   return data.data?.message || data.message || data.data || data;
 }
+
+export async function fetchUnreadMessageCount(role?: string): Promise<number> {
+  try {
+    const roleParam = role ? `?role=${role}` : '';
+    const res = await api
+      .get<any>(`/chat/unread-total${roleParam}`)
+      .catch(() => api.get<any>(`/chat/unread${roleParam}`));
+    const data = res.data?.data || res.data;
+    if (typeof data?.unread_total === 'number') return data.unread_total;
+    if (typeof data?.unreadTotal === 'number') return data.unreadTotal;
+    return 0;
+  } catch (err) {
+    return 0;
+  }
+}
+

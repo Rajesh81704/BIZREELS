@@ -22,6 +22,7 @@ import { VendorDrawerModal } from '@/components/vendor-drawer-modal';
 import { BrandColors, FontSize, FontWeight, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/context';
 import { useAddToCart, useCart } from '@/features/cart/queries';
+import { useUnreadMessageCount } from '@/features/chat/queries';
 import { useUnreadNotificationCount } from '@/features/notifications/queries';
 import { useReelsFeed } from '@/features/reels/queries';
 import { useVendorListings } from '@/features/vendor-listings/queries';
@@ -82,6 +83,7 @@ export default function HomeScreen() {
   const isVendor = activeRole === 'vendor';
   const isCreator = activeRole === 'creator';
   const { data: unreadNotifCount = 0 } = useUnreadNotificationCount(activeRole);
+  const { data: unreadMsgCount = 0 } = useUnreadMessageCount(activeRole);
   const custp = (user as any)?.customerProfile || {};
   const isCustomerUnonboarded =
     activeRole === 'customer' &&
@@ -207,14 +209,20 @@ export default function HomeScreen() {
                   )}
                 </TouchableOpacity>
 
-                {!isCreator && (
-                  <TouchableOpacity
-                    style={styles.chatIconBtn}
-                    onPress={() => router.push('/messages' as any)}
-                    accessibilityLabel="Messages Inbox">
-                    <Ionicons name="chatbubble-ellipses-outline" size={20} color={YELLOW} />
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                  style={styles.chatIconBtn}
+                  onPress={() => router.push('/messages' as any)}
+                  accessibilityLabel="Messages Inbox">
+                  <Ionicons name="chatbubble-ellipses-outline" size={20} color={YELLOW} />
+                  {unreadMsgCount > 0 && (
+                    <View style={styles.chatBadge}>
+                      <Text style={styles.chatBadgeText}>
+                        {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
 
                 {!isVendor && !isCreator && (
                   <TouchableOpacity
@@ -1830,5 +1838,25 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '900',
   },
+  chatBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  chatBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '900',
+  },
 });
+
 

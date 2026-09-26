@@ -24,6 +24,7 @@ import { RoleSwitcher } from '@/components/role-switcher';
 import { FontSize, FontWeight, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/context';
 import { useCurrentUserProfile } from '@/features/auth/queries';
+import { useUnreadMessageCount } from '@/features/chat/queries';
 import { api } from '@/lib/api';
 import { resolveImageUrl } from '@/utils/image';
 
@@ -42,6 +43,7 @@ export default function ProfileScreen() {
   const { signOut, status: authStatus } = useAuth();
 
   const { data: user, isLoading, isError, refetch, isRefetching } = useCurrentUserProfile();
+  const { data: unreadMsgCount = 0 } = useUnreadMessageCount((user as any)?.activeRole || (user as any)?.current_role);
 
   const [userInterests, setUserInterests] = useState<Array<{ category: string; subcategory?: string | null }>>([]);
 
@@ -321,7 +323,15 @@ export default function ProfileScreen() {
             onPress={() => router.push('/messages' as any)}
             accessibilityLabel="Chat Inbox">
             <Ionicons name="chatbubble-ellipses-outline" size={18} color={GOLD} />
+            {unreadMsgCount > 0 && (
+              <View style={styles.chatBadge}>
+                <Text style={styles.chatBadgeText}>
+                  {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
+
           <TouchableOpacity style={styles.logoutIconBtn} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={18} color={GOLD} />
           </TouchableOpacity>
@@ -653,6 +663,26 @@ const styles = StyleSheet.create({
     borderColor: BORDER,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
+  },
+  chatBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  chatBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '900',
   },
 
   scrollContent: { padding: Spacing.four, gap: Spacing.three },

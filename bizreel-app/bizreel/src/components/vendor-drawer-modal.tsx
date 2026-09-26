@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BrandColors, FontSize, FontWeight, Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/context';
+import { useUnreadMessageCount } from '@/features/chat/queries';
 import { useNotifications } from '@/features/notifications/queries';
 
 interface DrawerItem {
@@ -194,6 +195,7 @@ export function VendorDrawerModal({ isOpen, onClose }: VendorDrawerModalProps) {
   const NAV_SECTIONS = activeRole === 'creator' ? CREATOR_SECTIONS : activeRole === 'vendor' ? VENDOR_SECTIONS : CUSTOMER_SECTIONS;
 
   const { data: notificationsList = [] } = useNotifications(activeRole);
+  const { data: unreadMsgCount = 0 } = useUnreadMessageCount(activeRole);
   const unreadNotificationsCount = notificationsList.filter((n) => !n.isRead).length;
 
   return (
@@ -245,6 +247,16 @@ export function VendorDrawerModal({ isOpen, onClose }: VendorDrawerModalProps) {
                     <View style={styles.itemsList}>
                       {sec.items.map((item, idx) => {
                         const isActive = pathname === item.route;
+                        const badgeValue =
+                          item.route === '/messages' && unreadMsgCount > 0
+                            ? unreadMsgCount > 99
+                              ? '99+'
+                              : String(unreadMsgCount)
+                            : item.route === '/notifications' && unreadNotificationsCount > 0
+                            ? unreadNotificationsCount > 99
+                              ? '99+'
+                              : String(unreadNotificationsCount)
+                            : item.badge;
 
                         return (
                           <TouchableOpacity
@@ -263,16 +275,18 @@ export function VendorDrawerModal({ isOpen, onClose }: VendorDrawerModalProps) {
                               {item.title}
                             </Text>
 
-                            {item.badge && (
+                            {badgeValue && (
                               <View style={[
                                 styles.itemBadge,
-                                item.badge === 'VERIFY NOW' && { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }
+                                badgeValue === 'VERIFY NOW' && { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' },
+                                (item.route === '/messages' || item.route === '/notifications') && { backgroundColor: '#EF4444', borderColor: '#EF4444' }
                               ]}>
                                 <Text style={[
                                   styles.itemBadgeText,
-                                  item.badge === 'VERIFY NOW' && { color: '#B45309' }
+                                  badgeValue === 'VERIFY NOW' && { color: '#B45309' },
+                                  (item.route === '/messages' || item.route === '/notifications') && { color: '#FFFFFF', fontWeight: '900' }
                                 ]}>
-                                  {item.badge}
+                                  {badgeValue}
                                 </Text>
                               </View>
                             )}
@@ -284,6 +298,7 @@ export function VendorDrawerModal({ isOpen, onClose }: VendorDrawerModalProps) {
                 </View>
               );
             })}
+
 
             <View style={{ height: 20 }} />
           </ScrollView>
