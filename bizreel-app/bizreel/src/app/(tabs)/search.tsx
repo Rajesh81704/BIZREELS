@@ -255,6 +255,7 @@ export default function SearchScreen() {
   const [subcategory, setSubcategory] = useState<string>(params.subcategory || 'all');
   const [selectedChipId, setSelectedChipId] = useState<string>('all');
   const [maxPrice, setMaxPrice] = useState<number>(20000000); // 2 Cr Max
+  const [showBudgetSlider, setShowBudgetSlider] = useState<boolean>(false);
   const [hasOffers, setHasOffers] = useState<boolean>(false);
   const [openNow, setOpenNow] = useState<boolean>(false);
 
@@ -577,56 +578,73 @@ export default function SearchScreen() {
         </ScrollView>
       </View>
 
-      {/* ── MAX BUDGET SLIDER & QUICK PRESETS ROW ── */}
+      {/* ── MAX BUDGET SLIDER & QUICK PRESETS ROW (Collapsible) ── */}
       <View style={styles.budgetRow}>
-        <View style={styles.budgetLeft}>
-          <View style={styles.budgetHeaderRow}>
+        <View style={styles.budgetTopHeader}>
+          {/* Click to expand/collapse Budget Slider */}
+          <TouchableOpacity
+            style={[styles.budgetToggleBtn, showBudgetSlider && styles.budgetToggleBtnActive]}
+            onPress={() => setShowBudgetSlider(!showBudgetSlider)}>
+            <Ionicons name="cash-outline" size={14} color={showBudgetSlider ? '#1A1A1A' : '#7C3AED'} />
             <Text style={styles.budgetTitle}>Max Budget:</Text>
             <View style={styles.budgetValuePill}>
               <Text style={styles.budgetValueText}>{formatPriceLabel(maxPrice)}</Text>
             </View>
+            <Ionicons
+              name={showBudgetSlider ? 'chevron-up' : 'chevron-down'}
+              size={14}
+              color="#1A1A1A"
+            />
+          </TouchableOpacity>
+
+          {/* Offers & Open Now Toggles */}
+          <View style={styles.togglesRight}>
+            <TouchableOpacity
+              style={[styles.togglePill, hasOffers && styles.togglePillActiveOffers]}
+              onPress={() => setHasOffers(!hasOffers)}>
+              <Ionicons name="flame" size={13} color={hasOffers ? '#B45309' : '#64748B'} />
+              <Text style={[styles.togglePillText, hasOffers && styles.togglePillTextActiveOffers]}>
+                Offers
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.togglePill, openNow && styles.togglePillActiveOpen]}
+              onPress={() => setOpenNow(!openNow)}>
+              <View style={[styles.greenDot, openNow && { backgroundColor: '#10B981' }]} />
+              <Text style={[styles.togglePillText, openNow && styles.togglePillTextActiveOpen]}>
+                Open Now
+              </Text>
+            </TouchableOpacity>
           </View>
-
-          {/* Interactive Range Slider */}
-          <BudgetSlider value={maxPrice} onChange={setMaxPrice} />
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.budgetPresetsScroll}>
-            {BUDGET_PRESETS.map((chip) => {
-              const isSelected = maxPrice === chip.val;
-              return (
-                <TouchableOpacity
-                  key={chip.val}
-                  style={[styles.presetBtn, isSelected && styles.presetBtnActive]}
-                  onPress={() => setMaxPrice(chip.val)}>
-                  <Text style={[styles.presetBtnText, isSelected && styles.presetBtnTextActive]}>
-                    {chip.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
         </View>
 
-        {/* Offers & Open Now Toggles */}
-        <View style={styles.togglesRight}>
-          <TouchableOpacity
-            style={[styles.togglePill, hasOffers && styles.togglePillActiveOffers]}
-            onPress={() => setHasOffers(!hasOffers)}>
-            <Ionicons name="flame" size={13} color={hasOffers ? '#B45309' : '#64748B'} />
-            <Text style={[styles.togglePillText, hasOffers && styles.togglePillTextActiveOffers]}>
-              Offers
-            </Text>
-          </TouchableOpacity>
+        {/* Expanded Budget Slider Track & Presets */}
+        {showBudgetSlider && (
+          <View style={styles.expandedBudgetBox}>
+            {/* Interactive Range Slider */}
+            <BudgetSlider value={maxPrice} onChange={setMaxPrice} />
 
-          <TouchableOpacity
-            style={[styles.togglePill, openNow && styles.togglePillActiveOpen]}
-            onPress={() => setOpenNow(!openNow)}>
-            <View style={[styles.greenDot, openNow && { backgroundColor: '#10B981' }]} />
-            <Text style={[styles.togglePillText, openNow && styles.togglePillTextActiveOpen]}>
-              Open Now
-            </Text>
-          </TouchableOpacity>
-        </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.budgetPresetsScroll}>
+              {BUDGET_PRESETS.map((chip) => {
+                const isSelected = maxPrice === chip.val;
+                return (
+                  <TouchableOpacity
+                    key={chip.val}
+                    style={[styles.presetBtn, isSelected && styles.presetBtnActive]}
+                    onPress={() => setMaxPrice(chip.val)}>
+                    <Text style={[styles.presetBtnText, isSelected && styles.presetBtnTextActive]}>
+                      {chip.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
       </View>
 
       {/* ── ADVANCED FILTERS COLLAPSIBLE DRAWER (Web Parity) ── */}
@@ -1212,16 +1230,28 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E3DCCB',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 8,
+    paddingVertical: 8,
   },
-  budgetLeft: {
-    gap: 6,
-  },
-  budgetHeaderRow: {
+  budgetTopHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 8,
+  },
+  budgetToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F8F4EC',
+    borderWidth: 1,
+    borderColor: '#E3DCCB',
+    borderRadius: Radius.md,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  budgetToggleBtnActive: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#D99A3D',
   },
   budgetTitle: {
     color: '#1A1A1A',
@@ -1231,14 +1261,21 @@ const styles = StyleSheet.create({
   budgetValuePill: {
     backgroundColor: 'rgba(124,58,237,0.1)',
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: Radius.sm,
   },
   budgetValueText: {
     color: '#7C3AED',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '900',
+  },
+  expandedBudgetBox: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E3DCCB',
+    gap: 6,
   },
   sliderContainer: {
     marginVertical: 4,
