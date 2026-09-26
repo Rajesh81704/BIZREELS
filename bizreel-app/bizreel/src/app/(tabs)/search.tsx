@@ -26,6 +26,7 @@ import {
   Alert,
   FlatList,
   Modal,
+  PanResponder,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -121,6 +122,113 @@ export function getSubcategoriesList(cat: any): string[] {
     (k) => k.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(k.toLowerCase())
   );
   return foundKey ? DEFAULT_SUBCATEGORIES_MAP[foundKey] : [];
+}
+
+const SLIDER_TICKS = [
+  { pct: 0.0, val: 1000, label: '₹1K' },
+  { pct: 0.2, val: 50000, label: '50k' },
+  { pct: 0.4, val: 500000, label: '5L' },
+  { pct: 0.6, val: 2500000, label: '25L' },
+  { pct: 0.8, val: 10000000, label: '1Cr' },
+  { pct: 1.0, val: 20000000, label: '2Cr' },
+];
+
+function valueToPct(val: number): number {
+  if (val <= SLIDER_TICKS[0].val) return 0;
+  if (val >= SLIDER_TICKS[SLIDER_TICKS.length - 1].val) return 1;
+
+  for (let i = 0; i < SLIDER_TICKS.length - 1; i++) {
+    const t1 = SLIDER_TICKS[i];
+    const t2 = SLIDER_TICKS[i + 1];
+    if (val >= t1.val && val <= t2.val) {
+      const ratio = (val - t1.val) / (t2.val - t1.val);
+      return t1.pct + ratio * (t2.pct - t1.pct);
+    }
+  }
+  return 1;
+}
+
+function pctToValue(pct: number): number {
+  const p = Math.max(0, Math.min(1, pct));
+  for (let i = 0; i < SLIDER_TICKS.length - 1; i++) {
+    const t1 = SLIDER_TICKS[i];
+    const t2 = SLIDER_TICKS[i + 1];
+    if (p >= t1.pct && p <= t2.pct) {
+      const ratio = (p - t1.pct) / (t2.pct - t1.pct);
+      const raw = t1.val + ratio * (t2.val - t1.val);
+      if (raw < 50000) return Math.round(raw / 1000) * 1000;
+      if (raw < 500000) return Math.round(raw / 10000) * 10000;
+      if (raw < 2500000) return Math.round(raw / 50000) * 50000;
+      if (raw < 10000000) return Math.round(raw / 250000) * 250000;
+      return Math.round(raw / 500000) * 500000;
+    }
+  }
+  return 20000000;
+}
+
+interface BudgetSliderProps {
+  value: number;
+  onChange: (val: number) => void;
+}
+
+function BudgetSlider({ value, onChange }: BudgetSliderProps) {
+  const [trackWidth, setTrackWidth] = useState<number>(0);
+  const trackWidthRef = useRef<number>(0);
+
+  const pct = valueToPct(value);
+
+  const handleTouch = useCallback(
+    (evt: any) => {
+      const w = trackWidthRef.current;
+      if (w <= 0) return;
+      const touchX = evt.nativeEvent.locationX;
+      const newPct = touchX / w;
+      const newVal = pctToValue(newPct);
+      onChange(newVal);
+    },
+    [onChange]
+  );
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: (evt) => handleTouch(evt),
+        onPanResponderMove: (evt) => handleTouch(evt),
+        onPanResponderRelease: (evt) => handleTouch(evt),
+      }),
+    [handleTouch]
+  );
+
+  return (
+    <View style={styles.sliderContainer}>
+      <View
+        style={styles.sliderTrackBg}
+        onLayout={(e) => {
+          const w = e.nativeEvent.layout.width;
+          setTrackWidth(w);
+          trackWidthRef.current = w;
+        }}
+        {...panResponder.panHandlers}>
+        <View style={[styles.sliderTrackFill, { width: `${pct * 100}%` }]} />
+        <View style={[styles.sliderThumb, { left: `${Math.min(95, Math.max(0, pct * 100))}%` }]} />
+      </View>
+
+      <View style={styles.sliderLabelsRow}>
+        {SLIDER_TICKS.map((t) => (
+          <TouchableOpacity
+            key={t.label}
+            onPress={() => onChange(t.val)}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
+            <Text style={[styles.sliderLabelText, value === t.val && styles.sliderLabelTextActive]}>
+              {t.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
 }
 
 export default function SearchScreen() {
@@ -472,10 +580,15 @@ export default function SearchScreen() {
       {/* ── MAX BUDGET SLIDER & QUICK PRESETS ROW ── */}
       <View style={styles.budgetRow}>
         <View style={styles.budgetLeft}>
-          <Text style={styles.budgetTitle}>Max Budget:</Text>
-          <View style={styles.budgetValuePill}>
-            <Text style={styles.budgetValueText}>{formatPriceLabel(maxPrice)}</Text>
+          <View style={styles.budgetHeaderRow}>
+            <Text style={styles.budgetTitle}>Max Budget:</Text>
+            <View style={styles.budgetValuePill}>
+              <Text style={styles.budgetValueText}>{formatPriceLabel(maxPrice)}</Text>
+            </View>
           </View>
+
+          {/* Interactive Range Slider */}
+          <BudgetSlider value={maxPrice} onChange={setMaxPrice} />
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.budgetPresetsScroll}>
             {BUDGET_PRESETS.map((chip) => {
@@ -1105,6 +1218,11 @@ const styles = StyleSheet.create({
   budgetLeft: {
     gap: 6,
   },
+  budgetHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   budgetTitle: {
     color: '#1A1A1A',
     fontSize: 11,
@@ -1120,6 +1238,52 @@ const styles = StyleSheet.create({
   budgetValueText: {
     color: '#7C3AED',
     fontSize: 12,
+    fontWeight: '900',
+  },
+  sliderContainer: {
+    marginVertical: 4,
+    gap: 4,
+  },
+  sliderTrackBg: {
+    height: 8,
+    backgroundColor: '#E3DCCB',
+    borderRadius: 4,
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  sliderTrackFill: {
+    height: '100%',
+    backgroundColor: '#D99A3D',
+    borderRadius: 4,
+  },
+  sliderThumb: {
+    position: 'absolute',
+    top: -5,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#1A1A1A',
+    borderWidth: 2,
+    borderColor: '#D99A3D',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  sliderLabelsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 2,
+    marginTop: 2,
+  },
+  sliderLabelText: {
+    color: '#94A3B8',
+    fontSize: 9.5,
+    fontWeight: '700',
+  },
+  sliderLabelTextActive: {
+    color: '#D99A3D',
     fontWeight: '900',
   },
   budgetPresetsScroll: {
